@@ -1,0 +1,15 @@
+{
+  "name": "@recursor/bridge",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ReCursor bridge server (scaffold only).",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
