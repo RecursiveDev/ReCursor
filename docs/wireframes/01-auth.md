@@ -14,7 +14,7 @@
 |                                       |
 |            [ App Logo ]               |
 |                                       |
-|            RemoteCLI                   |
+|            ReCursor                   |
 |     AI Coding Agents, Anywhere        |
 |                                       |
 |                                       |
@@ -37,7 +37,7 @@
 
 ```
 +---------------------------------------+
-|              RemoteCLI                 |
+|              ReCursor                 |
 +---------------------------------------+
 |                                       |
 |            [ App Logo ]               |

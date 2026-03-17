@@ -2,6 +2,8 @@
 
 > Phase 1 — QR pairing and connection management.
 
+**Architecture Note:** Bridge connections establish a **Agent SDK session** for controllable, approval-based interactions. Hooks provide one-way observation only (no control) and do not support approvals or bidirectional commands.
+
 ---
 
 ## 2A. QR Code Pairing

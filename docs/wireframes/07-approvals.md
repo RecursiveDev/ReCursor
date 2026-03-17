@@ -2,6 +2,8 @@
 
 > Phase 2 — Approve, reject, or modify agent tool calls.
 
+**Architecture Note:** Tool call approvals apply to the **Agent SDK session** — the controllable bridge-side session where ReCursor has execution authority. Hooks provide one-way observation only and do not require or support approvals.
+
 ---
 
 ## 7A. Approval Card (Inline in Chat)
@@ -105,7 +107,7 @@
 
 ```
 +---------------------------------------+
-|  RemoteCLI                    now     |
+|  ReCursor                    now     |
 |  Approval needed: Edit login.dart     |
 |  Claude Code wants to change the      |
 |  OAuth callback URL.                  |

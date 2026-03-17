@@ -14,7 +14,7 @@
 +---------------------------------------+
 |                                       |
 |  +----------------------------------+ |
-|  | RecursiveDev/RemoteCLI           | |
+|  | RecursiveDev/ReCursor           | |
 |  | Mobile AI coding agent controller| |
 |  | Dart  *  12  fork 3  *  2h ago   | |
 |  +----------------------------------+ |
@@ -57,7 +57,7 @@
 
 ```
 +---------------------------------------+
-| [<]  RemoteCLI          [branch: main]|
+| [<]  ReCursor          [branch: main]|
 +---------------------------------------+
 | lib/                                  |
 |   > core/                             |

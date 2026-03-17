@@ -1,4 +1,4 @@
-# RemoteCLI - UI/UX Wireframes
+# ReCursor - UI/UX Wireframes
 
 > Modular ASCII wireframes for every screen in the mobile app.
 > Each file maps to a feature module. Screens are ordered by user flow.
