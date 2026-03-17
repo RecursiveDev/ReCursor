@@ -86,9 +86,27 @@ Most Flutter AI chat apps use HTTP streaming rather than WebSockets, because Ope
 
 **Kelivo** ([Chevey339/kelivo](https://github.com/Chevey339/kelivo), **~1.7K stars**) is the most polished overall Flutter LLM chat client, supporting OpenAI, Gemini, Anthropic, and many other providers. It uses HTTP streaming rather than WebSockets but features MCP support, web search integration, multimodal input (images, PDFs), voice/TTS, and Material You theming. Updated February 2026. **AGPL-3.0 licensed**.
 
-For architecture patterns specifically, **ai_fireside_chat** ([DenisovAV/ai_fireside_chat](https://github.com/DenisovAV/ai_fireside_chat)) provides the cleanest multi-provider abstraction — an abstract `ChatService` with concrete implementations per provider, all returning Dart streams via `processMessageStream()`, using BLoC state management. The official **Flutter AI Toolkit** establishes the canonical `LlmProvider` interface pattern with `generateStream()` returning `Stream<String>`.
+For architecture patterns specifically, **ai_fireside_chat** ([DenisovAV/ai_fireside_chat](https://github.com/DenisovAV/ai_fireside_chat)) provides the cleanest multi-provider abstraction — an abstract `ChatService` with concrete implementations per provider, all returning Dart streams via `processMessageStream()`, using BLoC state management. The official **Flutter AI Toolkit** establishes the canonical `LlmProvider` interface pattern with `generateStream()` returning `Stream<String>`. The **flutter_gen_ai_chat_ui** package ([hooshyar/flutter_gen_ai_chat_ui](https://github.com/hooshyar/flutter_gen_ai_chat_ui)) deserves mention as a framework-agnostic UI component library with streaming text animations (word-by-word rendering like ChatGPT/Claude), markdown support, and an AI Actions System for tool use.
 
-The **flutter_gen_ai_chat_ui** package ([hooshyar/flutter_gen_ai_chat_ui](https://github.com/hooshyar/flutter_gen_ai_chat_ui)) deserves mention as a framework-agnostic UI component library with streaming text animations (word-by-word rendering like ChatGPT/Claude), markdown support, and an AI Actions System for tool use.
+---
+
+## Claude Code Integration Constraints
+
+> **Important Finding**: Claude Code Remote Control is **first-party only**. There is no public API for third-party clients to join or mirror existing Claude Code sessions.
+
+**Supported Integration Paths for ReCursor:**
+
+| Integration | Status | Use Case |
+|-------------|--------|----------|
+| Claude Code Hooks | ✅ Supported | Event observation (one-way) |
+| Agent SDK | ✅ Supported | Parallel agent sessions |
+| MCP (Model Context Protocol) | ✅ Supported | Tool interoperability |
+| Remote Control Protocol | ❌ Not Available | First-party only |
+
+**ReCursor Architecture:**
+- **Event Source**: Claude Code Hooks POST events to bridge
+- **Session Control**: Agent SDK for parallel sessions
+- **UI Pattern**: OpenCode-style tool cards, diff viewer, timeline
 
 ---
 
@@ -97,3 +115,13 @@ The **flutter_gen_ai_chat_ui** package ([hooshyar/flutter_gen_ai_chat_ui](https:
 The research reveals a clear reference architecture for a mobile-first AI coding agent controller built in Flutter. **CC Pocket's WebSocket bridge pattern** — a TypeScript server running alongside the coding agent, connected to a Flutter mobile client via WebSocket with Tailscale tunneling — is the proven approach. For GitHub integration, **GSYGithubAppFlutter's four-layer architecture** with the **github_oauth** package provides the OAuth and API blueprint. For AI chat streaming, **Conduit's Riverpod + Socket.IO implementation** offers the most production-ready WebSocket pattern, while the **Flutter AI Toolkit's `LlmProvider` interface** provides the canonical abstraction layer.
 
 The most impactful architectural decision is which coding agents to target. **OpenCode** (75+ providers, 122K stars) and **Aider** (git-native, 42K stars) have the largest user bases among model-flexible tools, while Claude Code and Codex CLI dominate among vendor-locked options. Goose's CLI pass-through system — letting users route through any existing agent subscription — offers a compelling aggregation model. Building on the WebSocket bridge pattern with multi-agent support (as Happy/Happier attempts) would address the broadest market.
+
+For ReCursor specifically, the architecture combines:
+1. **OpenCode UI patterns** for the mobile interface
+2. **Claude Code Hooks** for event observation
+3. **Agent SDK** for parallel sessions
+4. **CC Pocket's bridge pattern** for connectivity
+
+---
+
+*Last updated: 2026-03-17*
