@@ -1,0 +1,3 @@
+include: package:flutter_lints/flutter.yaml
+
+# Scaffold-only: customize analysis/lints as the app is implemented.
