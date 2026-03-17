@@ -1,0 +1,10 @@
+Initial release of ReCursor — AI Coding Agent companion for mobile.
+
+• Claude Code session monitoring via hooks
+• Tool card approval flow
+• Code diff viewer
+• Agent chat with streaming responses
+• Git operations
+• Terminal access
+• Voice input
+• Offline mode

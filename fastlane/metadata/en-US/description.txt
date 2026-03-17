@@ -1,0 +1,20 @@
+ReCursor brings your AI coding agent workflows to mobile. Monitor Claude Code sessions, review and approve tool calls, view code diffs, and interact with AI coding agents — all from your iPhone or Android device.
+
+FEATURES
+• Real-time Claude Code session monitoring via hooks integration
+• OpenCode-style tool cards showing exactly what your AI agent is doing
+• Syntax-highlighted code diff viewer
+• Tool call approval flow — approve, reject, or modify AI actions before they execute
+• Parallel Agent SDK sessions for direct AI interaction from mobile
+• Session timeline with full event history
+• Git status, commits, and branch management
+• Embedded terminal with ANSI color support
+• Multi-agent support: Claude Code, OpenCode, Aider, Goose
+• Offline mode with local SQLite storage and sync on reconnect
+• Voice-to-text input
+• Secure connection via Tailscale/WireGuard mesh VPN
+
+GETTING STARTED
+ReCursor connects to the ReCursor bridge server running on your development machine. Pair via QR code or manual entry.
+
+Requires: ReCursor bridge server (open source, runs on macOS/Linux/Windows)

@@ -1,12 +1,8 @@
 name: recursor_mobile
-
-description: ReCursor Flutter mobile app (scaffold only).
+description: ReCursor Flutter mobile app — OpenCode-style UI for AI coding agents.
 repository: https://github.com/RecursiveDev/ReCursor
-
-# Prevent accidental publishing.
 publish_to: "none"
-
-version: 0.0.0
+version: 0.1.0+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -15,10 +11,72 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Immutable models
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # Local database
+  drift: ^2.18.0
+  drift_flutter: ^0.2.0
+  sqlite3_flutter_libs: ^0.5.0
+
+  # Key-value cache
+  hive_flutter: ^1.1.0
+
+  # Networking
+  web_socket_channel: ^3.0.0
+
+  # Secure storage
+  flutter_secure_storage: ^9.2.2
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Markdown rendering
+  flutter_markdown: ^0.7.4
+
+  # QR scanning
+  mobile_scanner: ^7.2.0
+
+  # Voice input
+  speech_to_text: ^7.3.0
+
+  # Local notifications
+  flutter_local_notifications: ^17.2.2
+
+  # Crash reporting
+  sentry_flutter: ^9.14.0
+
+  # Utilities
+  uuid: ^4.4.0
+  intl: ^0.19.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   flutter_lints: ^3.0.0
+  build_runner: ^2.4.11
+  freezed: ^2.5.7
+  riverpod_generator: ^2.4.3
+  drift_dev: ^2.18.0
+  json_serializable: ^6.8.0
+  mockito: ^5.4.4
+  patrol: ^3.14.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/
+    - assets/fonts/
+  fonts:
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700

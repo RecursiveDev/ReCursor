@@ -1,0 +1,81 @@
+fastlane_version "2.220.0"
+
+default_platform(:ios)
+
+# ─── iOS ─────────────────────────────────────────────────────────────────────
+
+platform :ios do
+  desc "Sync certificates and provisioning profiles (read-only)"
+  lane :certificates do
+    match(
+      type: "appstore",
+      readonly: true,
+      app_identifier: "dev.recursor.mobile"
+    )
+  end
+
+  desc "Build release IPA"
+  lane :build do
+    match(
+      type: "appstore",
+      readonly: true,
+      app_identifier: "dev.recursor.mobile"
+    )
+
+    build_app(
+      workspace: "apps/mobile/ios/Runner.xcworkspace",
+      scheme: "Runner",
+      export_method: "app-store",
+      output_directory: "apps/mobile/build/ios/iphoneos",
+      clean: true
+    )
+  end
+
+  desc "Upload to TestFlight"
+  lane :testflight do
+    build
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Submit to App Store"
+  lane :release do
+    build
+    upload_to_app_store(
+      skip_metadata: false,
+      skip_screenshots: false,
+      submit_for_review: false
+    )
+  end
+end
+
+# ─── Android ─────────────────────────────────────────────────────────────────
+
+platform :android do
+  desc "Build release App Bundle"
+  lane :build do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "apps/mobile/android"
+    )
+  end
+
+  desc "Deploy to Play Store internal track"
+  lane :deploy do
+    build
+    upload_to_play_store(
+      track: "internal",
+      aab: "apps/mobile/build/app/outputs/bundle/release/app-release.aab"
+    )
+  end
+
+  desc "Promote internal → production"
+  lane :promote do
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production"
+    )
+  end
+end
