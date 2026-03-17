@@ -1,34 +1,31 @@
 # Bridge Protocol Specification
 
-> WebSocket message protocol between the Flutter mobile app and the TypeScript bridge server.
+> WebSocket message protocol between the ReCursor Flutter mobile app and the TypeScript bridge server.
 
 ---
 
 ## Connection Lifecycle
 
-```
-Mobile App                          Bridge Server                    CLI Agent
-    |                                    |                              |
-    |--- wss:// connect (+ auth token) ->|                              |
-    |<-- connection_ack { version } -----|                              |
-    |                                    |                              |
-    |--- heartbeat_ping --------------->|                              |
-    |<-- heartbeat_pong ----------------|                              |
-    |                                    |                              |
-    |--- agent_start { agent, config } ->|--- spawn/attach agent ------>|
-    |<-- agent_ready { session_id } -----|<-- agent initialized --------|
-    |                                    |                              |
-    |--- message { text } ------------->|--- forward to agent --------->|
-    |<-- stream_start { msg_id } -------|<-- agent begins response -----|
-    |<-- stream_chunk { text } ---------|<-- token --------------------|
-    |<-- stream_chunk { text } ---------|<-- token --------------------|
-    |<-- stream_end { msg_id } ---------|<-- agent done ----------------|
-    |                                    |                              |
-    |<-- tool_call { action, params } --|<-- agent requests tool -------|
-    |--- tool_response { approved } --->|--- forward decision --------->|
-    |                                    |                              |
-    |--- disconnect ------------------->|                              |
-    |<-- connection_closed --------------|                              |
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+    participant Hooks as Claude Code Hooks
+    participant CC as Claude Code
+
+    Note over Mobile,CC: Initial Connection
+    Mobile->>Bridge: wss:// connect + auth token
+    Bridge-->>Mobile: connection_ack { version, sessions }
+    
+    Mobile->>Bridge: heartbeat_ping
+    Bridge-->>Mobile: heartbeat_pong
+
+    Note over Mobile,CC: Claude Code Hook Registration
+    CC->>Hooks: SessionStart event
+    Hooks->>Bridge: HTTP POST /hooks/event
+    Bridge-->>Hooks: 200 OK
+    
+    Bridge->>Mobile: session_started { session_id }
 ```
 
 ---
@@ -141,43 +138,21 @@ Agent session is initialized and ready.
     "session_id": "sess-abc123",
     "agent": "claude-code",
     "working_directory": "/home/user/project",
-    "branch": "main"
+    "branch": "main",
+    "status": "ready"
   }
 }
 ```
 
 #### `session_end` (bidirectional)
-Terminate a session.
+End a session. Can be initiated by client or server.
 
 ```json
 {
   "type": "session_end",
-  "id": "req-002",
   "payload": {
     "session_id": "sess-abc123",
-    "reason": "user_closed"
-  }
-}
-```
-
-#### `session_list` (client -> server) / `session_list_response` (server -> client)
-```json
-{ "type": "session_list", "id": "req-003" }
-
-{
-  "type": "session_list_response",
-  "id": "req-003",
-  "payload": {
-    "sessions": [
-      {
-        "session_id": "sess-abc123",
-        "agent": "claude-code",
-        "title": "Fix auth bug",
-        "created_at": "2026-03-16T10:00:00Z",
-        "last_message_at": "2026-03-16T10:32:00Z",
-        "status": "active"
-      }
-    ]
+    "reason": "user_request" // or "timeout", "error", "completed"
   }
 }
 ```
@@ -187,7 +162,7 @@ Terminate a session.
 ### Chat Messages
 
 #### `message` (client -> server)
-Send a user message to the agent.
+Send a chat message to the agent.
 
 ```json
 {
@@ -195,60 +170,60 @@ Send a user message to the agent.
   "id": "msg-001",
   "payload": {
     "session_id": "sess-abc123",
-    "text": "Fix the OAuth redirect bug in lib/auth/login.dart",
-    "attachments": []
+    "content": "Fix the auth bug in login.dart",
+    "role": "user"
   }
 }
 ```
 
 #### `stream_start` (server -> client)
-Agent begins generating a response.
+Agent begins streaming a response.
 
 ```json
 {
   "type": "stream_start",
-  "id": "msg-001",
   "payload": {
     "session_id": "sess-abc123",
-    "message_id": "resp-001"
+    "message_id": "msg-resp-001"
   }
 }
 ```
 
 #### `stream_chunk` (server -> client)
-A chunk of the agent's streamed response.
+Chunk of streamed response content.
 
 ```json
 {
   "type": "stream_chunk",
   "payload": {
-    "message_id": "resp-001",
-    "text": "I'll fix the OAuth redirect",
-    "chunk_index": 0
+    "session_id": "sess-abc123",
+    "message_id": "msg-resp-001",
+    "content": "I'll help you fix the auth bug",
+    "is_tool_use": false
   }
 }
 ```
 
 #### `stream_end` (server -> client)
-Agent finished generating the response.
+Streaming response is complete.
 
 ```json
 {
   "type": "stream_end",
   "payload": {
-    "message_id": "resp-001",
-    "final_text": "I'll fix the OAuth redirect in login.dart...",
-    "token_count": 245
+    "session_id": "sess-abc123",
+    "message_id": "msg-resp-001",
+    "finish_reason": "stop" // or "tool_call", "length", "error"
   }
 }
 ```
 
 ---
 
-### Tool Calls & Approvals
+### Tool Calls
 
 #### `tool_call` (server -> client)
-Agent requests permission to execute a tool.
+Agent wants to use a tool. Sent when Agent SDK initiates tool use.
 
 ```json
 {
@@ -256,61 +231,88 @@ Agent requests permission to execute a tool.
   "id": "tool-001",
   "payload": {
     "session_id": "sess-abc123",
+    "tool_call_id": "call-abc123",
     "tool": "edit_file",
-    "description": "Edit lib/auth/login.dart lines 42-45",
     "params": {
-      "file": "lib/auth/login.dart",
-      "start_line": 42,
-      "end_line": 45,
-      "old_content": "callbackUrl: 'http://localhost'",
-      "new_content": "callbackUrl: 'https://localhost'"
+      "file_path": "/home/user/project/lib/auth.dart",
+      "old_string": "void login() {",
+      "new_string": "void login() async {"
     },
-    "reasoning": "The callback URL must use HTTPS for OAuth security.",
-    "risk_level": "low"
+    "description": "Add async keyword to login function"
   }
 }
 ```
 
-`risk_level`: `"low"` | `"medium"` | `"high"` | `"critical"`
-
-#### `tool_response` (client -> server)
-User's decision on the tool call.
+#### `claude_event` (server -> client)
+Event from Claude Code Hooks. See [Claude Code Hooks Integration](integration/claude-code-hooks.md).
 
 ```json
 {
-  "type": "tool_response",
+  "type": "claude_event",
+  "payload": {
+    "event_type": "PostToolUse",
+    "session_id": "sess-abc123",
+    "timestamp": "2026-03-16T10:32:00Z",
+    "payload": {
+      "tool": "edit_file",
+      "result": { "success": true }
+    }
+  }
+}
+```
+
+#### `approval_required` (server -> client)
+Tool call requires user approval (from Hooks or Agent SDK).
+
+```json
+{
+  "type": "approval_required",
   "id": "tool-001",
   "payload": {
     "session_id": "sess-abc123",
-    "decision": "approved",
-    "modifications": null
+    "tool_call_id": "call-abc123",
+    "tool": "run_command",
+    "params": {
+      "command": "flutter build apk"
+    },
+    "description": "Build Android APK",
+    "risk_level": "medium",
+    "source": "hooks" // or "agent_sdk"
   }
 }
 ```
 
-`decision`: `"approved"` | `"rejected"` | `"modified"`
+#### `approval_response` (client -> server)
+User's decision on a tool call approval.
 
-When `decision` is `"modified"`:
 ```json
 {
-  "decision": "modified",
-  "modifications": "Also update the staging environment URL in config/staging.yaml"
+  "type": "approval_response",
+  "id": "tool-001",
+  "payload": {
+    "session_id": "sess-abc123",
+    "tool_call_id": "call-abc123",
+    "decision": "approved", // or "rejected", "modified"
+    "modifications": null // or modified params
+  }
 }
 ```
 
 #### `tool_result` (server -> client)
-Outcome of an executed tool.
+Result of tool execution.
 
 ```json
 {
   "type": "tool_result",
-  "id": "tool-001",
   "payload": {
     "session_id": "sess-abc123",
+    "tool_call_id": "call-abc123",
     "tool": "edit_file",
-    "success": true,
-    "output": "File edited successfully: lib/auth/login.dart",
-    "diff": "@@ -42,1 +42,1 @@\n-callbackUrl: 'http://...'\n+callbackUrl: 'https://...'"
+    "result": {
+      "success": true,
+      "content": "File edited successfully",
+      "diff": "... unified diff ..."
+    }
   }
 }
 ```
@@ -319,97 +321,228 @@ Outcome of an executed tool.
 
 ### Git Operations
 
-#### `git_command` (client -> server)
-Execute a git operation through the bridge.
+#### `git_status_request` (client -> server)
+Request current git status.
 
 ```json
 {
-  "type": "git_command",
+  "type": "git_status_request",
+  "id": "git-001",
+  "payload": {
+    "session_id": "sess-abc123"
+  }
+}
+```
+
+#### `git_status_response` (server -> client)
+Current git status.
+
+```json
+{
+  "type": "git_status_response",
   "id": "git-001",
   "payload": {
     "session_id": "sess-abc123",
-    "command": "commit",
-    "params": {
-      "message": "Fix OAuth redirect bug",
-      "files": ["lib/auth/login.dart", "lib/auth/oauth.dart"]
-    }
+    "branch": "feature/auth-fix",
+    "ahead": 2,
+    "behind": 0,
+    "is_clean": false,
+    "changes": [
+      { "path": "lib/auth.dart", "status": "modified", "additions": 5, "deletions": 2 }
+    ]
   }
 }
 ```
 
-Supported commands: `status`, `commit`, `push`, `pull`, `fetch`, `branch_list`, `branch_create`, `branch_switch`, `log`, `diff`.
-
-#### `git_result` (server -> client)
-```json
-{
-  "type": "git_result",
-  "id": "git-001",
-  "payload": {
-    "command": "commit",
-    "success": true,
-    "output": "Created commit abc1234: Fix OAuth redirect bug",
-    "data": {
-      "commit_hash": "abc1234",
-      "branch": "main",
-      "files_changed": 2
-    }
-  }
-}
-```
-
-#### `git_progress` (server -> client)
-Progress updates for long-running git operations (push, pull, clone).
+#### `git_commit` (client -> server)
+Create a commit.
 
 ```json
 {
-  "type": "git_progress",
+  "type": "git_commit",
   "id": "git-002",
   "payload": {
-    "command": "push",
-    "phase": "compressing",
-    "progress": 63,
-    "message": "Compressing objects: 63% (3/5)"
+    "session_id": "sess-abc123",
+    "message": "Fix auth bug in login flow",
+    "files": ["lib/auth.dart"] // null = all staged
+  }
+}
+```
+
+#### `git_diff` (client -> server)
+Request diff for files.
+
+```json
+{
+  "type": "git_diff",
+  "id": "git-003",
+  "payload": {
+    "session_id": "sess-abc123",
+    "files": ["lib/auth.dart"], // null = all changes
+    "cached": false
+  }
+}
+```
+
+#### `git_diff_response` (server -> client)
+Diff content.
+
+```json
+{
+  "type": "git_diff_response",
+  "id": "git-003",
+  "payload": {
+    "session_id": "sess-abc123",
+    "files": [
+      {
+        "path": "lib/auth.dart",
+        "old_path": "lib/auth.dart",
+        "new_path": "lib/auth.dart",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "hunks": [
+          {
+            "header": "@@ -10,5 +10,5 @@",
+            "old_start": 10,
+            "old_lines": 5,
+            "new_start": 10,
+            "new_lines": 5,
+            "lines": [
+              { "type": "context", "content": " class AuthService {" },
+              { "type": "removed", "content": "-  void login() {" },
+              { "type": "added", "content": "+  void login() async {" },
+              { "type": "context", "content": "     // ..." }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
 ---
 
-### Terminal
+### File Operations
 
-#### `terminal_input` (client -> server)
+#### `file_list` (client -> server)
+List files in a directory.
+
 ```json
 {
-  "type": "terminal_input",
-  "id": "term-001",
+  "type": "file_list",
+  "id": "file-001",
   "payload": {
-    "session_id": "term-sess-001",
-    "input": "flutter test\n"
+    "session_id": "sess-abc123",
+    "path": "/home/user/project/lib"
   }
 }
 ```
 
-#### `terminal_output` (server -> client)
+#### `file_list_response` (server -> client)
+Directory listing.
+
 ```json
 {
-  "type": "terminal_output",
+  "type": "file_list_response",
+  "id": "file-001",
   "payload": {
-    "session_id": "term-sess-001",
-    "output": "00:05 +12: All tests passed!\n",
-    "is_stderr": false
+    "session_id": "sess-abc123",
+    "path": "/home/user/project/lib",
+    "entries": [
+      { "name": "auth.dart", "type": "file", "size": 2048 },
+      { "name": "models", "type": "directory" }
+    ]
   }
 }
 ```
 
-#### `terminal_signal` (client -> server)
-Send signals (e.g., Ctrl+C).
+#### `file_read` (client -> server)
+Read file content.
 
 ```json
 {
-  "type": "terminal_signal",
+  "type": "file_read",
+  "id": "file-002",
   "payload": {
-    "session_id": "term-sess-001",
-    "signal": "SIGINT"
+    "session_id": "sess-abc123",
+    "path": "/home/user/project/lib/auth.dart",
+    "offset": 0,
+    "limit": 100
+  }
+}
+```
+
+#### `file_read_response` (server -> client)
+File content.
+
+```json
+{
+  "type": "file_read_response",
+  "id": "file-002",
+  "payload": {
+    "session_id": "sess-abc123",
+    "path": "/home/user/project/lib/auth.dart",
+    "content": "class AuthService { ... }",
+    "size": 2048,
+    "lines": 45
+  }
+}
+```
+
+---
+
+### Notifications
+
+#### `notification` (server -> client)
+Server-initiated notification.
+
+```json
+{
+  "type": "notification",
+  "id": "notif-001",
+  "payload": {
+    "session_id": "sess-abc123",
+    "notification_type": "approval_required",
+    "title": "Approval needed: Edit login.dart",
+    "body": "Claude Code wants to change the OAuth callback URL.",
+    "priority": "high",
+    "data": {
+      "tool_call_id": "tool-001",
+      "screen": "approval_detail"
+    }
+  }
+}
+```
+
+#### `notification_ack` (client -> server)
+Acknowledge receipt of notifications.
+
+```json
+{
+  "type": "notification_ack",
+  "payload": {
+    "notification_ids": ["notif-001", "notif-002"]
+  }
+}
+```
+
+---
+
+### Errors
+
+#### `error` (server -> client)
+Server-side error.
+
+```json
+{
+  "type": "error",
+  "payload": {
+    "code": "AGENT_ERROR",
+    "message": "Failed to execute tool: permission denied",
+    "session_id": "sess-abc123",
+    "recoverable": true
   }
 }
 ```
@@ -418,33 +551,36 @@ Send signals (e.g., Ctrl+C).
 
 ## Error Codes
 
-| Code | Description |
-|------|-------------|
-| `AUTH_FAILED` | Invalid or expired auth token |
-| `SESSION_NOT_FOUND` | Referenced session does not exist |
-| `AGENT_UNAVAILABLE` | Requested agent type not installed or not responding |
-| `AGENT_ERROR` | Agent returned an error |
-| `GIT_ERROR` | Git operation failed |
-| `PERMISSION_DENIED` | Operation blocked by bridge authorization policy |
-| `RATE_LIMITED` | Too many requests |
-| `INTERNAL_ERROR` | Unexpected bridge server error |
-
-Error response format:
-```json
-{
-  "type": "error",
-  "id": "original-request-id",
-  "payload": {
-    "code": "SESSION_NOT_FOUND",
-    "message": "Session sess-xyz does not exist or has expired"
-  }
-}
-```
+| Code | Description | Recoverable |
+|------|-------------|-------------|
+| `AUTH_FAILED` | Invalid or expired token | No (re-auth required) |
+| `SESSION_NOT_FOUND` | Session ID doesn't exist | No |
+| `AGENT_ERROR` | Agent execution failed | Yes (retry) |
+| `TOOL_ERROR` | Tool execution failed | Yes (modify params) |
+| `GIT_ERROR` | Git operation failed | Yes |
+| `RATE_LIMITED` | Too many requests | Yes (backoff) |
+| `BRIDGE_ERROR` | Internal bridge error | Yes |
 
 ---
 
-## Protocol Versioning
+## Reconnection Behavior
 
-- Protocol version is exchanged during `connection_ack`.
-- Clients and servers should be forward-compatible: ignore unknown fields.
-- Breaking changes increment the major version. The bridge rejects connections from incompatible clients with `connection_error` code `VERSION_MISMATCH`.
+When the mobile app reconnects after disconnection:
+
+1. Client sends `auth` message
+2. Server responds with `connection_ack` including `active_sessions`
+3. Server replays any queued events (notifications, tool results)
+4. Client acknowledges with `notification_ack`
+
+---
+
+## Related Documentation
+
+- [Architecture Overview](architecture/overview.md) — System architecture
+- [Data Flow](architecture/data-flow.md) — Message sequence diagrams
+- [Claude Code Hooks Integration](integration/claude-code-hooks.md) — Hook event format
+- [Agent SDK Integration](integration/agent-sdk.md) — Agent SDK message flow
+
+---
+
+*Last updated: 2026-03-17*
