@@ -1,13 +1,13 @@
 # Project Structure
 
-> Flutter directory layout and module organization for RemoteCLI.
+> Flutter directory layout and module organization for ReCursor.
 
 ---
 
 ## Top-Level Layout
 
 ```
-remotecli/
+recursor/
 ├── apps/
 │   └── mobile/                    # Flutter mobile app (iOS + Android)
 │       ├── android/
@@ -29,6 +29,7 @@ remotecli/
 │       ├── src/
 │       │   ├── server.ts          # WebSocket server entry
 │       │   ├── agents/            # Agent adapters (Claude Code, OpenCode, etc.)
+│       │   ├── hooks/             # Claude Code Hooks receiver
 │       │   ├── git/               # Git operation handlers
 │       │   ├── terminal/          # Terminal session manager
 │       │   ├── auth/              # Token validation, rate limiting
@@ -137,69 +138,58 @@ features/
 │           ├── message_bubble.dart
 │           ├── streaming_text.dart
 │           ├── chat_input_bar.dart
+│           ├── tool_card.dart          # OpenCode-style tool card
+│           ├── message_part.dart       # OpenCode-style message parts
 │           └── voice_input_sheet.dart
-│
-├── files/                         # File browsing (via bridge)
-│   ├── data/
-│   │   ├── models/
-│   │   │   └── file_tree_node.dart
-│   │   └── repositories/
-│   │       └── file_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── file_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   ├── file_tree_screen.dart
-│       │   └── file_viewer_screen.dart
-│       └── widgets/
-│           ├── tree_node.dart
-│           └── syntax_viewer.dart
-│
-├── git/                           # Git operations
-│   ├── data/
-│   │   ├── models/
-│   │   │   ├── git_status.dart
-│   │   │   ├── git_branch.dart
-│   │   │   └── git_commit.dart
-│   │   └── repositories/
-│   │       └── git_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       ├── git_provider.dart
-│   │       └── branch_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   ├── git_overview_screen.dart
-│       │   ├── branch_manager_screen.dart
-│       │   └── commit_screen.dart
-│       └── widgets/
-│           ├── branch_card.dart
-│           ├── commit_card.dart
-│           └── push_pull_progress.dart
 │
 ├── diff/                          # Code diff viewer
 │   ├── data/
-│   │   └── models/
-│   │       ├── diff_file.dart
-│   │       └── diff_hunk.dart
+│   │   └── repositories/
+│   │       └── diff_repository.dart
 │   ├── domain/
 │   │   └── providers/
 │   │       └── diff_provider.dart
 │   └── presentation/
 │       ├── screens/
-│       │   ├── diff_overview_screen.dart
-│       │   └── diff_detail_screen.dart
+│       │   └── diff_viewer_screen.dart
 │       └── widgets/
-│           ├── unified_diff_view.dart
-│           ├── side_by_side_diff.dart
-│           ├── diff_line.dart
-│           └── line_comment_sheet.dart
+│           ├── diff_viewer.dart       # OpenCode-style diff viewer
+│           ├── diff_file_card.dart
+│           ├── diff_hunk_view.dart
+│           └── syntax_highlighted_text.dart
 │
-├── approvals/                     # Tool call approval flow
+├── session/                       # Session management
 │   ├── data/
-│   │   ├── models/
-│   │   │   └── tool_call.dart
+│   │   └── repositories/
+│   │       └── session_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── session_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   └── session_detail_screen.dart
+│       └── widgets/
+│           ├── session_timeline.dart   # OpenCode-style timeline
+│           ├── session_card.dart
+│           └── event_badge.dart
+│
+├── git/                           # Git operations
+│   ├── data/
+│   │   └── repositories/
+│   │       └── git_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── git_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   ├── commit_screen.dart
+│       │   └── branch_screen.dart
+│       └── widgets/
+│           ├── git_status_card.dart
+│           └── file_change_tile.dart
+│
+├── approvals/                     # Tool call approvals
+│   ├── data/
 │   │   └── repositories/
 │   │       └── approval_repository.dart
 │   ├── domain/
@@ -207,31 +197,28 @@ features/
 │   │       └── approval_provider.dart
 │   └── presentation/
 │       ├── screens/
-│       │   ├── approval_detail_screen.dart
-│       │   └── audit_log_screen.dart
+│       │   └── approval_detail_screen.dart
 │       └── widgets/
 │           ├── approval_card.dart
-│           └── modify_sheet.dart
+│           ├── risk_indicator.dart
+│           └── modification_editor.dart
 │
 ├── terminal/                      # Terminal session
 │   ├── data/
-│   │   └── models/
-│   │       └── terminal_session.dart
+│   │   └── repositories/
+│   │       └── terminal_repository.dart
 │   ├── domain/
 │   │   └── providers/
 │   │       └── terminal_provider.dart
 │   └── presentation/
 │       ├── screens/
-│       │   ├── terminal_screen.dart
-│       │   └── terminal_picker_screen.dart
+│       │   └── terminal_screen.dart
 │       └── widgets/
 │           ├── terminal_output.dart
-│           └── terminal_input_bar.dart
+│           └── ansi_renderer.dart
 │
-├── agents/                        # Multi-agent management
+├── agents/                        # Agent management
 │   ├── data/
-│   │   ├── models/
-│   │   │   └── agent_config.dart
 │   │   └── repositories/
 │   │       └── agent_repository.dart
 │   ├── domain/
@@ -239,33 +226,31 @@ features/
 │   │       └── agent_provider.dart
 │   └── presentation/
 │       ├── screens/
-│       │   ├── agent_registry_screen.dart
-│       │   ├── agent_config_screen.dart
-│       │   └── add_agent_screen.dart
+│       │   ├── agent_list_screen.dart
+│       │   └── agent_config_screen.dart
 │       └── widgets/
-│           ├── agent_card.dart
-│           └── agent_switcher_sheet.dart
+│           └── agent_card.dart
 │
-├── settings/                      # App settings
+├── auth/                          # Authentication
+│   ├── data/
+│   │   └── repositories/
+│   │       └── auth_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── auth_provider.dart
 │   └── presentation/
 │       ├── screens/
-│       │   ├── settings_screen.dart
-│       │   ├── account_screen.dart
-│       │   ├── notification_prefs_screen.dart
-│       │   ├── bridge_settings_screen.dart
-│       │   └── offline_storage_screen.dart
+│       │   ├── login_screen.dart
+│       │   └── splash_screen.dart
 │       └── widgets/
-│           └── settings_tile.dart
+│           └── auth_button.dart
 │
-└── bridge/                        # Bridge pairing & connection
-    ├── data/
-    │   └── repositories/
-    │       └── bridge_repository.dart
+└── settings/                      # App settings
     └── presentation/
         ├── screens/
-        │   └── qr_pairing_screen.dart
+        │   └── settings_screen.dart
         └── widgets/
-            └── connection_status_bar.dart
+            └── setting_tile.dart
 ```
 
 ### `shared/` — Shared UI Components
@@ -273,76 +258,92 @@ features/
 ```
 shared/
 ├── widgets/
-│   ├── adaptive_layout.dart       # Responsive phone/tablet wrapper
-│   ├── loading_indicator.dart
-│   ├── error_banner.dart
-│   ├── offline_banner.dart
-│   ├── empty_state.dart
-│   └── confirm_dialog.dart
-├── extensions/
-│   ├── context_extensions.dart    # Theme, media query shortcuts
-│   └── string_extensions.dart
-└── constants/
-    ├── app_sizes.dart             # Spacing, padding, breakpoints
-    └── app_colors.dart            # Color tokens
+│   ├── loading_indicator.dart     # Consistent loading states
+│   ├── error_card.dart            # Error display
+│   ├── empty_state.dart           # Empty list placeholder
+│   ├── connection_status_bar.dart # Online/offline indicator
+│   ├── code_block.dart            # Syntax-highlighted code
+│   ├── expandable_card.dart       # Reusable expandable pattern
+│   └── markdown_view.dart         # Markdown rendering
+│
+├── constants/
+│   ├── colors.dart                # App color palette
+│   ├── typography.dart            # Text styles
+│   └── dimens.dart                # Spacing, sizing constants
+│
+└── utils/
+    ├── date_formatter.dart        # Date/time formatting
+    ├── diff_parser.dart           # Unified diff parsing
+    └── ansi_parser.dart           # ANSI color code parsing
 ```
 
 ---
 
-## Test Structure
-
-Mirrors the `lib/` structure:
+## Bridge Server Structure (`packages/bridge/src/`)
 
 ```
-test/
-├── core/
-│   ├── network/
-│   │   └── websocket_service_test.dart
-│   ├── auth/
-│   │   └── auth_provider_test.dart
-│   ├── storage/
-│   │   └── database_test.dart
-│   └── sync/
-│       └── sync_service_test.dart
-├── features/
-│   ├── chat/
-│   │   ├── data/chat_repository_test.dart
-│   │   ├── domain/chat_provider_test.dart
-│   │   └── presentation/chat_screen_test.dart
-│   ├── files/
-│   │   └── ...
-│   ├── git/
-│   │   └── ...
-│   └── ...
-├── shared/
-│   └── widgets/
-│       └── adaptive_layout_test.dart
-├── goldens/                       # Golden test baselines
-│   └── ...
-└── helpers/
-    ├── test_bridge_server.dart    # Local WS server for integration tests
-    ├── mock_providers.dart        # Shared Riverpod overrides
-    └── fixtures/                  # JSON fixtures for mock responses
-        ├── session_ready.json
-        ├── stream_chunk.json
-        └── tool_call.json
-
-integration_test/
-├── auth_flow_test.dart
-├── chat_flow_test.dart
-├── git_operations_test.dart
-└── approval_flow_test.dart
+bridge/
+├── server.ts                      # Express + WebSocket server entry
+├── config.ts                      # Environment configuration
+├── types.ts                       # TypeScript type definitions
+│
+├── websocket/
+│   ├── server.ts                  # WebSocket server setup
+│   ├── connection_manager.ts      # Client connection tracking
+│   └── message_handler.ts         # Message routing
+│
+├── hooks/
+│   ├── receiver.ts                # Claude Code Hooks HTTP endpoint
+│   ├── validator.ts               # Event validation
+│   └── event_queue.ts             # Event queuing for offline replay
+│
+├── agents/
+│   ├── agent_sdk_adapter.ts       # Agent SDK integration
+│   ├── session_manager.ts         # Session lifecycle management
+│   └── tool_executor.ts           # Tool execution wrapper
+│
+├── git/
+│   ├── git_service.ts             # Git operations
+│   └── diff_parser.ts             # Diff generation
+│
+├── terminal/
+│   ├── terminal_manager.ts        # Terminal session management
+│   └── output_stream.ts           # Terminal output streaming
+│
+├── auth/
+│   ├── token_validator.ts         # JWT/auth token validation
+│   └── rate_limiter.ts            # Rate limiting
+│
+└── notifications/
+    ├── event_bus.ts               # Internal event bus
+    └── dispatcher.ts              # WebSocket dispatch
 ```
 
 ---
 
-## Naming Conventions
+## Key Principles
 
-| Type | Convention | Example |
-|------|-----------|---------|
-| Files | `snake_case.dart` | `chat_screen.dart` |
-| Classes | `PascalCase` | `ChatScreen` |
-| Providers | `camelCaseProvider` | `chatProvider` |
-| Tests | `<file>_test.dart` | `chat_screen_test.dart` |
-| Feature dirs | `snake_case` | `features/chat/` |
-| Constants | `camelCase` | `defaultPadding` |
+1. **Feature-Based Organization**: Each feature is self-contained with its own data, domain, and presentation layers.
+
+2. **Clean Architecture**: Dependencies flow inward:
+   - Presentation depends on Domain
+   - Domain depends on Data
+   - Data depends on Core
+
+3. **Riverpod for State**: All state management uses Riverpod providers, defined in `domain/providers/`.
+
+4. **Repository Pattern**: All data access goes through repositories, which abstract local (Drift/Hive) vs. remote (WebSocket) sources.
+
+5. **OpenCode UI Patterns**: UI components follow OpenCode patterns (tool cards, diff viewer, session timeline).
+
+---
+
+## Related Documentation
+
+- [Data Models](data-models.md) — Drift schemas and domain entities
+- [Architecture Overview](architecture/overview.md) — System architecture
+- [OpenCode UI Patterns](integration/opencode-ui-patterns.md) — UI component mapping
+
+---
+
+*Last updated: 2026-03-17*
