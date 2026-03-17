@@ -90,6 +90,19 @@ Before marking docs work complete:
   - `C:/Repository/claude-code/plugins/plugin-dev/skills/hook-development/SKILL.md`
   - `C:/Repository/claude-code/plugins/hookify/hooks/hooks.json`
 
+### 4.3 Commit message guidelines
+
+**Do not mention agentic authors or subauthors in commit messages.**
+
+- No references to "Claude Code", "Cursor", "Copilot", or other coding agents in commit messages.
+- No co-authored-by lines referencing AI assistants.
+- Commit messages should reflect the human author's intent and rationale.
+- Examples of forbidden patterns:
+  - `Co-authored-by: Claude <noreply@anthropic.com>`
+  - `Generated with Claude Code`
+  - `Written by Cursor AI`
+- Focus on **what changed** and **why**, not **who/what wrote it**.
+
 ---
 
 ## 5) Preferred workflow for future implementation
