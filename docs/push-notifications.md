@@ -1,6 +1,6 @@
 # In-App Notification Architecture
 
-> How the bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based.
+> How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based.
 
 ---
 
@@ -12,21 +12,28 @@ Agent Event -> Bridge Server -> WebSocket -> Mobile App -> Local Notification (i
 
 All notifications flow through the existing WebSocket connection. No external push services (FCM/APNs) are used.
 
+---
+
 ## Notification Delivery
 
 ### When App is Connected (Foreground)
+
 - Bridge sends a `notification` message over the WebSocket.
 - App displays an in-app banner/toast or updates the notification center badge.
 - No OS-level notification needed — the user is already in the app.
 
 ### When App is Backgrounded
+
 - If the WebSocket connection is still alive (kept by OS background mode), the app receives the event and displays a **local notification** via `flutter_local_notifications`.
 - Local notifications support action buttons (e.g., "Approve" / "View").
 
 ### When App is Disconnected
+
 - Bridge stores events in a **pending event queue**.
 - On reconnect, bridge replays all unacknowledged events.
 - App processes the backlog and shows relevant notifications.
+
+---
 
 ## Notification Types
 
@@ -36,6 +43,8 @@ All notifications flow through the existing WebSocket connection. No external pu
 | Approval Required | Agent needs tool call approval | High | Approve/reject buttons |
 | Error | Agent encounters an error | High | Navigate to chat |
 | Agent Idle | Agent waiting for input | Low | Navigate to chat |
+
+---
 
 ## WebSocket Message Format
 
@@ -57,6 +66,8 @@ All notifications flow through the existing WebSocket connection. No external pu
 }
 ```
 
+---
+
 ## Acknowledgment
 
 ```json
@@ -70,6 +81,8 @@ All notifications flow through the existing WebSocket connection. No external pu
 
 The bridge removes acknowledged events from the pending queue.
 
+---
+
 ## In-App Notification Center
 
 - Bell icon in the app bar with unread count badge.
@@ -78,12 +91,16 @@ The bridge removes acknowledged events from the pending queue.
 - "Mark all read" action.
 - Notifications persist locally in Drift for offline access.
 
+---
+
 ## Reliability
 
 - WebSocket heartbeat ensures connection is alive.
 - If heartbeat fails, app shows "disconnected" banner — user knows notifications won't arrive.
 - On reconnect, bridge replays full event backlog (bounded by configurable max age, e.g., 24 hours).
 - No silent failure — if the connection is down, the user sees it immediately.
+
+---
 
 ## Trade-offs vs. Firebase
 
@@ -96,3 +113,64 @@ The bridge removes acknowledged events from the pending queue.
 | Reliability when connected | Immediate, guaranteed | Best-effort delivery |
 
 The WebSocket-only approach is chosen because the app's primary value requires an active bridge connection anyway. If the bridge is unreachable, notifications are moot.
+
+---
+
+## Local Notification Configuration
+
+```dart
+// Initialize local notifications
+final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+const iosSettings = DarwinInitializationSettings(
+  requestAlertPermission: true,
+  requestBadgePermission: true,
+  requestSoundPermission: true,
+);
+
+await flutterLocalNotificationsPlugin.initialize(
+  const InitializationSettings(android: androidSettings, iOS: iosSettings),
+  onDidReceiveNotificationResponse: (response) {
+    // Handle notification tap
+    _handleNotificationTap(response.payload);
+  },
+);
+
+// Show local notification
+Future<void> showLocalNotification(AppNotification notification) async {
+  const androidDetails = AndroidNotificationDetails(
+    'recursor_channel',
+    'ReCursor Notifications',
+    importance: Importance.high,
+    priority: Priority.high,
+    showWhen: true,
+  );
+  
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+  
+  await flutterLocalNotificationsPlugin.show(
+    notification.id.hashCode,
+    notification.title,
+    notification.body,
+    const NotificationDetails(android: androidDetails, iOS: iosDetails),
+    payload: jsonEncode(notification.data),
+  );
+}
+```
+
+---
+
+## Related Documentation
+
+- [Bridge Protocol](bridge-protocol.md) — WebSocket message specification
+- [Architecture Overview](architecture/overview.md) — System architecture
+- [Data Flow](architecture/data-flow.md) — Message sequence diagrams
+
+---
+
+*Last updated: 2026-03-17*
