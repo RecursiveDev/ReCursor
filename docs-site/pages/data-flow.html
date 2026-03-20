@@ -1,0 +1,67 @@
+<article class="page">
+  <div class="page-header">
+    <div class="breadcrumb">Core Concepts</div>
+    <h1>Data Flow</h1>
+    <p class="page-subtitle">Message-level flows between the mobile app, bridge server, and Claude Code.</p>
+  </div>
+
+  <h2>User Sends a Message</h2>
+  <div class="diagram-container">
+    <pre class="diagram">
+  ReCursor App       Bridge Server       Agent SDK         Claude API
+      |                    |                 |                  |
+      |--- message ------->|                 |                  |
+      |                    |-- agent.run() ->|                  |
+      |                    |                 |--- API request ->|
+      |                    |                 |<-- stream -------|
+      |                    |<- stream_chunk -|                  |
+      |<-- stream_chunk ---|                 |                  |
+      |    (update UI)     |                 |                  |
+      |                    |<- complete -----|                  |
+      |<-- stream_end -----|                 |                  |</pre>
+  </div>
+
+  <h2>Tool Execution with Approval</h2>
+  <div class="diagram-container">
+    <pre class="diagram">
+  ReCursor App       Bridge Server       Agent SDK         Tools
+      |                    |                 |               |
+      |                    |                 |-- tool_use -->|
+      |                    |<- tool_use -----|               |
+      |<-- approval_req ---|                 |               |
+      |                    |                 |               |
+      |-- approved ------->|                 |               |
+      |                    |-- continue ---->|               |
+      |                    |                 |-- execute --->|
+      |                    |                 |<-- result ----|
+      |                    |<- tool_result --|               |
+      |<-- tool_result ----|                 |               |
+      |  (render card)     |                 |               |</pre>
+  </div>
+
+  <h2>Hook Event Observation</h2>
+  <div class="diagram-container">
+    <pre class="diagram">
+  ReCursor App       Bridge Server        Hooks          Claude Code
+      |                    |                 |               |
+      |                    |                 |<- PostToolUse-|
+      |                    |<- HTTP POST ----|               |
+      |                    |--- 200 OK ----->|               |
+      |<-- claude_event ---|                 |               |
+      |  (update timeline) |                 |               |</pre>
+  </div>
+
+  <h2>Reconnection &amp; Event Replay</h2>
+  <div class="diagram-container">
+    <pre class="diagram">
+  ReCursor App       Bridge Server       Event Queue
+      |                    |                 |
+      |  (disconnected)    |                 |
+      |                    |<- events -------|  (queued while offline)
+      |                    |                 |
+      |--- auth ---------> |                 |
+      |<-- connection_ack -|                 |
+      |<-- queued events --|-- dequeue ----->|
+      |-- notification_ack>|                 |</pre>
+  </div>
+</article>

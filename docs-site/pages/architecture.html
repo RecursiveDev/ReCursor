@@ -1,0 +1,143 @@
+<article class="page">
+  <div class="page-header">
+    <div class="breadcrumb">Getting Started</div>
+    <h1>Architecture Overview</h1>
+    <p class="page-subtitle">System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI connecting to your user-controlled desktop bridge.</p>
+  </div>
+
+  <h2>System Context</h2>
+  <div class="diagram-container">
+    <pre class="diagram">
+  +---------------------------+
+  |   ReCursor Flutter App    |
+  |  +---------------------+  |
+  |  | OpenCode-like UI    |  |
+  |  | Riverpod State Mgmt |  |
+  |  | WebSocket Client    |  |
+  |  +----------+----------+  |
+  +-------------|-------------+
+                | wss:// (Tailscale/WireGuard)
+  +-------------|-----------------------------+
+  |  Development Machine                      |
+  |  +--------v----------+                    |
+  |  | Bridge Server     |                    |
+  |  | (TypeScript/Node)  |                    |
+  |  +--+----------+-----+                    |
+  |     |          |                           |
+  |  +--v---+  +---v-----------+              |
+  |  | Hooks|  | Agent SDK     |              |
+  |  +--+---+  | (Parallel)    |              |
+  |     |      +-------+-------+              |
+  |  +--v-----------+  |                      |
+  |  | Claude Code  |  +---> Anthropic API    |
+  |  | CLI          |                          |
+  |  +--------------+                          |
+  +--------------------------------------------+</pre>
+  </div>
+
+  <h2>Key Architectural Decisions</h2>
+
+  <h3>1. Claude Code Integration Strategy</h3>
+  <p><strong>Selected Architecture:</strong> Hybrid approach using Hooks for event observation + Agent SDK for parallel sessions.</p>
+  <table class="doc-table">
+    <thead><tr><th>Approach</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Direct Remote Control Protocol</td><td><span class="badge badge-red">Not Available</span></td><td>First-party only. No public API for third-party clients.</td></tr>
+      <tr><td>Claude Code Hooks</td><td><span class="badge badge-green">Supported</span></td><td>HTTP-based event observation (one-way)</td></tr>
+      <tr><td>Agent SDK</td><td><span class="badge badge-green">Supported</span></td><td>Parallel agent sessions (not mirroring)</td></tr>
+      <tr><td>MCP</td><td><span class="badge badge-green">Supported</span></td><td>Tool interoperability</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2. UI/UX Pattern</h3>
+  <p>ReCursor adopts <strong>OpenCode's UI patterns</strong> for the mobile interface:</p>
+  <ul>
+    <li><strong>Tool Cards</strong> &mdash; Rich, interactive cards for tool use and results</li>
+    <li><strong>Diff Viewer</strong> &mdash; Syntax-highlighted unified/side-by-side diffs</li>
+    <li><strong>Session Timeline</strong> &mdash; Visual timeline of agent actions and decisions</li>
+    <li><strong>Chat Interface</strong> &mdash; Streaming text with markdown rendering</li>
+  </ul>
+
+  <h3>3. Communication Pattern</h3>
+  <div class="code-block" data-lang="text" data-md-lang="">
+    <div class="code-header"><span>Communication Flow</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>Mobile App &lt;--WebSocket--&gt; Bridge Server &lt;--HTTP--&gt; Claude Code Hooks
+     |                                              |
+     |                                              v
+     +------------------------------------------Observes Events</code></pre>
+  </div>
+  <ul>
+    <li><strong>WebSocket</strong> &mdash; Bidirectional, real-time communication between mobile and bridge</li>
+    <li><strong>HTTP Hooks</strong> &mdash; One-way event streaming from Claude Code to bridge</li>
+    <li><strong>No Direct Mobile-to-Claude-Code</strong> &mdash; All communication flows through the bridge</li>
+  </ul>
+
+  <h2>Component Responsibilities</h2>
+  <h3>ReCursor Flutter App</h3>
+  <table class="doc-table">
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>UI Layer</td><td>Render OpenCode-style tool cards, diff viewer, timeline</td></tr>
+      <tr><td>State Management</td><td>Riverpod providers for sessions, messages, connection</td></tr>
+      <tr><td>WebSocket Client</td><td>Connect to bridge, handle reconnections, heartbeat</td></tr>
+      <tr><td>Local Storage</td><td>Drift for persistence, Hive for caching</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Bridge Server</h3>
+  <table class="doc-table">
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>WebSocket Server</td><td>Accept mobile connections, manage sessions</td></tr>
+      <tr><td>Event Queue</td><td>Buffer events from Hooks, replay on reconnect</td></tr>
+      <tr><td>HTTP Endpoint</td><td>Receive events from Claude Code Hooks</td></tr>
+      <tr><td>Agent SDK Adapter</td><td>Optional parallel session management</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Security Model</h2>
+  <div class="diagram-container">
+    <pre class="diagram">
+  Mobile  --->  WireGuard/Tailscale  --->  TLS 1.3  --->  Device Token  --->  Bridge
+           (Network Layer)          (Transport)       (Application)</pre>
+  </div>
+  <ol>
+    <li><strong>Network Layer:</strong> Tailscale/WireGuard mesh VPN</li>
+    <li><strong>Transport Layer:</strong> WSS (WebSocket Secure) with TLS 1.3</li>
+    <li><strong>Application Layer:</strong> Device pairing token on WebSocket handshake (no user accounts)</li>
+  </ol>
+
+  <h2>Data Flow Summary</h2>
+  <div class="two-col">
+    <div>
+      <h3>Outbound (Mobile to Agent)</h3>
+      <ol>
+        <li>User sends message from mobile app</li>
+        <li>Message queued locally (if offline)</li>
+        <li>WebSocket transmits to bridge</li>
+        <li>Bridge forwards to Agent SDK session</li>
+        <li>Agent SDK calls Claude API</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Inbound (Agent to Mobile)</h3>
+      <ol>
+        <li>Claude Code executes tool/action</li>
+        <li>Hooks POST event to bridge</li>
+        <li>Bridge queues event (if mobile disconnected)</li>
+        <li>WebSocket transmits to mobile</li>
+        <li>UI renders OpenCode-style component</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>Limitations &amp; Constraints</h2>
+  <table class="doc-table">
+    <thead><tr><th>Constraint</th><th>Impact</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>Hooks are one-way</td><td>Cannot inject messages into Claude Code</td><td>Use Agent SDK for parallel session</td></tr>
+      <tr><td>No session mirroring</td><td>Mobile sees events but not full context</td><td>Hooks include rich event metadata</td></tr>
+      <tr><td>Requires local Claude Code</td><td>Cannot work without desktop agent</td><td>Clear user messaging, offline queue</td></tr>
+    </tbody>
+  </table>
+</article>

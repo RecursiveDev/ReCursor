@@ -1,0 +1,91 @@
+<article class="page">
+  <div class="page-header">
+    <div class="breadcrumb">Core Concepts</div>
+    <h1>Offline Architecture</h1>
+    <p class="page-subtitle">How the ReCursor app works without connectivity and syncs when reconnected.</p>
+  </div>
+
+  <h2>Storage Strategy</h2>
+  <table class="doc-table">
+    <thead><tr><th>Data Type</th><th>Storage</th><th>Rationale</th></tr></thead>
+    <tbody>
+      <tr><td>Conversations, tasks, agent configs</td><td><strong>Drift</strong> (SQLite)</td><td>Type-safe queries, migrations, reactive streams</td></tr>
+      <tr><td>UI preferences, cached tokens, session state</td><td><strong>Hive</strong></td><td>Fast key-value for ephemeral data</td></tr>
+      <tr><td>File content cache</td><td><strong>File system</strong></td><td>Large blobs don't belong in SQLite</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Repository Pattern</h2>
+  <div class="code-block" data-lang="text" data-md-lang="">
+    <div class="code-header"><span>Architecture</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>UI Layer (Riverpod providers)
+    |
+Repository Layer (abstracts local vs. remote)
+    |
+    +-- Local Data Source (Drift / Hive)
+    +-- Remote Data Source (Bridge WebSocket)</code></pre>
+  </div>
+  <p>Repository reads from local DB first (instant UI response), fetches from bridge in background, and Drift's reactive queries automatically update the UI when local data changes.</p>
+
+  <h2>Sync Queue</h2>
+  <p>When offline, mutations go into a local queue:</p>
+  <div class="code-block" data-lang="dart">
+    <div class="code-header"><span>Dart</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>class SyncQueue extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get operation => text()();     // "send_message", "approve_tool"
+  TextColumn get payload => text()();       // JSON: full operation
+  TextColumn get sessionId => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get synced => boolean().withDefault(const Constant(false))();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+}</code></pre>
+  </div>
+
+  <h2>Connection States</h2>
+  <table class="doc-table">
+    <thead><tr><th>State</th><th>Description</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr><td><code>online</code></td><td>Connected to bridge</td><td>Sync queue, real-time updates</td></tr>
+      <tr><td><code>offline</code></td><td>No connectivity</td><td>Queue mutations locally</td></tr>
+      <tr><td><code>bridge_unreachable</code></td><td>Network but no bridge</td><td>Retry with backoff, queue mutations</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Sync Strategies</h2>
+  <div class="two-col">
+    <div>
+      <h3>Push-First (Outbound)</h3>
+      <ol>
+        <li>User action (send message, approve tool)</li>
+        <li>Save to local DB</li>
+        <li>Try to send via WebSocket</li>
+        <li>If failed, add to SyncQueue</li>
+        <li>Show "pending" state in UI</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Pull-First (Inbound)</h3>
+      <ol>
+        <li>On reconnect, request events since last sync</li>
+        <li>Merge with local state</li>
+        <li>Resolve conflicts</li>
+        <li>Update UI</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>Conflict Resolution</h2>
+  <p><strong>Default:</strong> Last-write-wins using <code>updated_at</code> timestamps. For destructive operations (git push, file overwrite), the user is prompted with a conflict dialog.</p>
+
+  <h2>Storage Limits</h2>
+  <table class="doc-table">
+    <thead><tr><th>Data Type</th><th>Max Size</th><th>Cleanup Strategy</th></tr></thead>
+    <tbody>
+      <tr><td>SyncQueue</td><td>1000 items</td><td>FIFO eviction</td></tr>
+      <tr><td>Messages</td><td>30 days</td><td>Archive to file</td></tr>
+      <tr><td>Sessions</td><td>90 days</td><td>Soft delete</td></tr>
+      <tr><td>File cache</td><td>100 MB</td><td>LRU eviction</td></tr>
+    </tbody>
+  </table>
+</article>
