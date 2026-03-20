@@ -17,8 +17,8 @@
 |  $ git status                         |
 |  On branch main                       |
 |  Changes not staged for commit:       |
-|    modified:   lib/auth/login.dart    |
-|    modified:   lib/auth/oauth.dart    |
+|    modified:   lib/features/startup/bridge_setup_screen.dart |
+|    modified:   lib/features/startup/splash_screen.dart       |
 |                                       |
 |  Untracked files:                     |
 |    test/auth_test.dart                |

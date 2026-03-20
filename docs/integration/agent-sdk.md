@@ -1,6 +1,6 @@
 # Agent SDK Integration
 
-> Using the Claude Agent SDK for parallel agent sessions in ReCursor.
+> Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols.
 
 ---
 
@@ -88,7 +88,7 @@ const agent = new Agent({
 
 // Start a conversation
 const response = await agent.run({
-  messages: [{ role: 'user', content: 'Fix the auth bug in login.dart' }],
+  messages: [{ role: 'user', content: 'Tighten the bridge startup validation in bridge_setup_screen.dart' }],
 });
 ```
 

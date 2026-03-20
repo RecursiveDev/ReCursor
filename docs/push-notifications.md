@@ -55,8 +55,8 @@ All notifications flow through the existing WebSocket connection. No external pu
   "payload": {
     "session_id": "sess-abc123",
     "notification_type": "approval_required",
-    "title": "Approval needed: Edit login.dart",
-    "body": "Claude Code wants to change the OAuth callback URL.",
+    "title": "Approval needed: Update bridge_setup_screen.dart",
+    "body": "Claude Code wants to tighten bridge URL validation before pairing.",
     "priority": "high",
     "data": {
       "tool_call_id": "tool-001",

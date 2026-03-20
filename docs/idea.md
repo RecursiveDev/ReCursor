@@ -1,6 +1,6 @@
 # ReCursor — Project Concept
 
-> **Mobile-first AI coding agent controller** — Control Claude Code and other AI coding assistants from your mobile device (iOS/Android) with an OpenCode-inspired UI.
+> **Mobile-first AI coding agent companion** — Connect to your user-controlled desktop bridge to observe and interact with Claude Code and other AI coding assistants from your mobile device (iOS/Android) with an OpenCode-inspired UI. Bridge-first, no-login workflow.
 
 ---
 
@@ -46,21 +46,23 @@ flowchart LR
         App["ReCursor Flutter App\n(OpenCode-like UI)"]
     end
 
-    subgraph DevMachine["💻 Development Machine"]
-        Bridge["Bridge Server"]
+    subgraph DevMachine["💻 User-Controlled Development Machine"]
+        Bridge["ReCursor Bridge Server"]
         CCHooks["Claude Code Hooks\n(Event Observer)"]
         CC["Claude Code CLI"]
     end
 
-    App <-->|WebSocket| Bridge
-    Bridge <-->|HTTP| CCHooks
+    App <-->|WebSocket (wss://)| Bridge
+    Bridge <-->|HTTP POST| CCHooks
     CCHooks -->|Observes| CC
 ```
 
 **Integration Strategy:**
-- **Event Source**: Claude Code Hooks POST events to the bridge server
+- **Bridge-First**: Mobile app connects directly to user-controlled bridge (no hosted service, no login)
+- **Event Source**: Claude Code Hooks POST events to the bridge server (one-way observation)
 - **UI Pattern**: OpenCode-style tool cards, diff viewer, session timeline
-- **Session Model**: Parallel Agent SDK sessions (not direct mirroring)
+- **Session Model**: Parallel Agent SDK sessions (not mirroring existing Claude Code sessions)
+- **Remote Access**: Secure tunnel (Tailscale, WireGuard) to your own bridge — not unsupported third-party Claude Remote Control
 
 ---
 
@@ -71,7 +73,7 @@ flowchart LR
 | Framework | Flutter | Cross-platform, CC Pocket precedent |
 | State | Riverpod | Type-safe, testable, Conduit pattern |
 | Networking | `web_socket_channel` | Standard Flutter WebSocket |
-| Auth | GitHub OAuth2 + PAT | `github_oauth` package |
+| Device Pairing | QR code + token | Bridge-first connection |
 | Local DB | Drift (SQLite) | Type-safe queries, migrations |
 | Cache | Hive | Fast key-value for ephemeral data |
 | Bridge | TypeScript (Node.js) | CC Pocket pattern |

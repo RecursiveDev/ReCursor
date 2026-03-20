@@ -1,6 +1,6 @@
 # Claude Code Hooks Integration
 
-> Configure Claude Code Hooks to POST events to the ReCursor bridge server for mobile consumption.
+> Configure Claude Code Hooks to POST events to the ReCursor bridge server for mobile consumption. This is a supported integration path for one-way event observation — not a Remote Control protocol.
 
 ---
 
@@ -340,9 +340,9 @@ eventBus.on('claude-event', broadcastToMobile);
   "session_id": "sess-abc123",
   "timestamp": "2026-03-17T10:35:00Z",
   "payload": {
-    "prompt": "Add error handling to the login function",
+    "prompt": "Add error handling to the bridge setup reconnect flow",
     "context": {
-      "current_file": "lib/auth.dart",
+      "current_file": "lib/features/startup/bridge_setup_screen.dart",
       "cursor_position": 145
     }
   }
