@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/message_models.dart';
+import '../../domain/approval_source.dart';
 
 /// Card widget representing a pending tool-call approval.
 class ApprovalCard extends StatelessWidget {
@@ -29,9 +30,11 @@ class ApprovalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final riskColor = _riskColor(toolCall.riskLevel);
+    final isObservedHook = isObservedHookApproval(toolCall);
 
     return Semantics(
-      label: 'Tool approval: ${toolCall.tool}, risk: ${toolCall.riskLevel.name}',
+      label:
+          'Tool approval: ${toolCall.tool}, risk: ${toolCall.riskLevel.name}',
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         child: InkWell(
@@ -74,48 +77,64 @@ class ApprovalCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 10),
-                // Action buttons
+                if (isObservedHook) ...[
+                  const Text(
+                    'Observed via Claude hooks — action buttons are available only for bridge-side Agent SDK sessions.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9E9E9E),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 Row(
                   children: [
-                    Expanded(
-                      child: Semantics(
-                        label: 'Approve tool call',
-                        button: true,
-                        child: OutlinedButton(
-                          onPressed: onApprove,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF4CAF50),
-                            side: const BorderSide(color: Color(0xFF4CAF50)),
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                    if (!isObservedHook) ...[
+                      Expanded(
+                        child: Semantics(
+                          label: 'Approve tool call',
+                          button: true,
+                          child: OutlinedButton(
+                            onPressed: onApprove,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF4CAF50),
+                              side: const BorderSide(color: Color(0xFF4CAF50)),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                            ),
+                            child: const Text('Approve',
+                                style: TextStyle(fontSize: 12)),
                           ),
-                          child: const Text('Approve', style: TextStyle(fontSize: 12)),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Semantics(
-                        label: 'Reject tool call',
-                        button: true,
-                        child: OutlinedButton(
-                          onPressed: onReject,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFF44747),
-                            side: const BorderSide(color: Color(0xFFF44747)),
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Semantics(
+                          label: 'Reject tool call',
+                          button: true,
+                          child: OutlinedButton(
+                            onPressed: onReject,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFF44747),
+                              side: const BorderSide(color: Color(0xFFF44747)),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                            ),
+                            child: const Text('Reject',
+                                style: TextStyle(fontSize: 12)),
                           ),
-                          child: const Text('Reject', style: TextStyle(fontSize: 12)),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
+                    ],
                     OutlinedButton(
                       onPressed: onTap,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                       ),
-                      child: const Text('Details', style: TextStyle(fontSize: 12)),
+                      child: Text(
+                        isObservedHook ? 'View' : 'Details',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -139,9 +158,9 @@ class _RiskBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         level.name.toUpperCase(),

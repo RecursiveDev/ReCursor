@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/message_models.dart';
+import '../../../diff/domain/providers/diff_provider.dart';
 
 /// Visual state of a tool card in the chat timeline.
 enum ToolState {
@@ -17,7 +20,7 @@ enum ToolState {
   failed,
 }
 
-class ToolCard extends StatefulWidget {
+class ToolCard extends ConsumerStatefulWidget {
   final String toolName;
   final Map<String, dynamic> params;
   final String? id;
@@ -38,10 +41,10 @@ class ToolCard extends StatefulWidget {
   });
 
   @override
-  State<ToolCard> createState() => _ToolCardState();
+  ConsumerState<ToolCard> createState() => _ToolCardState();
 }
 
-class _ToolCardState extends State<ToolCard>
+class _ToolCardState extends ConsumerState<ToolCard>
     with SingleTickerProviderStateMixin {
   bool _paramsExpanded = false;
   bool _resultExpanded = false;
@@ -51,7 +54,6 @@ class _ToolCardState extends State<ToolCard>
   /// Determines the visual state of this tool card.
   ToolState get _state {
     final riskLevel = widget.metadata?['risk_level'] as String?;
-    // If risk_level exists in metadata and tool is not completed, it's pending approval
     if (riskLevel != null && !widget.isCompleted) {
       return ToolState.pendingApproval;
     }
@@ -60,7 +62,6 @@ class _ToolCardState extends State<ToolCard>
     return ToolState.failed;
   }
 
-  /// The risk level from metadata (defaults to low if not set).
   RiskLevel get _riskLevel {
     final level = widget.metadata?['risk_level'] as String?;
     return switch (level) {
@@ -70,6 +71,30 @@ class _ToolCardState extends State<ToolCard>
       _ => RiskLevel.low,
     };
   }
+
+  String? get _source {
+    final metadataSource = widget.metadata?['source'];
+    if (metadataSource is String && metadataSource.isNotEmpty) {
+      return metadataSource;
+    }
+
+    final resultSource = widget.result?.metadata?['source'];
+    if (resultSource is String && resultSource.isNotEmpty) {
+      return resultSource;
+    }
+
+    return null;
+  }
+
+  String? get _diffText {
+    final diff = widget.result?.metadata?['diff'];
+    if (diff is String && diff.trim().isNotEmpty) {
+      return diff;
+    }
+    return null;
+  }
+
+  bool get _hasDiff => _diffText != null;
 
   @override
   void initState() {
@@ -136,6 +161,25 @@ class _ToolCardState extends State<ToolCard>
     };
   }
 
+  void _openDiff() {
+    final diffText = _diffText;
+    if (diffText == null) {
+      return;
+    }
+
+    final opened =
+        ref.read(diffNotifierProvider.notifier).openUnifiedDiff(diffText);
+    if (!opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Unable to open diff for this tool result.')),
+      );
+      return;
+    }
+
+    context.go('/home/diff');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPendingApproval = _state == ToolState.pendingApproval;
@@ -156,7 +200,6 @@ class _ToolCardState extends State<ToolCard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with risk badge for pending approvals
             Padding(
               padding: const EdgeInsets.all(10),
               child: Row(
@@ -183,8 +226,11 @@ class _ToolCardState extends State<ToolCard>
                 ],
               ),
             ),
-            // Approval required banner
-            if (isPendingApproval) _ApprovalBanner(riskLevel: _riskLevel),
+            if (isPendingApproval)
+              _ApprovalBanner(
+                riskLevel: _riskLevel,
+                source: _source,
+              ),
             if (widget.params.isNotEmpty)
               _ExpandableSection(
                 label: 'Parameters',
@@ -203,6 +249,18 @@ class _ToolCardState extends State<ToolCard>
                   child: _ResultContent(result: widget.result!),
                 ),
               ),
+            if (_hasDiff)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _openDiff,
+                    icon: const Icon(Icons.difference_outlined, size: 16),
+                    label: const Text('View Diff'),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -210,7 +268,6 @@ class _ToolCardState extends State<ToolCard>
   }
 }
 
-/// Risk level badge shown in pending approval state.
 class _RiskBadge extends StatelessWidget {
   final RiskLevel level;
   final Color color;
@@ -238,11 +295,11 @@ class _RiskBadge extends StatelessWidget {
   }
 }
 
-/// Banner shown when approval is required for a tool.
 class _ApprovalBanner extends StatelessWidget {
   final RiskLevel riskLevel;
+  final String? source;
 
-  const _ApprovalBanner({required this.riskLevel});
+  const _ApprovalBanner({required this.riskLevel, required this.source});
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +309,7 @@ class _ApprovalBanner extends StatelessWidget {
       RiskLevel.high => const Color(0xFFF44747),
       RiskLevel.critical => const Color(0xFF8B0000),
     };
+    final isHookObservation = source == 'hooks';
 
     return Container(
       width: double.infinity,
@@ -264,11 +322,19 @@ class _ApprovalBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.pending_actions, size: 16, color: color),
+          Icon(
+            isHookObservation
+                ? Icons.visibility_outlined
+                : Icons.pending_actions,
+            size: 16,
+            color: color,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Approval required — check Approvals tab',
+              isHookObservation
+                  ? 'Observed via Claude hooks — review in Approvals.'
+                  : 'Approval required — check Approvals tab',
               style: TextStyle(
                 color: color,
                 fontSize: 12,

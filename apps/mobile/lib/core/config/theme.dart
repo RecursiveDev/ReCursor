@@ -21,12 +21,10 @@ class AppTheme {
   static ThemeData get darkTheme {
     const colorScheme = ColorScheme.dark(
       surface: AppColors.surface,
-      background: AppColors.background,
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       error: AppColors.error,
       onSurface: AppColors.textPrimary,
-      onBackground: AppColors.textPrimary,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
     );
@@ -127,13 +125,13 @@ class AppTheme {
         thickness: 1,
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return AppColors.primary;
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
           return AppColors.textSecondary;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
-            return AppColors.primary.withOpacity(0.4);
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary.withValues(alpha: 0.4);
           }
           return AppColors.border;
         }),

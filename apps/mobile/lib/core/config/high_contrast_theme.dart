@@ -4,10 +4,10 @@ class HighContrastTheme {
   static ThemeData get theme {
     return ThemeData.dark().copyWith(
       colorScheme: const ColorScheme.dark(
-        primary: Color(0xFFFFFFFF),        // white
-        secondary: Color(0xFFFFFF00),      // yellow
-        surface: Color(0xFF000000),        // pure black
-        error: Color(0xFFFF0000),          // pure red
+        primary: Color(0xFFFFFFFF), // white
+        secondary: Color(0xFFFFFF00), // yellow
+        surface: Color(0xFF000000), // pure black
+        error: Color(0xFFFF0000), // pure red
       ),
       scaffoldBackgroundColor: Colors.black,
       cardTheme: const CardThemeData(
@@ -31,20 +31,20 @@ class HighContrastTheme {
       ),
       iconTheme: const IconThemeData(color: Colors.white),
       dividerColor: Colors.white,
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: Colors.black,
-        border: const OutlineInputBorder(
+        border: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.white, width: 2),
         ),
-        enabledBorder: const OutlineInputBorder(
+        enabledBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.white, width: 2),
         ),
-        focusedBorder: const OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.yellow, width: 2),
         ),
-        labelStyle: const TextStyle(color: Colors.white),
-        hintStyle: const TextStyle(color: Colors.grey),
+        labelStyle: TextStyle(color: Colors.white),
+        hintStyle: TextStyle(color: Colors.grey),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.black,

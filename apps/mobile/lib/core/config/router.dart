@@ -13,6 +13,7 @@ import '../../features/repos/presentation/screens/file_tree_screen.dart';
 import '../../features/repos/presentation/screens/file_viewer_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/startup/presentation/screens/bridge_setup_screen.dart';
+import '../../features/startup/presentation/screens/health_verification_screen.dart';
 import '../../features/startup/presentation/screens/splash_screen.dart';
 import '../../features/terminal/presentation/screens/terminal_screen.dart';
 
@@ -28,6 +29,10 @@ GoRouter _buildRouter() {
       GoRoute(
         path: '/bridge-setup',
         builder: (_, __) => const BridgeSetupScreen(),
+      ),
+      GoRoute(
+        path: '/health-verification',
+        builder: (_, __) => const HealthVerificationScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

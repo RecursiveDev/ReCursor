@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/models/message_models.dart';
 import '../../../../core/network/websocket_messages.dart';
 import '../../../../core/providers/database_provider.dart';
 import '../../../../core/providers/websocket_provider.dart';
 import '../../../../core/storage/database.dart';
-import '../../../../core/storage/tables/approvals_table.dart';
-import 'package:drift/drift.dart' show Value;
-import 'package:uuid/uuid.dart';
+import '../approval_source.dart';
 
 const _uuid = Uuid();
 
@@ -41,11 +41,19 @@ class PendingApprovalsNotifier extends StateNotifier<List<ToolCall>> {
   }
 
   ToolCall _parseToolCall(Map<String, dynamic> payload) {
+    final params = <String, dynamic>{
+      ...((payload['params'] as Map<String, dynamic>?) ?? {}),
+    };
+    final source = payload['source'] as String? ?? 'agent_sdk';
+    if (source.isNotEmpty) {
+      params[observedHookSourceKey] = source;
+    }
+
     return ToolCall(
       id: payload['tool_call_id'] as String? ?? _uuid.v4(),
       sessionId: payload['session_id'] as String? ?? '',
       tool: payload['tool'] as String? ?? 'unknown',
-      params: (payload['params'] as Map<String, dynamic>?) ?? {},
+      params: params,
       description: payload['description'] as String?,
       reasoning: payload['reasoning'] as String?,
       riskLevel: _parseRisk(payload['risk_level'] as String?),
@@ -64,12 +72,22 @@ class PendingApprovalsNotifier extends StateNotifier<List<ToolCall>> {
   }
 
   Future<void> approve(String sessionId, String toolCallId) async {
+    final pending = _pendingToolCall(toolCallId);
+    if (pending == null || isObservedHookApproval(pending)) {
+      return;
+    }
+
     await _sendDecision(sessionId, toolCallId, 'approved');
     await _persist(toolCallId, ApprovalDecision.approved);
     _remove(toolCallId);
   }
 
   Future<void> reject(String sessionId, String toolCallId) async {
+    final pending = _pendingToolCall(toolCallId);
+    if (pending == null || isObservedHookApproval(pending)) {
+      return;
+    }
+
     await _sendDecision(sessionId, toolCallId, 'rejected');
     await _persist(toolCallId, ApprovalDecision.rejected);
     _remove(toolCallId);
@@ -80,6 +98,11 @@ class PendingApprovalsNotifier extends StateNotifier<List<ToolCall>> {
     String toolCallId,
     Map<String, dynamic> modifications,
   ) async {
+    final pending = _pendingToolCall(toolCallId);
+    if (pending == null || isObservedHookApproval(pending)) {
+      return;
+    }
+
     final service = _ref.read(webSocketServiceProvider);
     service.send(BridgeMessage.approvalResponse(
       sessionId: sessionId,
@@ -90,6 +113,14 @@ class PendingApprovalsNotifier extends StateNotifier<List<ToolCall>> {
     await _persist(toolCallId, ApprovalDecision.modified,
         modifications: jsonEncode(modifications));
     _remove(toolCallId);
+  }
+
+  ToolCall? _pendingToolCall(String toolCallId) {
+    try {
+      return state.firstWhere((toolCall) => toolCall.id == toolCallId);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _sendDecision(
@@ -150,7 +181,8 @@ final pendingApprovalsProvider =
 
 final approvalHistoryProvider = StreamProvider<List<ToolCall>>((ref) {
   final db = ref.watch(databaseProvider);
-  return db.select(db.approvals)
+  return db
+      .select(db.approvals)
       .watch()
       .map((rows) => rows.map(_rowToToolCall).toList());
 });

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/message_models.dart';
+import '../../domain/approval_source.dart';
 import '../../domain/providers/approval_provider.dart';
 import '../widgets/modification_editor.dart';
 
@@ -21,8 +22,7 @@ class ApprovalDetailScreen extends ConsumerStatefulWidget {
       _ApprovalDetailScreenState();
 }
 
-class _ApprovalDetailScreenState
-    extends ConsumerState<ApprovalDetailScreen> {
+class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
   final _modController = TextEditingController();
   bool _showModEditor = false;
 
@@ -73,10 +73,10 @@ class _ApprovalDetailScreenState
     final text = _modController.text.trim();
     if (text.isEmpty) return;
     ref.read(pendingApprovalsProvider.notifier).modify(
-          toolCall.sessionId,
-          toolCall.id,
-          {'instructions': text},
-        );
+      toolCall.sessionId,
+      toolCall.id,
+      {'instructions': text},
+    );
     context.pop();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Modifications submitted')),
@@ -91,11 +91,14 @@ class _ApprovalDetailScreenState
     if (toolCall == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Approval')),
-        body: const Center(child: Text('Approval not found or already decided.')),
+        body:
+            const Center(child: Text('Approval not found or already decided.')),
       );
     }
 
     final riskColor = _riskColor(toolCall.riskLevel);
+    final isObservedHook = isObservedHookApproval(toolCall);
+    final visibleParams = visibleApprovalParams(toolCall);
 
     return Scaffold(
       appBar: AppBar(title: Text(toolCall.tool)),
@@ -120,6 +123,26 @@ class _ApprovalDetailScreenState
           ),
           const SizedBox(height: 16),
 
+          if (isObservedHook) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2A33),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF3C5566)),
+              ),
+              child: const Text(
+                'This approval was observed through Claude Code hooks. Hooks are one-way observation only, so ReCursor cannot approve or reject it from mobile. Use the Agent SDK session flow for actionable approvals.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFD4D4D4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Parameters expandable card
           _ExpandableSection(
             title: 'Parameters',
@@ -131,8 +154,7 @@ class _ApprovalDetailScreenState
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                const JsonEncoder.withIndent('  ')
-                    .convert(toolCall.params),
+                const JsonEncoder.withIndent('  ').convert(visibleParams),
                 style: const TextStyle(
                   fontFamily: 'JetBrainsMono',
                   fontSize: 12,
@@ -158,7 +180,7 @@ class _ApprovalDetailScreenState
           ],
 
           // Modification editor (shown after tapping Modify)
-          if (_showModEditor) ...[
+          if (!isObservedHook && _showModEditor) ...[
             const SizedBox(height: 16),
             ModificationEditor(
               controller: _modController,
@@ -168,48 +190,56 @@ class _ApprovalDetailScreenState
 
           const SizedBox(height: 24),
 
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _approve(toolCall),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('Approve'),
-                ),
+          if (isObservedHook)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.pop(),
+                child: const Text('Done'),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _reject(toolCall),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF44747),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _approve(toolCall),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CAF50),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Approve'),
                   ),
-                  child: const Text('Reject'),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() {
-                    _showModEditor = !_showModEditor;
-                  }),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9800),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _reject(toolCall),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF44747),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Reject'),
                   ),
-                  child: const Text('Modify'),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => setState(() {
+                      _showModEditor = !_showModEditor;
+                    }),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF9800),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Modify'),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -227,9 +257,9 @@ class _RiskBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         level.name.toUpperCase(),
@@ -265,8 +295,7 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
                   Expanded(
