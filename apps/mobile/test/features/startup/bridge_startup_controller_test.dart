@@ -50,7 +50,7 @@ void main() {
       expect(result.message, contains('must use wss://'));
     });
 
-    test('restores the saved bridge pairing and opens the home shell',
+    test('restores the saved bridge pairing and opens health verification',
         () async {
       final service = FakeStartupWebSocketService();
       final controller = BridgeStartupController(
@@ -63,7 +63,7 @@ void main() {
 
       final result = await controller.restore();
 
-      expect(result.destination, AppStartupDestination.home);
+      expect(result.destination, AppStartupDestination.healthVerification);
       expect(service.lastUrl, 'wss://device.tailnet.ts.net:3000');
       expect(service.lastToken, 'bridge-token-123');
       expect(service.currentStatus, ConnectionStatus.connected);

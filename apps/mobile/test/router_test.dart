@@ -8,6 +8,7 @@ import 'package:recursor_mobile/features/approvals/presentation/screens/approval
 import 'package:recursor_mobile/features/git/presentation/screens/git_screen.dart';
 import 'package:recursor_mobile/features/settings/presentation/screens/settings_screen.dart';
 import 'package:recursor_mobile/features/startup/presentation/screens/bridge_setup_screen.dart';
+import 'package:recursor_mobile/features/startup/presentation/screens/health_verification_screen.dart';
 import 'package:recursor_mobile/features/startup/presentation/screens/splash_screen.dart';
 import 'package:recursor_mobile/features/terminal/presentation/screens/terminal_screen.dart';
 
@@ -21,6 +22,11 @@ void main() {
     test('BridgeSetupScreen exists and instantiates', () {
       const screen = BridgeSetupScreen();
       expect(screen, isA<BridgeSetupScreen>());
+    });
+
+    test('HealthVerificationScreen exists and instantiates', () {
+      const screen = HealthVerificationScreen();
+      expect(screen, isA<HealthVerificationScreen>());
     });
 
     test('AgentListScreen exists and instantiates', () {

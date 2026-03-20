@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recursor_mobile/core/models/message_models.dart';
 import 'package:recursor_mobile/features/chat/presentation/widgets/tool_card.dart';
@@ -6,16 +7,13 @@ import 'package:recursor_mobile/features/chat/presentation/widgets/tool_card.dar
 void main() {
   group('ToolCard', () {
     testWidgets('shows running state without metadata', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'edit_file',
-              params: {'path': 'lib/main.dart'},
-              id: 'tool-1',
-              isCompleted: false,
-            ),
-          ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {'path': 'lib/main.dart'},
+          id: 'tool-1',
+          isCompleted: false,
         ),
       );
 
@@ -25,47 +23,58 @@ void main() {
 
     testWidgets('shows approval required state with risk level badge',
         (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'edit_file',
-              params: {'path': 'lib/main.dart'},
-              id: 'tool-1',
-              isCompleted: false,
-              metadata: {
-                'risk_level': 'high',
-                'source': 'agent_sdk',
-              },
-            ),
-          ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {'path': 'lib/main.dart'},
+          id: 'tool-1',
+          isCompleted: false,
+          metadata: {
+            'risk_level': 'high',
+            'source': 'agent_sdk',
+          },
         ),
       );
 
       expect(find.text('edit_file'), findsOneWidget);
-      // High risk badge should be visible
       expect(find.text('HIGH'), findsOneWidget);
-      // Approvals banner should be visible
       expect(find.textContaining('Approval required'), findsOneWidget);
-      // Pending icon appears twice (in header and banner)
       expect(find.byIcon(Icons.pending_actions), findsNWidgets(2));
     });
 
+    testWidgets('shows hook observation banner for hook sourced approvals',
+        (tester) async {
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {'path': 'lib/main.dart'},
+          id: 'tool-1',
+          isCompleted: false,
+          metadata: {
+            'risk_level': 'high',
+            'source': 'hooks',
+          },
+        ),
+      );
+
+      expect(find.textContaining('Observed via Claude hooks'), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+    });
+
     testWidgets('shows completed state with result', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'edit_file',
-              params: {'path': 'lib/main.dart'},
-              id: 'tool-1',
-              isCompleted: true,
-              result: ToolResult(
-                success: true,
-                content: 'File updated successfully',
-                durationMs: 150,
-              ),
-            ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {'path': 'lib/main.dart'},
+          id: 'tool-1',
+          isCompleted: true,
+          result: ToolResult(
+            success: true,
+            content: 'File updated successfully',
+            durationMs: 150,
           ),
         ),
       );
@@ -74,22 +83,42 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
 
+    testWidgets('shows diff handoff button when result contains a diff',
+        (tester) async {
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {'path': 'lib/main.dart'},
+          id: 'tool-1',
+          isCompleted: true,
+          result: ToolResult(
+            success: true,
+            content: 'Updated file',
+            metadata: {
+              'diff':
+                  '--- a/lib/main.dart\n+++ b/lib/main.dart\n@@ -1 +1 @@\n-void oldMain() {}\n+void main() {}',
+            },
+          ),
+        ),
+      );
+
+      expect(find.text('View Diff'), findsOneWidget);
+    });
+
     testWidgets('shows failed state with error', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'edit_file',
-              params: {'path': 'lib/main.dart'},
-              id: 'tool-1',
-              isCompleted: true,
-              result: ToolResult(
-                success: false,
-                content: '',
-                error: 'Permission denied',
-                durationMs: 50,
-              ),
-            ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {'path': 'lib/main.dart'},
+          id: 'tool-1',
+          isCompleted: true,
+          result: ToolResult(
+            success: false,
+            content: '',
+            error: 'Permission denied',
+            durationMs: 50,
           ),
         ),
       );
@@ -99,17 +128,14 @@ void main() {
     });
 
     testWidgets('shows medium risk level badge', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'bash',
-              params: {'command': 'ls -la'},
-              id: 'tool-2',
-              isCompleted: false,
-              metadata: {'risk_level': 'medium'},
-            ),
-          ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'bash',
+          params: {'command': 'ls -la'},
+          id: 'tool-2',
+          isCompleted: false,
+          metadata: {'risk_level': 'medium'},
         ),
       );
 
@@ -117,17 +143,14 @@ void main() {
     });
 
     testWidgets('shows critical risk level badge', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'bash',
-              params: {'command': 'rm -rf /'},
-              id: 'tool-3',
-              isCompleted: false,
-              metadata: {'risk_level': 'critical'},
-            ),
-          ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'bash',
+          params: {'command': 'rm -rf /'},
+          id: 'tool-3',
+          isCompleted: false,
+          metadata: {'risk_level': 'critical'},
         ),
       );
 
@@ -135,45 +158,36 @@ void main() {
     });
 
     testWidgets('expands parameters on tap', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ToolCard(
-              toolName: 'edit_file',
-              params: {
-                'path': 'lib/main.dart',
-                'new_content': 'void main() {}'
-              },
-              id: 'tool-1',
-              isCompleted: false,
-            ),
-          ),
+      await _pumpToolCard(
+        tester,
+        const ToolCard(
+          toolName: 'edit_file',
+          params: {
+            'path': 'lib/main.dart',
+            'new_content': 'void main() {}',
+          },
+          id: 'tool-1',
+          isCompleted: false,
         ),
       );
 
-      // Parameters section should be present
       expect(find.text('Parameters'), findsOneWidget);
 
-      // Tap on Parameters section
       await tester.tap(find.text('Parameters'));
       await tester.pumpAndSettle();
 
-      // Key value list should now be visible (check for the widget type)
       expect(find.byType(ToolCard), findsOneWidget);
     });
 
     group('tool icon selection', () {
       testWidgets('shows file icon for file operations', (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: ToolCard(
-                toolName: 'read_file',
-                params: {},
-                id: 'tool-1',
-                isCompleted: false,
-              ),
-            ),
+        await _pumpToolCard(
+          tester,
+          const ToolCard(
+            toolName: 'read_file',
+            params: {},
+            id: 'tool-1',
+            isCompleted: false,
           ),
         );
 
@@ -181,16 +195,13 @@ void main() {
       });
 
       testWidgets('shows terminal icon for bash operations', (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: ToolCard(
-                toolName: 'bash',
-                params: {},
-                id: 'tool-1',
-                isCompleted: false,
-              ),
-            ),
+        await _pumpToolCard(
+          tester,
+          const ToolCard(
+            toolName: 'bash',
+            params: {},
+            id: 'tool-1',
+            isCompleted: false,
           ),
         );
 
@@ -198,16 +209,13 @@ void main() {
       });
 
       testWidgets('shows git icon for git operations', (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: ToolCard(
-                toolName: 'git_status',
-                params: {},
-                id: 'tool-1',
-                isCompleted: false,
-              ),
-            ),
+        await _pumpToolCard(
+          tester,
+          const ToolCard(
+            toolName: 'git_status',
+            params: {},
+            id: 'tool-1',
+            isCompleted: false,
           ),
         );
 
@@ -215,4 +223,14 @@ void main() {
       });
     });
   });
+}
+
+Future<void> _pumpToolCard(WidgetTester tester, ToolCard toolCard) {
+  return tester.pumpWidget(
+    ProviderScope(
+      child: MaterialApp(
+        home: Scaffold(body: toolCard),
+      ),
+    ),
+  );
 }

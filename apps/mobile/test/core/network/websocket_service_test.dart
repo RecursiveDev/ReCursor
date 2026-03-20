@@ -41,6 +41,10 @@ void main() {
           'payload': {
             'server_version': '1.0.0',
             'supported_agents': <String>[],
+            'connection_mode': 'secure_remote',
+            'connection_mode_description': 'Secure tunnel',
+            'bridge_url': 'wss://device.tailnet.ts.net:3000',
+            'requires_health_verification': true,
             'active_sessions': <Map<String, dynamic>>[],
           },
         }),
@@ -50,8 +54,155 @@ void main() {
 
       expect(service.currentStatus, ConnectionStatus.connected);
       expect(statuses, contains(ConnectionStatus.connected));
+      expect(
+        service.lastConnectionAckPayload?['requires_health_verification'],
+        isTrue,
+      );
 
       await statusSub.cancel();
+      service.dispose();
+      await fakeChannel.close();
+    });
+
+    test('can request bridge health status after auth', () async {
+      final fakeChannel = FakeWebSocketChannel();
+      final service = WebSocketService(channelFactory: (_) => fakeChannel);
+
+      final connectFuture = service.connect(
+        url: 'wss://device.tailnet.ts.net:3000',
+        token: 'bridge-token-123',
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      fakeChannel.addIncoming(
+        jsonEncode({
+          'type': 'connection_ack',
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'payload': {
+            'server_version': '1.0.0',
+            'supported_agents': <String>[],
+            'connection_mode': 'secure_remote',
+            'connection_mode_description': 'Secure tunnel',
+            'bridge_url': 'wss://device.tailnet.ts.net:3000',
+            'requires_health_verification': true,
+            'active_sessions': <Map<String, dynamic>>[],
+          },
+        }),
+      );
+      await connectFuture;
+
+      final healthFuture = service.requestHealthCheck();
+      await Future<void>.delayed(Duration.zero);
+
+      final healthFrame =
+          jsonDecode(fakeChannel.sentMessages.last) as Map<String, dynamic>;
+      expect(healthFrame['type'], 'health_check');
+
+      fakeChannel.addIncoming(
+        jsonEncode({
+          'type': 'health_status',
+          'id': healthFrame['id'],
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'payload': {
+            'status': 'healthy',
+            'connection_mode': 'secure_remote',
+            'warnings': <String>[],
+            'checks': {
+              'tls_valid': true,
+              'clock_sync': true,
+              'version_compatible': true,
+              'token_permissions': true,
+            },
+            'server_timestamp': DateTime.now().toUtc().toIso8601String(),
+            'latency_ms': 24,
+            'ready': true,
+          },
+        }),
+      );
+
+      final payload = await healthFuture;
+      expect(payload['status'], 'healthy');
+      expect(service.lastHealthStatusPayload?['ready'], isTrue);
+
+      service.dispose();
+      await fakeChannel.close();
+    });
+
+    test('can acknowledge warning for direct public bridge mode', () async {
+      final fakeChannel = FakeWebSocketChannel();
+      final service = WebSocketService(channelFactory: (_) => fakeChannel);
+
+      final connectFuture = service.connect(
+        url: 'wss://203.0.113.42:3000',
+        token: 'bridge-token-123',
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      fakeChannel.addIncoming(
+        jsonEncode({
+          'type': 'connection_ack',
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'payload': {
+            'server_version': '1.0.0',
+            'supported_agents': <String>[],
+            'connection_mode': 'direct_public',
+            'connection_mode_description': 'Direct public connection',
+            'bridge_url': 'wss://203.0.113.42:3000',
+            'requires_health_verification': true,
+            'active_sessions': <Map<String, dynamic>>[],
+          },
+        }),
+      );
+      await connectFuture;
+
+      final healthFuture = service.requestHealthCheck();
+      await Future<void>.delayed(Duration.zero);
+      fakeChannel.addIncoming(
+        jsonEncode({
+          'type': 'health_status',
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'payload': {
+            'status': 'warning',
+            'connection_mode': 'direct_public',
+            'warnings': ['DIRECT_PUBLIC_CONNECTION'],
+            'checks': {
+              'tls_valid': true,
+              'clock_sync': true,
+              'version_compatible': true,
+              'token_permissions': true,
+            },
+            'server_timestamp': DateTime.now().toUtc().toIso8601String(),
+            'latency_ms': 45,
+            'ready': false,
+            'requires_acknowledgment': true,
+          },
+        }),
+      );
+      await healthFuture;
+
+      final ackFuture = service.acknowledgeWarning('DIRECT_PUBLIC_CONNECTION');
+      await Future<void>.delayed(Duration.zero);
+
+      final ackFrame =
+          jsonDecode(fakeChannel.sentMessages.last) as Map<String, dynamic>;
+      expect(ackFrame['type'], 'acknowledge_warning');
+
+      fakeChannel.addIncoming(
+        jsonEncode({
+          'type': 'acknowledgment_accepted',
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'payload': {
+            'warning_code': 'DIRECT_PUBLIC_CONNECTION',
+            'ready': true,
+            'session_timeout': '8h',
+          },
+        }),
+      );
+
+      final payload = await ackFuture;
+      expect(payload['ready'], isTrue);
+      expect(service.lastHealthStatusPayload?['ready'], isTrue);
+
       service.dispose();
       await fakeChannel.close();
     });
