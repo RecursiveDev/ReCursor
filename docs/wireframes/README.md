@@ -18,10 +18,14 @@
                     |  (Restore or New Pairing)  |
                     +--------------+--------------+
                                    |
-                          +--------v---------+
-                          |   Bridge Setup   |
-                          |   (QR Pairing)   |
-                          +--------+---------+
+              +--------------------+--------------------+
+              |                                         |
+     +--------v---------+                       +-------v--------+
+     |   Bridge Setup   |                       | Health Verify  |
+     |   (QR Pairing)   |                       | (Post-connect) |
+     +--------+---------+                       +-------+--------+
+              |                                         |
+              +--------------------+--------------------+
                                    |
                     +--------------v--------------+
                     |     Main Shell (Bottom Nav)  |
@@ -37,7 +41,7 @@
                  +-------+ +-------+ +----------+
 ```
 
-**Key:** No login screen, no user accounts — the app opens directly to bridge pairing restoration or setup.
+**Key:** No login screen, no user accounts — the app opens directly to bridge pairing restoration or setup. **Health Verification** is a mandatory step after connection before entering the main shell.
 
 ## Bottom Navigation Tabs
 

@@ -127,6 +127,20 @@ flowchart LR
 2. **Transport Layer**: WSS (WebSocket Secure) with TLS 1.3
 3. **Application Layer**: Device pairing token on WebSocket handshake (no user accounts, no login)
 
+### Connection Mode Detection
+
+After establishing the WebSocket connection, the bridge analyzes the connection to determine the **connection mode**. This informs the user of the security posture and triggers appropriate warnings:
+
+| Mode | Detection Criteria | Security Level | User Experience |
+|------|-------------------|----------------|-----------------|
+| **Local-only** | Loopback address (`127.0.0.1`, `::1`) | ✅ Secure | House icon indicator |
+| **Private network** | RFC1918 private IP (10.x, 172.16-31.x, 192.168.x) | ✅ Secure | WiFi icon indicator |
+| **Secure remote** | Tailscale/WireGuard IP (100.x.x.x) or validated tunnel domain | ✅ Secure | Shield icon indicator |
+| **Direct public remote** | Public IP or domain without tunnel validation | ⚠️ Warning | Warning triangle, requires acknowledgment |
+| **Misconfigured** | `ws://` instead of `wss://`, or other insecure setup | ❌ Blocked | Error screen, connection refused |
+
+**Health Verification**: After `connection_ack`, the client sends a `health_check` message. The bridge responds with `health_status` including the detected connection mode. The app displays the mode indicator and, for "direct public remote," requires explicit user acknowledgment before proceeding to the main shell.
+
 ---
 
 ## Data Flow Summary

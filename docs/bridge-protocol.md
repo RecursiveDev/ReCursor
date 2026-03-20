@@ -65,7 +65,7 @@ Sent immediately after WebSocket connection opens for device pairing authenticat
 ```
 
 #### `connection_ack` (server -> client)
-Confirms authentication and connection.
+Confirms authentication and connection. Includes detected connection mode for security transparency.
 
 ```json
 {
@@ -74,9 +74,114 @@ Confirms authentication and connection.
   "payload": {
     "server_version": "1.0.0",
     "supported_agents": ["claude-code", "opencode", "aider", "goose"],
+    "connection_mode": "secure_remote",
+    "connection_mode_description": "Tailscale mesh VPN (100.x.x.x)",
+    "bridge_url": "wss://devbox.tailnet.ts.net:3000",
+    "requires_health_verification": true,
     "active_sessions": [
       { "session_id": "sess-abc", "agent": "claude-code", "title": "Bridge startup validation" }
     ]
+  }
+}
+```
+
+**Connection Mode Values:**
+- `local_only` — Loopback address (127.0.0.1, ::1)
+- `private_network` — RFC1918 private IP (10.x, 172.16-31.x, 192.168.x)
+- `secure_remote` — Tailscale/WireGuard or validated secure tunnel
+- `direct_public` — Public IP/domain without tunnel (requires acknowledgment)
+- `misconfigured` — Insecure setup detected (connection will be rejected)
+
+#### `health_check` (client -> server)
+Sent after `connection_ack` to verify connection health before entering main shell.
+
+```json
+{
+  "type": "health_check",
+  "id": "health-001",
+  "payload": {
+    "timestamp": "2026-03-20T14:32:00Z",
+    "client_nonce": "random-nonce-123",
+    "client_capabilities": ["health_v1", "acknowledgment_v1"]
+  }
+}
+```
+
+#### `health_status` (server -> client)
+Response to health check with detailed status and any security warnings.
+
+```json
+{
+  "type": "health_status",
+  "id": "health-001",
+  "payload": {
+    "status": "healthy",
+    "connection_mode": "secure_remote",
+    "warnings": [],
+    "checks": {
+      "tls_valid": true,
+      "clock_sync": true,
+      "version_compatible": true,
+      "token_permissions": true
+    },
+    "server_timestamp": "2026-03-20T14:32:00.050Z",
+    "latency_ms": 24,
+    "ready": true
+  }
+}
+```
+
+**Direct Public Remote with Warning:**
+
+```json
+{
+  "type": "health_status",
+  "id": "health-001",
+  "payload": {
+    "status": "warning",
+    "connection_mode": "direct_public",
+    "warnings": ["DIRECT_PUBLIC_CONNECTION"],
+    "warning_details": {
+      "DIRECT_PUBLIC_CONNECTION": "Connection is over public internet without tunnel. Certificate validation is required."
+    },
+    "checks": {
+      "tls_valid": true,
+      "clock_sync": true,
+      "version_compatible": true,
+      "token_permissions": true
+    },
+    "ready": false,
+    "requires_acknowledgment": true
+  }
+}
+```
+
+#### `acknowledge_warning` (client -> server)
+User acknowledgment for security warnings (e.g., direct public remote).
+
+```json
+{
+  "type": "acknowledge_warning",
+  "id": "ack-001",
+  "payload": {
+    "warning_code": "DIRECT_PUBLIC_CONNECTION",
+    "acknowledged": true,
+    "acknowledged_at": "2026-03-20T14:32:30Z"
+  }
+}
+```
+
+#### `acknowledgment_accepted` (server -> client)
+Confirmation that warning acknowledgment was accepted.
+
+```json
+{
+  "type": "acknowledgment_accepted",
+  "id": "ack-001",
+  "payload": {
+    "warning_code": "DIRECT_PUBLIC_CONNECTION",
+    "ready": true,
+    "session_timeout": "8h"
   }
 }
 ```
@@ -91,6 +196,28 @@ Authentication or connection failure.
   "payload": {
     "code": "AUTH_FAILED",
     "message": "Invalid or expired token"
+  }
+}
+```
+
+**Error Codes:**
+- `AUTH_FAILED` — Invalid or expired device pairing token
+- `INSECURE_TRANSPORT` — Connection attempted over `ws://` instead of `wss://`
+- `MISCONFIGURED` — Bridge security settings prevent this connection
+- `VERSION_INCOMPATIBLE` — Client/server protocol version mismatch
+- `RATE_LIMITED` — Too many connection attempts
+
+**Misconfigured Mode Example:**
+
+```json
+{
+  "type": "connection_error",
+  "id": "auth-001",
+  "payload": {
+    "code": "INSECURE_TRANSPORT",
+    "message": "Bridge requires wss:// (WebSocket Secure). Unencrypted ws:// connections are blocked.",
+    "documentation_url": "https://docs.recursor.dev/security/tls-required",
+    "remediation": "Enable TLS on your bridge server and use wss:// URLs"
   }
 }
 ```

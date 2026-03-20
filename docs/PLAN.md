@@ -73,11 +73,17 @@ ReCursor uses a **bridge-first** connection model with no user accounts:
 - [ ] Define WebSocket protocol (see [bridge-protocol.md](bridge-protocol.md))
 - [ ] Implement WebSocket client service with `web_socket_channel`
 - [ ] Connection pairing via QR code (encode bridge URL + device pairing token)
+- [ ] Manual URL entry fallback for pairing (generic remote URL support)
 - [ ] Restore saved bridge pairings on startup before entering the main shell
-- [ ] Tailscale integration documentation / setup guide
+- [ ] **Health verification** step after WebSocket connection before entering main shell
+- [ ] **Connection mode detection**: local-only, private network, secure remote, direct public remote, misconfigured
+- [ ] Connection mode UI indicators (green/yellow/red status per mode)
+- [ ] Security warning screen for "direct public remote" mode requiring user acknowledgment
+- [ ] "Misconfigured" mode detection and blocking (e.g., `ws://` instead of `wss://`)
+- [ ] Tailscale/WireGuard integration documentation / setup guide (user-managed, no built-in automation)
 - [ ] Always use `wss://`; optional certificate pinning
 - [ ] Auto-reconnect with exponential backoff
-- [ ] **Tests:** Unit test WebSocket service with mocks and startup restore logic
+- [ ] **Tests:** Unit test WebSocket service with mocks, startup restore logic, connection mode detection, and health verification flow
 
 ### 1.4 Basic Agent Chat Interface (OpenCode-style)
 - [ ] Chat UI with message list (user messages + agent responses)

@@ -35,9 +35,18 @@
 
 | Document | Description |
 |----------|-------------|
-| [security-architecture.md](security-architecture.md) | Network security, auth, cert pinning, bridge authorization |
+| [security-architecture.md](security-architecture.md) | Network security, auth, cert pinning, bridge authorization, TLS implementation |
 | [offline-architecture.md](offline-architecture.md) | Drift/Hive storage, sync queue, conflict resolution |
 | [push-notifications.md](push-notifications.md) | WebSocket-based notifications and local alerts |
+
+### Protocol & API Specifications
+
+| Document | Description |
+|----------|-------------|
+| [bridge-protocol.md](bridge-protocol.md) | WebSocket message protocol between app and bridge |
+| [bridge-http-api.md](bridge-http-api.md) | REST endpoints for hooks, health, and control |
+| [error-handling.md](error-handling.md) | Error taxonomy, recovery patterns, reconnection strategies |
+| [type-mapping.md](type-mapping.md) | Dart↔TypeScript cross-language type contracts |
 
 ### Development
 

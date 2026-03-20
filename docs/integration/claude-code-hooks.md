@@ -233,6 +233,444 @@ eventBus.on('claude-event', broadcastToMobile);
 
 ---
 
+## Formal Event Schema & Validation Contract
+
+This section defines the formal JSON Schema for Claude Code Hook events and the validation contract used by the ReCursor bridge server.
+
+> **Source of Truth**: TypeScript types are authoritative. Dart models are derived.
+
+### Base Event Structure
+
+All hook events share this base structure:
+
+```typescript
+// TypeScript source of truth
+interface HookEvent {
+  event: HookEventType;           // Required: Event discriminator
+  timestamp: string;              // Required: ISO 8601 UTC
+  session_id: string;             // Required: Session identifier
+  payload: HookEventPayload;      // Required: Event-specific data
+}
+
+type HookEventType = 
+  | 'SessionStart'
+  | 'SessionEnd'
+  | 'PreToolUse'
+  | 'PostToolUse'
+  | 'UserPromptSubmit'
+  | 'Stop'
+  | 'SubagentStop'
+  | 'PreCompact'
+  | 'Notification';
+
+type HookEventPayload = 
+  | SessionStartPayload
+  | SessionEndPayload
+  | PreToolUsePayload
+  | PostToolUsePayload
+  | UserPromptSubmitPayload
+  | StopPayload
+  | SubagentStopPayload
+  | PreCompactPayload
+  | NotificationPayload;
+```
+
+### JSON Schema Definition
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://recursor.dev/schemas/hook-event.json",
+  "title": "Claude Code Hook Event",
+  "type": "object",
+  "required": ["event", "timestamp", "session_id", "payload"],
+  "properties": {
+    "event": {
+      "type": "string",
+      "enum": [
+        "SessionStart", "SessionEnd", "PreToolUse", "PostToolUse",
+        "UserPromptSubmit", "Stop", "SubagentStop", "PreCompact", "Notification"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event": { "const": "SessionStart" } } },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/SessionStartPayload" } } }
+    },
+    {
+      "if": { "properties": { "event": { "const": "PreToolUse" } } },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/PreToolUsePayload" } } }
+    },
+    {
+      "if": { "properties": { "event": { "const": "PostToolUse" } } },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/PostToolUsePayload" } } }
+    },
+    {
+      "if": { "properties": { "event": { "const": "UserPromptSubmit" } } },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/UserPromptSubmitPayload" } } }
+    },
+    {
+      "if": { "properties": { "event": { "const": "Stop" } } },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/StopPayload" } } }
+    }
+  ],
+  "definitions": {
+    "SessionStartPayload": {
+      "type": "object",
+      "required": ["working_directory"],
+      "properties": {
+        "working_directory": { "type": "string" },
+        "initial_prompt": { "type": "string" },
+        "environment": { "type": "object" }
+      }
+    },
+    "PreToolUsePayload": {
+      "type": "object",
+      "required": ["tool", "params", "risk_level", "requires_approval"],
+      "properties": {
+        "tool": { "type": "string" },
+        "params": { "type": "object" },
+        "risk_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "requires_approval": { "type": "boolean" }
+      }
+    },
+    "PostToolUsePayload": {
+      "type": "object",
+      "required": ["tool", "params", "result", "success"],
+      "properties": {
+        "tool": { "type": "string" },
+        "params": { "type": "object" },
+        "result": {},
+        "success": { "type": "boolean" },
+        "execution_time_ms": { "type": "number" }
+      }
+    },
+    "UserPromptSubmitPayload": {
+      "type": "object",
+      "required": ["prompt"],
+      "properties": {
+        "prompt": { "type": "string" },
+        "context_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "estimated_tokens": { "type": "integer" }
+      }
+    },
+    "StopPayload": {
+      "type": "object",
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": ["task_completed", "user_request", "error", "max_tokens", "safety"]
+        },
+        "message": { "type": "string" },
+        "context": { "type": "object" }
+      }
+    }
+  }
+}
+```
+
+### Validation Contract
+
+The bridge server validates all incoming hook events according to these rules:
+
+| Field | Requirement | Validation Rule | Error Code |
+|-------|-------------|-------------------|------------|
+| `event` | Required | Must be in confirmed events list | `HOOK_INVALID_EVENT_TYPE` |
+| `timestamp` | Required | ISO 8601 format, within 5 min skew | `HOOK_INVALID_TIMESTAMP` |
+| `session_id` | Required | Non-empty string, valid format | `HOOK_INVALID_SESSION_ID` |
+| `payload` | Required | Object matching event schema | `HOOK_INVALID_PAYLOAD` |
+
+### Timestamp Validation
+
+Timestamps are validated for freshness and format:
+
+```typescript
+const MAX_TIMESTAMP_SKEW_MS = 5 * 60 * 1000; // 5 minutes
+
+function validateTimestamp(timestamp: string): ValidationResult {
+  // Parse ISO 8601
+  const parsed = Date.parse(timestamp);
+  if (isNaN(parsed)) {
+    return { valid: false, code: 'HOOK_INVALID_TIMESTAMP', reason: 'Not ISO 8601' };
+  }
+  
+  const eventTime = new Date(parsed);
+  const now = new Date();
+  const diff = Math.abs(now.getTime() - eventTime.getTime());
+  
+  // Reject future/past events outside skew window
+  if (diff > MAX_TIMESTAMP_SKEW_MS) {
+    return { 
+      valid: false, 
+      code: 'HOOK_STALE_TIMESTAMP', 
+      reason: `Event timestamp ${diff}ms from current time` 
+    };
+  }
+  
+  return { valid: true };
+}
+```
+
+### TypeScript Validation (Zod)
+
+```typescript
+import { z } from 'zod';
+
+// Risk level enum
+const RiskLevelSchema = z.enum(['low', 'medium', 'high', 'critical']);
+
+// Base event schema
+const HookEventSchema = z.object({
+  event: z.enum([
+    'SessionStart', 'SessionEnd', 'PreToolUse', 'PostToolUse',
+    'UserPromptSubmit', 'Stop', 'SubagentStop', 'PreCompact', 'Notification'
+  ]),
+  timestamp: z.string().datetime(),
+  session_id: z.string().min(1),
+  payload: z.record(z.unknown()),
+});
+
+// Payload schemas by event type
+const SessionStartPayloadSchema = z.object({
+  working_directory: z.string(),
+  initial_prompt: z.string().optional(),
+  environment: z.record(z.unknown()).optional(),
+});
+
+const PreToolUsePayloadSchema = z.object({
+  tool: z.string(),
+  params: z.record(z.unknown()),
+  risk_level: RiskLevelSchema,
+  requires_approval: z.boolean(),
+});
+
+const PostToolUsePayloadSchema = z.object({
+  tool: z.string(),
+  params: z.record(z.unknown()),
+  result: z.unknown(),
+  success: z.boolean(),
+  execution_time_ms: z.number().optional(),
+});
+
+// Event type discriminator
+const EventTypeToPayloadSchema = {
+  SessionStart: SessionStartPayloadSchema,
+  PreToolUse: PreToolUsePayloadSchema,
+  PostToolUse: PostToolUsePayloadSchema,
+  // ... other event types
+} as const;
+
+// Validation function
+export function validateHookEvent(data: unknown): { 
+  success: true; event: HookEvent 
+} | { 
+  success: false; errors: ValidationError[] 
+} {
+  // Validate base structure
+  const baseResult = HookEventSchema.safeParse(data);
+  if (!baseResult.success) {
+    return { 
+      success: false, 
+      errors: baseResult.error.errors.map(e => ({
+        field: e.path.join('.'),
+        message: e.message,
+        code: 'VALIDATION_ERROR'
+      }))
+    };
+  }
+  
+  const event = baseResult.data;
+  
+  // Validate timestamp freshness
+  const timestampValidation = validateTimestamp(event.timestamp);
+  if (!timestampValidation.valid) {
+    return {
+      success: false,
+      errors: [{ field: 'timestamp', message: timestampValidation.reason, code: timestampValidation.code }]
+    };
+  }
+  
+  // Validate payload against event-specific schema
+  const payloadSchema = EventTypeToPayloadSchema[event.event as keyof typeof EventTypeToPayloadSchema];
+  if (payloadSchema) {
+    const payloadResult = payloadSchema.safeParse(event.payload);
+    if (!payloadResult.success) {
+      return {
+        success: false,
+        errors: payloadResult.error.errors.map(e => ({
+          field: `payload.${e.path.join('.')}`,
+          message: e.message,
+          code: 'PAYLOAD_VALIDATION_ERROR'
+        }))
+      };
+    }
+  }
+  
+  return { success: true, event: event as HookEvent };
+}
+```
+
+### Dart Validation
+
+```dart
+import 'package:json_annotation/json_annotation.dart';
+
+// Generated code
+part 'hook_event.g.dart';
+
+@JsonSerializable()
+class HookEvent {
+  final String event;
+  final DateTime timestamp;
+  final String sessionId;
+  final Map<String, dynamic> payload;
+
+  HookEvent({
+    required this.event,
+    required this.timestamp,
+    required this.sessionId,
+    required this.payload,
+  });
+
+  factory HookEvent.fromJson(Map<String, dynamic> json) =>
+      _$HookEventFromJson(json);
+
+  Map<String, dynamic> toJson() => _$HookEventToJson(this);
+}
+
+// Validation
+class HookEventValidator {
+  static const List<String> validEventTypes = [
+    'SessionStart', 'SessionEnd', 'PreToolUse', 'PostToolUse',
+    'UserPromptSubmit', 'Stop', 'SubagentStop', 'PreCompact', 'Notification'
+  ];
+
+  static const Duration maxTimestampSkew = Duration(minutes: 5);
+
+  static ValidationResult validate(Map<String, dynamic> json) {
+    final errors = <ValidationError>[];
+
+    // Validate required fields
+    if (!json.containsKey('event')) {
+      errors.add(ValidationError(field: 'event', message: 'Required field missing'));
+    } else if (!validEventTypes.contains(json['event'])) {
+      errors.add(ValidationError(
+        field: 'event',
+        message: 'Invalid event type: ${json['event']}',
+        code: 'HOOK_INVALID_EVENT_TYPE',
+      ));
+    }
+
+    if (!json.containsKey('timestamp')) {
+      errors.add(ValidationError(field: 'timestamp', message: 'Required field missing'));
+    } else {
+      try {
+        final timestamp = DateTime.parse(json['timestamp'] as String);
+        final now = DateTime.now();
+        final diff = now.difference(timestamp).abs();
+
+        if (diff > maxTimestampSkew) {
+          errors.add(ValidationError(
+            field: 'timestamp',
+            message: 'Timestamp ${diff.inSeconds}s from current time',
+            code: 'HOOK_STALE_TIMESTAMP',
+          ));
+        }
+      } catch (e) {
+        errors.add(ValidationError(
+          field: 'timestamp',
+          message: 'Invalid ISO 8601 format',
+          code: 'HOOK_INVALID_TIMESTAMP',
+        ));
+      }
+    }
+
+    if (!json.containsKey('session_id')) {
+      errors.add(ValidationError(field: 'session_id', message: 'Required field missing'));
+    } else if ((json['session_id'] as String).isEmpty) {
+      errors.add(ValidationError(
+        field: 'session_id',
+        message: 'Session ID cannot be empty',
+        code: 'HOOK_INVALID_SESSION_ID',
+      ));
+    }
+
+    if (!json.containsKey('payload')) {
+      errors.add(ValidationError(field: 'payload', message: 'Required field missing'));
+    } else if (json['payload'] is! Map) {
+      errors.add(ValidationError(
+        field: 'payload',
+        message: 'Payload must be an object',
+        code: 'HOOK_INVALID_PAYLOAD',
+      ));
+    }
+
+    return errors.isEmpty
+        ? ValidationResult.valid()
+        : ValidationResult.invalid(errors);
+  }
+}
+
+class ValidationResult {
+  final bool isValid;
+  final List<ValidationError> errors;
+
+  ValidationResult.valid() : isValid = true, errors = [];
+  ValidationResult.invalid(this.errors) : isValid = false;
+}
+
+class ValidationError {
+  final String field;
+  final String message;
+  final String? code;
+
+  ValidationError({
+    required this.field,
+    required this.message,
+    this.code,
+  });
+}
+```
+
+### Validation Response Format
+
+When validation fails, the bridge server responds with:
+
+```json
+{
+  "received": false,
+  "validation_errors": [
+    {
+      "field": "timestamp",
+      "message": "Event timestamp 312000ms from current time",
+      "code": "HOOK_STALE_TIMESTAMP"
+    }
+  ],
+  "timestamp": "2026-03-20T14:32:00.000Z"
+}
+```
+
+---
+
 ## Event Payload Schemas
 
 ### PostToolUse Event
@@ -395,4 +833,4 @@ eventBus.on('claude-event', broadcastToMobile);
 
 ---
 
-*Last updated: 2026-03-17 | Verified against Claude Code source truth*
+*Last updated: 2026-03-20 | Verified against Claude Code source truth*
