@@ -33,30 +33,42 @@ function isValidTimestamp(value: unknown): value is string {
   return age <= MAX_EVENT_AGE_MS && age >= -MAX_FUTURE_SKEW_MS;
 }
 
-export function validateHookEvent(event: unknown): event is HookEvent {
+export function normalizeHookEvent(event: unknown): HookEvent | null {
   if (!isRecord(event)) {
-    return false;
+    return null;
   }
 
-  if (
-    typeof event.event_type !== "string" ||
-    event.event_type.length === 0 ||
-    !VALID_EVENT_TYPES.includes(event.event_type)
-  ) {
-    return false;
+  const eventType =
+    typeof event.event_type === "string"
+      ? event.event_type
+      : typeof event.event === "string"
+        ? event.event
+        : null;
+
+  if (!eventType || !VALID_EVENT_TYPES.includes(eventType)) {
+    return null;
   }
 
   if (typeof event.session_id !== "string" || event.session_id.length === 0) {
-    return false;
+    return null;
   }
 
   if (!isValidTimestamp(event.timestamp)) {
-    return false;
+    return null;
   }
 
   if (!isRecord(event.payload)) {
-    return false;
+    return null;
   }
 
-  return true;
+  return {
+    event_type: eventType,
+    session_id: event.session_id,
+    timestamp: event.timestamp,
+    payload: event.payload,
+  };
+}
+
+export function validateHookEvent(event: unknown): event is HookEvent {
+  return normalizeHookEvent(event) !== null;
 }

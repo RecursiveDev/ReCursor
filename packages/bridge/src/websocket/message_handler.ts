@@ -6,6 +6,8 @@ import type { AgentSdkAdapter } from "../agents/agent_sdk_adapter";
 import type { GitService } from "../git/git_service";
 import { SUPPORTED_AGENTS } from "../types";
 import type {
+  AcknowledgeWarningPayload,
+  AcknowledgmentAcceptedPayload,
   ActiveSessionPayload,
   ApprovalResponsePayload,
   AuthPayload,
@@ -22,6 +24,8 @@ import type {
   GitDiffResponsePayload,
   GitStatusPayload,
   GitStatusRequestPayload,
+  HealthCheckPayload,
+  HealthStatusPayload,
   HeartbeatPongPayload,
   MessagePayload,
   NotificationAckPayload,
@@ -31,8 +35,12 @@ import type {
 import type { AgentSessionManager } from "../agents/session_manager";
 import { FileService } from "../files/file_service";
 import type { EventQueue } from "../hooks/event_queue";
+import type { ConnectionMode } from "./connection_mode";
 
 const SERVER_VERSION = "0.1.0";
+const DEFAULT_CONNECTION_MODE: ConnectionMode = "secure_remote";
+const DEFAULT_BRIDGE_URL = "wss://bridge.local";
+const WARNING_CODE_DIRECT_PUBLIC = "DIRECT_PUBLIC_CONNECTION";
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [MessageHandler] ${msg}`);
@@ -78,6 +86,19 @@ function mapActiveSession(session: {
   };
 }
 
+function parseClientTimestamp(value?: string): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function clampLatency(value: number): number {
+  return value < 0 ? 0 : value;
+}
+
 export class MessageHandler {
   private fileService: FileService;
 
@@ -99,7 +120,7 @@ export class MessageHandler {
     } catch {
       this.connectionManager.sendToClient(
         clientId,
-        errorMsg("BRIDGE_ERROR", "Invalid JSON message"),
+        errorMsg("PROTO_INVALID_MESSAGE", "Invalid JSON message"),
       );
       return;
     }
@@ -132,6 +153,14 @@ export class MessageHandler {
 
     try {
       switch (type) {
+        case "health_check":
+          this.handleHealthCheck(clientId, payload as HealthCheckPayload, id);
+          break;
+
+        case "acknowledge_warning":
+          this.handleWarningAcknowledgment(clientId, payload as AcknowledgeWarningPayload, id);
+          break;
+
         case "session_start":
           await this.agentSdkAdapter.handleSessionStart(
             payload as SessionStartPayload,
@@ -187,7 +216,7 @@ export class MessageHandler {
           log(`Unknown message type: ${type} from client ${clientId}`);
           this.connectionManager.sendToClient(
             clientId,
-            errorMsg("BRIDGE_ERROR", `Unknown message type: ${type}`, type),
+            errorMsg("PROTO_INVALID_MESSAGE", `Unknown message type: ${type}`, type),
           );
       }
     } catch (err) {
@@ -222,9 +251,31 @@ export class MessageHandler {
       return;
     }
 
+    const client = this.connectionManager.getClient(clientId);
+    if (client?.connectionMode === "misconfigured") {
+      this.connectionManager.sendToClient(clientId, {
+        type: "connection_error",
+        id: requestId ?? uuidv4(),
+        timestamp: ts(),
+        payload: {
+          code: "INSECURE_TRANSPORT",
+          message:
+            "Bridge requires wss:// (WebSocket Secure). Unencrypted ws:// connections are blocked.",
+          documentation_url: "https://docs.recursor.dev/security/tls-required",
+          remediation: "Enable TLS on your bridge server and use wss:// URLs",
+        } as ConnectionErrorPayload,
+      });
+      log(`Rejected insecure transport for client ${clientId}`);
+      return;
+    }
+
     this.connectionManager.authenticateClient(clientId);
 
     const activeSessions = this.agentSessionManager.getActiveSessions().map(mapActiveSession);
+    const connectionMode = client?.connectionMode ?? DEFAULT_CONNECTION_MODE;
+    const connectionModeDescription =
+      client?.connectionModeDescription ?? "Secure tunnel connection";
+    const bridgeUrl = client?.bridgeUrl ?? DEFAULT_BRIDGE_URL;
 
     const ackMsg: BridgeMessage<ConnectionAckPayload> = {
       type: "connection_ack",
@@ -233,6 +284,10 @@ export class MessageHandler {
       payload: {
         server_version: SERVER_VERSION,
         supported_agents: [...SUPPORTED_AGENTS],
+        connection_mode: connectionMode,
+        connection_mode_description: connectionModeDescription,
+        bridge_url: bridgeUrl,
+        requires_health_verification: true,
         active_sessions: activeSessions,
       },
     };
@@ -253,6 +308,104 @@ export class MessageHandler {
       payload: {},
     };
     this.connectionManager.sendToClient(clientId, pong);
+  }
+
+  private handleHealthCheck(
+    clientId: string,
+    payload: HealthCheckPayload,
+    requestId?: string,
+  ): void {
+    const client = this.connectionManager.getClient(clientId);
+    const connectionMode = client?.connectionMode ?? DEFAULT_CONNECTION_MODE;
+    const clientTimestamp = parseClientTimestamp(payload.timestamp);
+    const now = Date.now();
+    const clockSkewMs =
+      clientTimestamp === null ? Number.POSITIVE_INFINITY : Math.abs(now - clientTimestamp);
+    const latencyMs = clientTimestamp === null ? 0 : clampLatency(now - clientTimestamp);
+    const clockSync = clockSkewMs <= 5 * 60 * 1000;
+
+    const checks: HealthStatusPayload["checks"] = {
+      tls_valid: connectionMode !== "misconfigured",
+      clock_sync: clockSync,
+      version_compatible: true,
+      token_permissions: true,
+    };
+
+    const directPublicWarningRequired =
+      connectionMode === "direct_public" && client?.warningAcknowledged !== true;
+
+    const healthPayload: HealthStatusPayload = {
+      status: directPublicWarningRequired ? "warning" : "healthy",
+      connection_mode: connectionMode,
+      warnings: directPublicWarningRequired ? [WARNING_CODE_DIRECT_PUBLIC] : [],
+      checks,
+      server_timestamp: ts(),
+      latency_ms: latencyMs,
+      ready: !directPublicWarningRequired && Object.values(checks).every(Boolean),
+      ...(directPublicWarningRequired
+        ? {
+            warning_details: {
+              [WARNING_CODE_DIRECT_PUBLIC]:
+                "Connection is over public internet without tunnel. Certificate validation is required.",
+            },
+            requires_acknowledgment: true,
+          }
+        : {}),
+    };
+
+    this.connectionManager.sendToClient(clientId, {
+      type: "health_status",
+      id: requestId ?? uuidv4(),
+      timestamp: ts(),
+      payload: healthPayload,
+    });
+  }
+
+  private handleWarningAcknowledgment(
+    clientId: string,
+    payload: AcknowledgeWarningPayload,
+    requestId?: string,
+  ): void {
+    const client = this.connectionManager.getClient(clientId);
+
+    if (!client || client.connectionMode !== "direct_public") {
+      this.connectionManager.sendToClient(
+        clientId,
+        errorMsg(
+          "PROTO_SEQUENCE_ERROR",
+          "Warning acknowledgment is only valid for direct public connections",
+          "acknowledge_warning",
+        ),
+      );
+      return;
+    }
+
+    if (!payload.acknowledged || payload.warning_code !== WARNING_CODE_DIRECT_PUBLIC) {
+      this.connectionManager.sendToClient(
+        clientId,
+        errorMsg(
+          "PROTO_INVALID_MESSAGE",
+          "Invalid warning acknowledgment payload",
+          "acknowledge_warning",
+        ),
+      );
+      return;
+    }
+
+    this.connectionManager.acknowledgeWarning(clientId);
+
+    const response: BridgeMessage<AcknowledgmentAcceptedPayload> = {
+      type: "acknowledgment_accepted",
+      id: requestId ?? uuidv4(),
+      timestamp: ts(),
+      payload: {
+        warning_code: payload.warning_code,
+        ready: true,
+        session_timeout: "8h",
+      },
+    };
+
+    this.connectionManager.sendToClient(clientId, response);
   }
 
   private handleNotificationAck(payload: NotificationAckPayload): void {

@@ -1,19 +1,33 @@
 import type WebSocket from "ws";
-import type { MobileClient, BridgeMessage } from "../types";
+import type { BridgeMessage, MobileClient } from "../types";
+import type { ConnectionMode } from "./connection_mode";
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [ConnectionManager] ${msg}`);
 }
 
+export interface ClientConnectionMetadata {
+  remoteAddress?: string;
+  connectionMode?: ConnectionMode;
+  connectionModeDescription?: string;
+  bridgeUrl?: string;
+}
+
 export class ConnectionManager {
   private clients = new Map<string, MobileClient>();
 
-  addClient(id: string, ws: WebSocket): void {
+  addClient(id: string, ws: WebSocket, metadata?: ClientConnectionMetadata): void {
     const client: MobileClient = {
       id,
       ws,
       sessionIds: [],
       authenticated: false,
+      remoteAddress: metadata?.remoteAddress,
+      connectionMode: metadata?.connectionMode,
+      connectionModeDescription: metadata?.connectionModeDescription,
+      bridgeUrl: metadata?.bridgeUrl,
+      warningAcknowledged: false,
+      connectedAt: new Date().toISOString(),
     };
     this.clients.set(id, client);
     log(`Client added: ${id}`);
@@ -27,6 +41,13 @@ export class ConnectionManager {
     }
   }
 
+  acknowledgeWarning(id: string): void {
+    const client = this.clients.get(id);
+    if (client) {
+      client.warningAcknowledged = true;
+    }
+  }
+
   removeClient(id: string): void {
     this.clients.delete(id);
     log(`Client removed: ${id}`);
@@ -34,6 +55,20 @@ export class ConnectionManager {
 
   getClient(id: string): MobileClient | undefined {
     return this.clients.get(id);
+  }
+
+  getAuthenticatedClientCount(): number {
+    let count = 0;
+    for (const client of this.clients.values()) {
+      if (client.authenticated) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  getTotalClientCount(): number {
+    return this.clients.size;
   }
 
   broadcast(message: BridgeMessage<unknown>, filter?: (client: MobileClient) => boolean): void {

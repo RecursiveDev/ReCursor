@@ -3,11 +3,37 @@ import { v4 as uuidv4 } from "uuid";
 import type { IncomingMessage, Server } from "http";
 import type { ConnectionManager } from "./connection_manager";
 import type { MessageHandler } from "./message_handler";
+import { buildBridgeUrl, describeConnectionMode, detectConnectionMode } from "./connection_mode";
 
 const PING_INTERVAL_MS = 30_000;
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [WebSocketServer] ${msg}`);
+}
+
+function getHeaderValue(req: IncomingMessage, headerName: string): string | undefined {
+  const value = req.headers[headerName];
+  if (typeof value === "string") {
+    return value.split(",")[0]?.trim();
+  }
+
+  return value?.[0]?.trim();
+}
+
+function isSecureTransport(req: IncomingMessage): boolean {
+  const forwardedProto = getHeaderValue(req, "x-forwarded-proto")?.toLowerCase();
+  const forwardedSsl = getHeaderValue(req, "x-forwarded-ssl")?.toLowerCase();
+
+  const socketEncrypted =
+    "encrypted" in req.socket &&
+    Boolean((req.socket as typeof req.socket & { encrypted?: boolean }).encrypted);
+
+  return (
+    socketEncrypted ||
+    forwardedProto === "https" ||
+    forwardedProto === "wss" ||
+    forwardedSsl === "on"
+  );
 }
 
 export class WebSocketServer {
@@ -28,7 +54,7 @@ export class WebSocketServer {
         serverNoContextTakeover: true,
         serverMaxWindowBits: 10,
         concurrencyLimit: 10,
-        threshold: 1024, // only compress messages > 1KB
+        threshold: 1024,
       },
     });
     this.setup();
@@ -37,9 +63,30 @@ export class WebSocketServer {
   private setup(): void {
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       const clientId = uuidv4();
-      log(`New connection: ${clientId} from ${req.socket.remoteAddress}`);
+      const secureTransport = isSecureTransport(req);
+      const remoteAddress =
+        getHeaderValue(req, "x-forwarded-for") ?? req.socket.remoteAddress ?? undefined;
+      const host =
+        getHeaderValue(req, "x-forwarded-host") ?? getHeaderValue(req, "host") ?? undefined;
+      const connectionMode = detectConnectionMode({
+        remoteAddress,
+        host,
+        secureTransport,
+      });
+      const connectionModeDescription = describeConnectionMode(connectionMode, {
+        remoteAddress,
+        host,
+      });
+      const bridgeUrl = buildBridgeUrl(host, secureTransport);
 
-      this.connectionManager.addClient(clientId, ws);
+      log(`New connection: ${clientId} from ${remoteAddress ?? "unknown"} (${connectionMode})`);
+
+      this.connectionManager.addClient(clientId, ws, {
+        remoteAddress,
+        connectionMode,
+        connectionModeDescription,
+        bridgeUrl,
+      });
 
       ws.on("message", (data) => {
         const raw = data.toString();

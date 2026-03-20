@@ -1,4 +1,5 @@
 import type WebSocket from "ws";
+import type { ConnectionMode } from "./websocket/connection_mode";
 
 export const SUPPORTED_AGENTS = ["claude-code"] as const;
 
@@ -31,12 +32,53 @@ export interface ActiveSessionPayload {
 export interface ConnectionAckPayload {
   server_version: string;
   supported_agents: SupportedAgent[];
+  connection_mode: ConnectionMode;
+  connection_mode_description: string;
+  bridge_url: string;
+  requires_health_verification: boolean;
   active_sessions: ActiveSessionPayload[];
 }
 
 export interface ConnectionErrorPayload {
   code: string;
   message: string;
+  documentation_url?: string;
+  remediation?: string;
+}
+
+export interface HealthCheckPayload {
+  timestamp: string;
+  client_nonce: string;
+  client_capabilities?: string[];
+}
+
+export interface HealthStatusPayload {
+  status: "healthy" | "warning" | "blocked";
+  connection_mode: ConnectionMode;
+  warnings: string[];
+  warning_details?: Record<string, string>;
+  checks: {
+    tls_valid: boolean;
+    clock_sync: boolean;
+    version_compatible: boolean;
+    token_permissions: boolean;
+  };
+  server_timestamp: string;
+  latency_ms: number;
+  ready: boolean;
+  requires_acknowledgment?: boolean;
+}
+
+export interface AcknowledgeWarningPayload {
+  warning_code: string;
+  acknowledged: boolean;
+  acknowledged_at: string;
+}
+
+export interface AcknowledgmentAcceptedPayload {
+  warning_code: string;
+  ready: boolean;
+  session_timeout: string;
 }
 
 export type HeartbeatPingPayload = Record<string, never>;
@@ -278,6 +320,12 @@ export interface MobileClient {
   ws: WebSocket;
   sessionIds: string[];
   authenticated: boolean;
+  remoteAddress?: string;
+  connectionMode?: ConnectionMode;
+  connectionModeDescription?: string;
+  bridgeUrl?: string;
+  warningAcknowledged?: boolean;
+  connectedAt?: string;
 }
 
 export interface AgentSession {

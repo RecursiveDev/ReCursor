@@ -34,8 +34,10 @@ export function rateLimiter(req: Request, res: Response, next: NextFunction): vo
     const retryAfter = Math.ceil((WINDOW_MS - (now - entry.windowStart)) / 1000);
     res.setHeader("Retry-After", retryAfter);
     res.status(429).json({
-      error: "Too Many Requests",
+      error: "RateLimitExceeded",
       message: `Rate limit exceeded. Try again in ${retryAfter}s`,
+      code: "RATE_LIMIT_EXCEEDED",
+      retry_after: retryAfter,
     });
     return;
   }
