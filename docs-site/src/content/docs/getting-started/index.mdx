@@ -1,0 +1,23 @@
+---
+title: Getting started
+description: Orientation pages for the ReCursor project, its documentation corpus, and the current execution plan.
+editUrl: false
+sidebar:
+  order: 1
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+The published docs site is generated from the repository’s canonical <code>/docs</code> directory. Use this section to understand the project intent before diving into architecture or implementation details.
+
+<CardGrid>
+  <Card title="Documentation index" icon="list-tree" href="/getting-started/documentation-index/">
+    The source-of-truth index for the entire documentation corpus.
+  </Card>
+  <Card title="Product vision" icon="light-bulb" href="/getting-started/product-vision/">
+    The product concept, bridge-first UX, and OpenCode parity goals.
+  </Card>
+  <Card title="Implementation plan" icon="checklist" href="/getting-started/implementation-plan/">
+    The phased roadmap used to sequence delivery work across the project.
+  </Card>
+</CardGrid>

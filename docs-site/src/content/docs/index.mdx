@@ -1,0 +1,57 @@
+---
+title: ReCursor documentation
+description: Bridge-first project docs for the ReCursor mobile companion UI, published with Astro Starlight.
+editUrl: false
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div className="hero-note">
+  <strong>Source of truth:</strong> The canonical documentation lives in <code>/docs</code> in this repository. This site is generated from that corpus and preserves the project constraint that Claude Code Remote Control is first-party only.
+</div>
+
+## Start here
+
+<CardGrid stagger>
+  <Card title="Getting started" icon="open-book" href="/getting-started/">
+    Project overview, product vision, and the current implementation plan.
+  </Card>
+  <Card title="Architecture" icon="seti:graphql" href="/architecture/">
+    System overview, bridge protocol, data flow, and project structure.
+  </Card>
+  <Card title="Integrations" icon="seti:code-climate" href="/integrations/">
+    Supported Claude Code Hooks, Agent SDK, and OpenCode UI pattern references.
+  </Card>
+  <Card title="Operations" icon="seti:terraform" href="/operations/">
+    Security, offline behavior, testing, notifications, and CI/CD guidance.
+  </Card>
+  <Card title="Reference" icon="seti:json" href="/reference/">
+    Bridge HTTP API, error taxonomy, and cross-language type contracts.
+  </Card>
+  <Card title="Wireframes" icon="seti:html" href="/wireframes/">
+    Screen-by-screen mobile UI wireframes covering the bridge-first workflow.
+  </Card>
+  <Card title="Research" icon="seti:mdx" href="/research/">
+    Background research documents that informed the current architecture.
+  </Card>
+  <Card title="Legal" icon="seti:license" href="/legal/">
+    Privacy policy and terms of service drafts for future release readiness.
+  </Card>
+</CardGrid>
+
+## AI-friendly artifacts
+
+<div className="site-link-list">
+
+- [Compact AI index](/llms.txt)
+- [Full concatenated AI context](/llms-full.txt)
+
+</div>
+
+## Project constraints
+
+- ReCursor is a **mobile-first companion UI** for AI coding workflows.
+- The app follows a **bridge-first, no-login** model that connects to a user-controlled desktop bridge.
+- **Claude Code Hooks** are documented as **one-way observation** only.
+- **Claude Agent SDK** is documented as a **parallel, controllable** session model.
+- Third-party mirroring of first-party Claude Code Remote Control sessions is treated as **unsupported** unless official documentation changes.

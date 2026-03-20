@@ -1,0 +1,86 @@
+---
+import Default from '@astrojs/starlight/components/Head.astro';
+import favicon from '../assets/recursor-logo-light.svg?url';
+---
+
+<Default><slot /></Default>
+<link rel="icon" type="image/svg+xml" href={favicon} />
+<meta name="theme-color" content="#0f172a" />
+<script>
+  import mermaid from 'mermaid';
+
+  function currentTheme() {
+    const root = document.documentElement;
+    const themeValue = root.dataset.theme ?? '';
+    const isDark =
+      themeValue === 'dark' ||
+      root.classList.contains('dark') ||
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    return isDark ? 'dark' : 'default';
+  }
+
+  function prepareDiagrams() {
+    const diagrams = document.querySelectorAll<HTMLElement>(
+      'pre code.language-mermaid, pre[data-language="mermaid"]',
+    );
+
+    for (const source of diagrams) {
+      const container = source.closest('.expressive-code') ?? source.closest('pre');
+      if (!container) {
+        continue;
+      }
+
+      const diagram = document.createElement('div');
+      diagram.className = 'mermaid';
+      diagram.dataset.definition = source.textContent ?? '';
+      diagram.textContent = diagram.dataset.definition;
+      container.replaceWith(diagram);
+    }
+  }
+
+  function resetRenderedDiagrams() {
+    const diagrams = document.querySelectorAll<HTMLElement>('.mermaid[data-definition]');
+    for (const diagram of diagrams) {
+      diagram.removeAttribute('data-processed');
+      diagram.textContent = diagram.dataset.definition ?? '';
+    }
+  }
+
+  async function renderMermaid() {
+    prepareDiagrams();
+    resetRenderedDiagrams();
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: currentTheme(),
+    });
+
+    await mermaid.run({ querySelector: '.mermaid' });
+  }
+
+  let observerAttached = false;
+
+  function attachThemeObserver() {
+    if (observerAttached) {
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      void renderMermaid();
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    });
+
+    observerAttached = true;
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    attachThemeObserver();
+    void renderMermaid();
+  });
+</script>

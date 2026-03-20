@@ -1,0 +1,45 @@
+:root {
+  --sl-color-accent-low: #0f172a;
+  --sl-color-accent: #38bdf8;
+  --sl-color-accent-high: #e0f2fe;
+  --sl-font: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+:root[data-theme='light'] {
+  --sl-color-bg: #f8fafc;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-text: #0f172a;
+}
+
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #082f49;
+  --sl-color-accent: #38bdf8;
+  --sl-color-accent-high: #e0f2fe;
+}
+
+.hero-note {
+  border-left: 4px solid var(--sl-color-accent);
+  padding: 1rem 1.25rem;
+  background: color-mix(in srgb, var(--sl-color-accent) 10%, var(--sl-color-bg));
+  border-radius: 0.75rem;
+}
+
+.site-link-list a {
+  font-weight: 600;
+}
+
+.mermaid {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--sl-color-bg-nav) 88%, transparent);
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
