@@ -61,7 +61,7 @@ class Agents extends Table {
   TextColumn get displayName => text()();                 // "Claude Code"
   TextColumn get agentType => text()();                   // "claude-code", "opencode", "aider", "goose", "custom"
   TextColumn get bridgeUrl => text()();                   // "wss://100.78.42.15:3000"
-  TextColumn get authToken => text()();                   // Encrypted bridge auth token
+  TextColumn get authToken => text()();                   // Encrypted bridge pairing token (device-bridge auth, not user account)
   TextColumn get workingDirectory => text().nullable()();
   TextColumn get status => text()
       .withDefault(const Constant('disconnected'))();     // "connected", "disconnected", "inactive"
@@ -138,22 +138,22 @@ class TerminalSessions extends Table {
 
 ## Hive Boxes (Key-Value)
 
-### Auth Box
+### Connection Box
 
 ```dart
 @HiveType(typeId: 1)
-class AuthState {
+class BridgeConnectionState {
   @HiveField(0)
-  final String accessToken;
+  final String deviceToken;
   
   @HiveField(1)
-  final String refreshToken;
+  final String bridgeUrl;
   
   @HiveField(2)
-  final DateTime expiresAt;
+  final DateTime pairedAt;
   
   @HiveField(3)
-  final String tokenType; // "oauth" | "pat"
+  final String tokenType; // "device_pairing"
 }
 ```
 

@@ -14,10 +14,10 @@
 | Claude Code wants to:            |
 |                                  |
 | Edit File                        |
-| lib/auth/login.dart              |
+| lib/features/startup/bridge_...  |
 |                                  |
-| - callbackUrl: 'http://...'     |
-| + callbackUrl: 'https://...'    |
+| - allowWs: true                 |
+| + requireWss: true              |
 |                                  |
 | [View Full Diff]                 |
 |                                  |
@@ -39,28 +39,28 @@
 |                                       |
 |  +----------------------------------+ |
 |  | Agent: Claude Code               | |
-|  | Session: Fix auth bug            | |
+|  | Session: Bridge startup          | |
 |  | Time: 10:33 AM                   | |
 |  +----------------------------------+ |
 |                                       |
 |  Tool: Edit File                      |
-|  File: lib/auth/login.dart            |
+|  File: lib/features/startup/...       |
 |  Lines: 42-45                         |
 |                                       |
 |  Changes:                             |
 |  +----------------------------------+ |
 |  | @@ -40,7 +40,8 @@               | |
-|  |  40 | final config = OAuthConf.. | |
-|  |  41 | clientId: env.clientId,    | |
-|  |  42 |- callbackUrl: 'http://..  | |
-|  |  42 |+ callbackUrl: 'https://.. | |
-|  |  43 |+ redirectValidation: true, | |
+|  |  40 | final validator = Bridge.. | |
+|  |  41 | if (url.isEmpty) return... | |
+|  |  42 |- return wsAllowed(url);    | |
+|  |  42 |+ return wssRequired(url);  | |
+|  |  43 |+ ensureTokenPresent();     | |
 |  +----------------------------------+ |
 |                                       |
 |  Agent reasoning:                     |
-|  "The callback URL must use HTTPS     |
-|   for OAuth security. I'm also        |
-|   adding redirect validation."        |
+|  "The bridge URL must use WSS and    |
+|   the pairing token cannot be empty. |
+|   I'm tightening startup validation."|
 |                                       |
 +---------------------------------------+
 | [  Approve  ]           [  Reject  ]  |
@@ -108,9 +108,9 @@
 ```
 +---------------------------------------+
 |  ReCursor                    now     |
-|  Approval needed: Edit login.dart     |
-|  Claude Code wants to change the      |
-|  OAuth callback URL.                  |
+|  Approval needed: Bridge setup edit   |
+|  Claude Code wants to tighten the     |
+|  startup bridge validation.           |
 |                                       |
 |  [ Approve ]            [ View ]      |
 +---------------------------------------+
@@ -133,7 +133,7 @@
 |  Today                                |
 |  +----------------------------------+ |
 |  | [check] Approved                 | |
-|  | Edit lib/auth/login.dart         | |
+|  | Edit bridge_setup_screen.dart   | |
 |  | Claude Code  *  10:33 AM        | |
 |  +----------------------------------+ |
 |  | [check] Approved                 | |

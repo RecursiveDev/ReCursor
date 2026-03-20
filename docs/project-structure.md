@@ -32,7 +32,7 @@ recursor/
 │       │   ├── hooks/             # Claude Code Hooks receiver
 │       │   ├── git/               # Git operation handlers
 │       │   ├── terminal/          # Terminal session manager
-│       │   ├── auth/              # Token validation, rate limiting
+│       │   ├── auth/              # Device token validation, rate limiting
 │       │   └── notifications/     # Event queue + WebSocket dispatch
 │       ├── package.json
 │       └── tsconfig.json
@@ -64,13 +64,12 @@ core/
 │   ├── websocket_messages.dart    # Message type definitions (from bridge-protocol.md)
 │   └── connection_state.dart      # Connection state enum + notifier
 │
-├── auth/
-│   ├── auth_provider.dart         # Riverpod auth state provider
-│   ├── auth_repository.dart       # OAuth + PAT token management
-│   ├── token_storage.dart         # flutter_secure_storage wrapper
-│   └── github_oauth.dart          # OAuth2 flow handler
+├── providers/
+│   ├── token_storage_provider.dart # Secure bridge token storage provider
+│   └── websocket_provider.dart     # Shared WebSocket service providers
 │
 ├── storage/
+│   ├── secure_token_storage.dart   # flutter_secure_storage wrapper for bridge pairing
 │   ├── database.dart              # Drift database definition
 │   ├── tables/                    # Drift table definitions
 │   │   ├── sessions.dart
@@ -231,19 +230,13 @@ features/
 │       └── widgets/
 │           └── agent_card.dart
 │
-├── auth/                          # Authentication
-│   ├── data/
-│   │   └── repositories/
-│   │       └── auth_repository.dart
+├── startup/                       # Bridge-first launch and pairing restore
 │   ├── domain/
-│   │   └── providers/
-│   │       └── auth_provider.dart
+│   │   └── bridge_startup_controller.dart
 │   └── presentation/
-│       ├── screens/
-│       │   ├── login_screen.dart
-│       │   └── splash_screen.dart
-│       └── widgets/
-│           └── auth_button.dart
+│       └── screens/
+│           ├── splash_screen.dart
+│           └── bridge_setup_screen.dart
 │
 └── settings/                      # App settings
     └── presentation/
@@ -311,7 +304,7 @@ bridge/
 │   └── output_stream.ts           # Terminal output streaming
 │
 ├── auth/
-│   ├── token_validator.ts         # JWT/auth token validation
+│   ├── token_validator.ts         # Device pairing token validation
 │   └── rate_limiter.ts            # Rate limiting
 │
 └── notifications/

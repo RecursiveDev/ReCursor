@@ -1,0 +1,80 @@
+<article class="page">
+  <div class="page-header">
+    <div class="breadcrumb">Development</div>
+    <h1>Roadmap</h1>
+    <p class="page-subtitle">Implementation plan across four phases, from foundation to production release.</p>
+  </div>
+
+  <h2>Phase 1: Foundation</h2>
+  <div class="phase-card phase-1">
+    <div class="phase-header">
+      <span class="badge badge-blue">Phase 1</span>
+      <span>Bootable app with bridge connectivity and basic agent chat</span>
+    </div>
+    <ul>
+      <li>Initialize Flutter project (iOS + Android)</li>
+      <li>Bridge connection with QR code pairing</li>
+      <li>WebSocket client with auto-reconnect</li>
+      <li>Basic chat interface with streaming text</li>
+      <li>OpenCode-style message part rendering</li>
+      <li>Repository file browsing</li>
+      <li>CI/CD pipeline setup</li>
+    </ul>
+  </div>
+
+  <h2>Phase 2: Core Features</h2>
+  <div class="phase-card phase-2">
+    <div class="phase-header">
+      <span class="badge badge-purple">Phase 2</span>
+      <span>Hooks integration, tool cards, diff viewer, notifications</span>
+    </div>
+    <ul>
+      <li>Claude Code Hooks event reception</li>
+      <li>OpenCode-style tool cards (pending/running/completed/error)</li>
+      <li>Syntax-highlighted diff viewer (unified + side-by-side)</li>
+      <li>Session timeline with event navigation</li>
+      <li>Tool call approval flow</li>
+      <li>WebSocket-based push notifications</li>
+    </ul>
+  </div>
+
+  <h2>Phase 3: Advanced Features</h2>
+  <div class="phase-card phase-3">
+    <div class="phase-header">
+      <span class="badge badge-orange">Phase 3</span>
+      <span>Voice, multi-agent, terminal, offline mode</span>
+    </div>
+    <ul>
+      <li>Voice commands via platform speech APIs</li>
+      <li>Multi-agent support (Claude Code, OpenCode, Aider, Goose)</li>
+      <li>Embedded terminal view with ANSI color rendering</li>
+      <li>Full offline mode with Drift/Hive sync queue</li>
+    </ul>
+  </div>
+
+  <h2>Phase 4: Polish &amp; Release</h2>
+  <div class="phase-card phase-4">
+    <div class="phase-header">
+      <span class="badge badge-green">Phase 4</span>
+      <span>Performance, accessibility, app store release</span>
+    </div>
+    <ul>
+      <li>Large repo handling and performance optimization</li>
+      <li>Tablet and landscape layouts</li>
+      <li>Accessibility (TalkBack, VoiceOver, dynamic type)</li>
+      <li>App Store and Google Play release preparation</li>
+    </ul>
+  </div>
+
+  <h2>Testing Strategy</h2>
+  <table class="doc-table">
+    <thead><tr><th>Level</th><th>Tool</th><th>Coverage</th></tr></thead>
+    <tbody>
+      <tr><td>Unit</td><td><code>flutter_test</code> + <code>mockito</code></td><td>Services, providers, models</td></tr>
+      <tr><td>Widget</td><td><code>flutter_test</code></td><td>UI components with mocks</td></tr>
+      <tr><td>Golden</td><td><code>alchemist</code></td><td>Visual regression for key screens</td></tr>
+      <tr><td>Integration</td><td><code>integration_test</code></td><td>Full flows: connect, chat, hooks</td></tr>
+      <tr><td>E2E</td><td><code>patrol</code></td><td>Complete user journeys on real devices</td></tr>
+    </tbody>
+  </table>
+</article>

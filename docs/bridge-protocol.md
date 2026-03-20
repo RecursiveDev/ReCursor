@@ -1,6 +1,6 @@
 # Bridge Protocol Specification
 
-> WebSocket message protocol between the ReCursor Flutter mobile app and the TypeScript bridge server.
+> WebSocket message protocol between the ReCursor Flutter mobile app and the user-controlled TypeScript bridge server. Bridge-first, no-login: device pairing via QR code, no user accounts.
 
 ---
 
@@ -50,14 +50,14 @@ All messages are JSON objects with a `type` field and an optional `id` for reque
 ### Connection
 
 #### `auth` (client -> server)
-Sent immediately after WebSocket connection opens.
+Sent immediately after WebSocket connection opens for device pairing authentication.
 
 ```json
 {
   "type": "auth",
   "id": "auth-001",
   "payload": {
-    "token": "bridge-auth-token-xxxxx",
+    "token": "device-pairing-token-xxxxx",
     "client_version": "1.0.0",
     "platform": "ios"
   }
@@ -75,7 +75,7 @@ Confirms authentication and connection.
     "server_version": "1.0.0",
     "supported_agents": ["claude-code", "opencode", "aider", "goose"],
     "active_sessions": [
-      { "session_id": "sess-abc", "agent": "claude-code", "title": "Fix auth bug" }
+      { "session_id": "sess-abc", "agent": "claude-code", "title": "Bridge startup validation" }
     ]
   }
 }
@@ -170,7 +170,7 @@ Send a chat message to the agent.
   "id": "msg-001",
   "payload": {
     "session_id": "sess-abc123",
-    "content": "Fix the auth bug in login.dart",
+    "content": "Tighten the bridge startup validation in bridge_setup_screen.dart",
     "role": "user"
   }
 }
@@ -198,7 +198,7 @@ Chunk of streamed response content.
   "payload": {
     "session_id": "sess-abc123",
     "message_id": "msg-resp-001",
-    "content": "I'll help you fix the auth bug",
+    "content": "I'll tighten the bridge startup validation",
     "is_tool_use": false
   }
 }
@@ -234,11 +234,11 @@ Agent wants to use a tool. Sent when Agent SDK initiates tool use.
     "tool_call_id": "call-abc123",
     "tool": "edit_file",
     "params": {
-      "file_path": "/home/user/project/lib/auth.dart",
-      "old_string": "void login() {",
-      "new_string": "void login() async {"
+      "file_path": "/home/user/project/lib/features/startup/bridge_setup_screen.dart",
+      "old_string": "return wsAllowed(url);",
+      "new_string": "return requireWss(url);"
     },
-    "description": "Add async keyword to login function"
+    "description": "Require secure bridge URLs during startup"
   }
 }
 ```
@@ -343,12 +343,12 @@ Current git status.
   "id": "git-001",
   "payload": {
     "session_id": "sess-abc123",
-    "branch": "feature/auth-fix",
+    "branch": "feature/bridge-startup",
     "ahead": 2,
     "behind": 0,
     "is_clean": false,
     "changes": [
-      { "path": "lib/auth.dart", "status": "modified", "additions": 5, "deletions": 2 }
+      { "path": "lib/features/startup/bridge_setup_screen.dart", "status": "modified", "additions": 5, "deletions": 2 }
     ]
   }
 }
@@ -363,8 +363,8 @@ Create a commit.
   "id": "git-002",
   "payload": {
     "session_id": "sess-abc123",
-    "message": "Fix auth bug in login flow",
-    "files": ["lib/auth.dart"] // null = all staged
+    "message": "Tighten bridge startup validation",
+    "files": ["lib/features/startup/bridge_setup_screen.dart"] // null = all staged
   }
 }
 ```
@@ -378,7 +378,7 @@ Request diff for files.
   "id": "git-003",
   "payload": {
     "session_id": "sess-abc123",
-    "files": ["lib/auth.dart"], // null = all changes
+    "files": ["lib/features/startup/bridge_setup_screen.dart"], // null = all changes
     "cached": false
   }
 }
@@ -395,9 +395,9 @@ Diff content.
     "session_id": "sess-abc123",
     "files": [
       {
-        "path": "lib/auth.dart",
-        "old_path": "lib/auth.dart",
-        "new_path": "lib/auth.dart",
+        "path": "lib/features/startup/bridge_setup_screen.dart",
+        "old_path": "lib/features/startup/bridge_setup_screen.dart",
+        "new_path": "lib/features/startup/bridge_setup_screen.dart",
         "status": "modified",
         "additions": 5,
         "deletions": 2,
@@ -409,9 +409,9 @@ Diff content.
             "new_start": 10,
             "new_lines": 5,
             "lines": [
-              { "type": "context", "content": " class AuthService {" },
-              { "type": "removed", "content": "-  void login() {" },
-              { "type": "added", "content": "+  void login() async {" },
+              { "type": "context", "content": " class BridgeConnectionValidator {" },
+              { "type": "removed", "content": "-  return wsAllowed(url);" },
+              { "type": "added", "content": "+  return requireWss(url);" },
               { "type": "context", "content": "     // ..." }
             ]
           }
@@ -467,7 +467,7 @@ Read file content.
   "id": "file-002",
   "payload": {
     "session_id": "sess-abc123",
-    "path": "/home/user/project/lib/auth.dart",
+    "path": "/home/user/project/lib/features/startup/bridge_setup_screen.dart",
     "offset": 0,
     "limit": 100
   }
@@ -505,8 +505,8 @@ Server-initiated notification.
   "payload": {
     "session_id": "sess-abc123",
     "notification_type": "approval_required",
-    "title": "Approval needed: Edit login.dart",
-    "body": "Claude Code wants to change the OAuth callback URL.",
+    "title": "Approval needed: Update bridge_setup_screen.dart",
+    "body": "Claude Code wants to tighten bridge URL validation before pairing.",
     "priority": "high",
     "data": {
       "tool_call_id": "tool-001",

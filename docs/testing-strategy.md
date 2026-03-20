@@ -55,7 +55,7 @@ expectLater(
 ### What to Unit Test
 
 - WebSocket service (connect, disconnect, reconnect, message parsing)
-- Auth provider state transitions (unauthenticated -> authenticating -> authenticated -> error)
+- Bridge connection state transitions (disconnected -> connecting -> connected -> error)
 - Git command serialization/deserialization
 - Notification payload parsing
 - Diff parsing logic
@@ -88,7 +88,7 @@ testWidgets('shows connected status', (tester) async {
 ### What to Widget Test
 
 - Chat UI with mock message streams
-- Login screen form validation and submission
+- Bridge QR pairing screen
 - OpenCode-style Tool Cards with sample data
 - Diff viewer with sample diff data
 - Approval UI approve/reject/modify interactions
@@ -167,7 +167,7 @@ testWidgets('full chat flow', (tester) async {
 
 ### What to Integration Test
 
-- Auth -> connect -> chat -> receive response
+- Bridge connect -> validate pairing -> chat -> receive response
 - Git operation flows (commit, push, pull)
 - Approval flow (receive tool call -> approve -> agent continues)
 - Offline -> reconnect -> sync
@@ -213,7 +213,7 @@ class TestBridgeServer {
 
 ### E2E Scenarios
 
-- Full onboarding flow: install -> auth -> pair -> first message
+- Full onboarding flow: install -> bridge pairing -> first message
 - Background notification: receive approval request -> tap notification -> approve
 - Multi-session: switch between agent sessions
 - Offline workflow: actions while offline -> sync on reconnect

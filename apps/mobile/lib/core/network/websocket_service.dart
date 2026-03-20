@@ -1,0 +1,338 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+import 'bridge_connection_validator.dart';
+import 'connection_state.dart';
+import 'websocket_messages.dart';
+
+typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri);
+
+/// WebSocket client service for communication with the ReCursor bridge server.
+///
+/// Responsibilities:
+/// - Connect / disconnect lifecycle
+/// - Authentication handshake
+/// - Heartbeat (ping every 15 s, expect pong within 10 s)
+/// - Automatic reconnect with exponential back-off (1 → 2 → 4 → 8 … max 30 s)
+/// - Serialize outgoing [BridgeMessage] to JSON
+/// - Parse incoming JSON into [BridgeMessage]
+class WebSocketService {
+  WebSocketService({WebSocketChannelFactory? channelFactory})
+      : _channelFactory = channelFactory ?? WebSocketChannel.connect;
+
+  static const int _heartbeatIntervalSeconds = 15;
+  static const int _heartbeatTimeoutSeconds = 10;
+  static const int _authTimeoutSeconds = 10;
+  static const int _maxReconnectDelaySeconds = 30;
+
+  final WebSocketChannelFactory _channelFactory;
+
+  WebSocketChannel? _channel;
+  String? _url;
+  String? _token;
+  Map<String, dynamic>? _lastConnectionAckPayload;
+
+  final StreamController<BridgeMessage> _messageController =
+      StreamController<BridgeMessage>.broadcast();
+  final StreamController<ConnectionStatus> _statusController =
+      StreamController<ConnectionStatus>.broadcast();
+
+  ConnectionStatus _status = ConnectionStatus.disconnected;
+  int _reconnectAttempts = 0;
+  bool _intentionalDisconnect = false;
+  bool _authFailed = false;
+  Completer<void>? _authCompleter;
+
+  Timer? _heartbeatTimer;
+  Timer? _pongTimeoutTimer;
+  Timer? _reconnectTimer;
+
+  Stream<BridgeMessage> get messages => _messageController.stream;
+  Stream<ConnectionStatus> get connectionStatus => _statusController.stream;
+  ConnectionStatus get currentStatus => _status;
+  Map<String, dynamic>? get lastConnectionAckPayload =>
+      _lastConnectionAckPayload;
+
+  Future<void> connect({required String url, required String token}) async {
+    final validation = BridgeConnectionValidator.validate(
+      url: url,
+      token: token,
+    );
+    if (!validation.isValid) {
+      throw BridgeConnectionException(validation.errorMessage!);
+    }
+
+    _url = url.trim();
+    _token = token.trim();
+    _intentionalDisconnect = false;
+    _authFailed = false;
+    _reconnectAttempts = 0;
+    await _doConnect();
+  }
+
+  Future<void> _doConnect() async {
+    if (_url == null || _token == null) {
+      throw const BridgeConnectionException(
+        'Bridge connection details are incomplete.',
+      );
+    }
+
+    if (_status != ConnectionStatus.reconnecting) {
+      _setStatus(ConnectionStatus.connecting);
+    }
+
+    _cleanUp(closeChannel: true, cancelReconnect: false);
+    _authCompleter = Completer<void>();
+
+    try {
+      final Uri uri = Uri.parse(_url!);
+      final WebSocketChannel channel = _channelFactory(uri);
+      _channel = channel;
+
+      channel.stream.listen(
+        _onRawMessage,
+        onError: _onError,
+        onDone: _onDone,
+        cancelOnError: false,
+      );
+
+      await channel.ready;
+
+      _sendInternal(
+        BridgeMessage.auth(
+          token: _token!,
+          clientVersion: '0.1.0',
+          platform: _platformString(),
+        ),
+      );
+
+      await _authCompleter!.future.timeout(
+        const Duration(seconds: _authTimeoutSeconds),
+        onTimeout: () {
+          throw const BridgeConnectionException(
+            'Bridge authentication timed out.',
+          );
+        },
+      );
+
+      _startHeartbeat();
+    } catch (error) {
+      _completeAuthError(error);
+      _setStatus(ConnectionStatus.error);
+      _cleanUp(closeChannel: true, cancelReconnect: false);
+      _scheduleReconnectIfNeeded();
+      if (error is BridgeConnectionException) {
+        rethrow;
+      }
+      throw BridgeConnectionException('Failed to connect to bridge: $error');
+    }
+  }
+
+  void disconnect() {
+    _intentionalDisconnect = true;
+    _authFailed = false;
+    _completeAuthError(
+      const BridgeConnectionException('Bridge connection closed.'),
+    );
+    _cleanUp();
+    _setStatus(ConnectionStatus.disconnected);
+  }
+
+  bool send(BridgeMessage message) {
+    if (_channel == null || _status != ConnectionStatus.connected) {
+      return false;
+    }
+    return _sendInternal(message);
+  }
+
+  void sendRaw(String json) {
+    _channel?.sink.add(json);
+  }
+
+  bool _sendInternal(BridgeMessage message) {
+    final WebSocketChannel? channel = _channel;
+    if (channel == null) {
+      return false;
+    }
+
+    channel.sink.add(message.toJsonString());
+    return true;
+  }
+
+  void _onRawMessage(dynamic data) {
+    try {
+      final Map<String, dynamic> json =
+          jsonDecode(data as String) as Map<String, dynamic>;
+      final BridgeMessage message = BridgeMessage.fromJson(json);
+
+      if (message.type == BridgeMessageType.connectionAck) {
+        _reconnectAttempts = 0;
+        _authFailed = false;
+        _lastConnectionAckPayload = Map<String, dynamic>.unmodifiable(
+          Map<String, dynamic>.from(message.payload),
+        );
+        _setStatus(ConnectionStatus.connected);
+        _completeAuthSuccess();
+        return;
+      }
+
+      if (message.type == BridgeMessageType.connectionError) {
+        _authFailed = true;
+        final String detail = message.payload['message'] as String? ??
+            'Bridge rejected the auth token.';
+        _completeAuthError(BridgeConnectionException(detail));
+        _setStatus(ConnectionStatus.error);
+        _cleanUp(closeChannel: true, cancelReconnect: false);
+        return;
+      }
+
+      if (message.type == BridgeMessageType.heartbeatPong) {
+        _pongTimeoutTimer?.cancel();
+        _pongTimeoutTimer = null;
+        return;
+      }
+
+      if (!_messageController.isClosed) {
+        _messageController.add(message);
+      }
+    } catch (_) {
+      // Ignore malformed frames from the bridge.
+    }
+  }
+
+  void _onError(Object error) {
+    _completeAuthError(
+        BridgeConnectionException('Bridge socket error: $error'));
+    _setStatus(ConnectionStatus.error);
+    _cleanUp(closeChannel: false, cancelReconnect: false);
+    _scheduleReconnectIfNeeded();
+  }
+
+  void _onDone() {
+    _completeAuthError(
+      const BridgeConnectionException('Bridge connection closed.'),
+    );
+    _setStatus(ConnectionStatus.disconnected);
+    _cleanUp(closeChannel: false, cancelReconnect: false);
+    _scheduleReconnectIfNeeded();
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(
+      const Duration(seconds: _heartbeatIntervalSeconds),
+      (_) => _sendPing(),
+    );
+  }
+
+  void _sendPing() {
+    if (_status != ConnectionStatus.connected) {
+      return;
+    }
+
+    final bool sent = send(BridgeMessage.heartbeatPing());
+    if (!sent) {
+      return;
+    }
+
+    _pongTimeoutTimer?.cancel();
+    _pongTimeoutTimer = Timer(
+      const Duration(seconds: _heartbeatTimeoutSeconds),
+      _onPongTimeout,
+    );
+  }
+
+  void _onPongTimeout() {
+    _cleanUp(closeChannel: true, cancelReconnect: false);
+    _setStatus(ConnectionStatus.reconnecting);
+    _scheduleReconnectIfNeeded();
+  }
+
+  void _scheduleReconnectIfNeeded() {
+    if (_intentionalDisconnect || _authFailed) {
+      return;
+    }
+    _scheduleReconnect();
+  }
+
+  void _scheduleReconnect() {
+    _reconnectTimer?.cancel();
+
+    final int delaySeconds = _exponentialDelay(_reconnectAttempts);
+    _reconnectAttempts++;
+    _setStatus(ConnectionStatus.reconnecting);
+
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () async {
+      if (_intentionalDisconnect || _authFailed) {
+        return;
+      }
+
+      try {
+        await _doConnect();
+      } catch (_) {
+        // Reconnect failures are surfaced through connectionStatus.
+      }
+    });
+  }
+
+  int _exponentialDelay(int attempt) {
+    final int delay = (1 << attempt).clamp(1, _maxReconnectDelaySeconds);
+    return delay;
+  }
+
+  void _completeAuthSuccess() {
+    final Completer<void>? completer = _authCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
+  void _completeAuthError(Object error) {
+    final Completer<void>? completer = _authCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.completeError(error);
+    }
+  }
+
+  void _cleanUp({
+    bool closeChannel = true,
+    bool cancelReconnect = true,
+  }) {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _pongTimeoutTimer?.cancel();
+    _pongTimeoutTimer = null;
+    if (cancelReconnect) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+    }
+
+    if (closeChannel) {
+      _channel?.sink.close();
+      _channel = null;
+    }
+  }
+
+  void _setStatus(ConnectionStatus status) {
+    _status = status;
+    if (!_statusController.isClosed) {
+      _statusController.add(status);
+    }
+  }
+
+  String _platformString() {
+    return 'flutter';
+  }
+
+  void dispose() {
+    _intentionalDisconnect = true;
+    _completeAuthError(
+      const BridgeConnectionException('Bridge connection disposed.'),
+    );
+    _cleanUp();
+    _messageController.close();
+    _statusController.close();
+  }
+}

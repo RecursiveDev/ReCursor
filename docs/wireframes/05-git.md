@@ -25,10 +25,10 @@
 |                                       |
 |  Recent Activity                      |
 |  +----------------------------------+ |
-|  | abc1234  Fix OAuth redirect      | |
+|  | abc1234  Tighten bridge startup  | |
 |  | Nathan  *  2 hours ago           | |
 |  +----------------------------------+ |
-|  | def5678  Add auth provider       | |
+|  | def5678  Add pairing restore     | |
 |  | Nathan  *  5 hours ago           | |
 |  +----------------------------------+ |
 |  | ghi9012  Initial project setup   | |
@@ -65,7 +65,7 @@
 |  |   feature/voice-input            | |
 |  |   origin/feature/voice  *  +3   | |
 |  +----------------------------------+ |
-|  |   fix/oauth-redirect             | |
+|  |   fix/bridge-startup            | |
 |  |   (no remote)  *  local only    | |
 |  +----------------------------------+ |
 |                                       |
@@ -126,20 +126,20 @@
 |                                       |
 |  Commit message:                      |
 |  +----------------------------------+ |
-|  | Fix OAuth redirect bug           | |
+|  | Tighten bridge startup          | |
 |  +----------------------------------+ |
-|  | Updated callback URL from http   | |
-|  | to https in login.dart. Added    | |
-|  | validation for redirect URIs.    | |
+|  | Require WSS bridge URLs and     | |
+|  | keep the saved pairing token    | |
+|  | before restoring the session.   | |
 |  |                                  | |
 |  +----------------------------------+ |
 |                                       |
 |  Changed files:       [Select All]    |
 |  +----------------------------------+ |
-|  | [x] M  lib/auth/login.dart       | |
+|  | [x] M  lib/features/startup/... | |
 |  |        +2 -1                [>]  | |
 |  +----------------------------------+ |
-|  | [x] M  lib/auth/oauth.dart       | |
+|  | [x] M  test/startup_restore..   | |
 |  |        +15 -3               [>]  | |
 |  +----------------------------------+ |
 |  | [ ] ?  test/auth_test.dart       | |
@@ -191,8 +191,8 @@
 |   Push complete!                      |
 |                                       |
 |   3 commits pushed to origin/main     |
-|   abc1234  Fix OAuth redirect         |
-|   def5678  Add URL validation         |
+|   abc1234  Tighten bridge startup     |
+|   def5678  Add session restore        |
 |   ghi9012  Update tests               |
 |                                       |
 |   [           Done                  ] |

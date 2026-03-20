@@ -64,6 +64,8 @@ The emerging architectural pattern across all mobile coding agent clients is a *
 
 ## Flutter GitHub client apps provide battle-tested architectural patterns
 
+> **Note:** This section documents GitHub OAuth patterns as prior research for mobile GitHub client architecture. ReCursor's current direction is **bridge-first with no user authentication** — repository operations are delegated to the agent running on the development machine. Git operations via bridge commands, not native mobile OAuth.
+
 For GitHub OAuth, repository browsing, and git operations on mobile, three codebases stand out as architectural references.
 
 **GSYGithubAppFlutter** ([CarGuo/gsy_github_app_flutter](https://github.com/CarGuo/gsy_github_app_flutter)) at **15.4K stars** is the definitive Flutter GitHub client. Updated through February 2026, it uniquely demonstrates Redux, Provider, Riverpod, and Signals state management in the same project. Its four-layer architecture (UI → State → Service → Data) with repository pattern, event bus, and SQL caching provides a complete blueprint. Features include full GitHub OAuth (using custom URL scheme `gsygithubapp://authed`), repo/issue/PR browsing, trending repos, search, markdown rendering, and i18n. **Apache 2.0 licensed** with 2.6K forks.

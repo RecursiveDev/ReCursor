@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="apps/mobile/assets/branding/ReCursor_Darklogo.png">
-    <img src="apps/mobile/assets/branding/ReCursor_Lightlogo.png" alt="ReCursor Logo" width="140" height="140">
+    <source media="(prefers-color-scheme: dark)" srcset="apps/mobile/assets/branding/recursor_logo_dark.svg">
+    <img src="apps/mobile/assets/branding/recursor_logo_light.svg" alt="ReCursor Logo" width="140" height="140">
   </picture>
 </p>
 
@@ -58,9 +58,10 @@
 This repository is **work in progress**.
 
 - ✅ Repo structure + documentation are being established.
-- ⏳ Flutter app and bridge server implementation are not yet shipped.
+- ✅ The mobile direction is now bridge-first: pair with your local bridge, no sign-in required.
+- ⏳ Flutter app and bridge server implementation are still being completed.
 
-If you're new here, start with: **`docs/README.md`**.
+If you're new here, start with: **`docs/README.md`** and the bridge pairing flow in `docs/wireframes/01-startup.md`.
 
 ---
 
@@ -75,11 +76,18 @@ If you're new here, start with: **`docs/README.md`**.
 
 ### Important constraint (Claude Code)
 
-Claude Code's **Remote Control** feature is **first-party** (designed for `claude.ai/code` and official Claude apps). ReCursor docs are written to avoid claiming access to any private/undocumented Remote Control protocol.
+Claude Code's **Remote Control** feature is **first-party only** (designed for `claude.ai/code` and official Claude apps). There is no public API for third-party clients to join or mirror existing Claude Code sessions.
 
-ReCursor's supported approach is:
-- **Claude Code Hooks**: event observation (one-way)
-- **Claude Agent SDK**: a **parallel, controllable** agent session that ReCursor can drive (approvals/tool execution live here)
+ReCursor's supported integration paths:
+- **Claude Code Hooks**: HTTP-based event observation (one-way)
+- **Claude Agent SDK**: **parallel, controllable** agent sessions that ReCursor can drive
+
+### Bridge-first, no-login workflow
+
+ReCursor uses a **bridge-first** connection model:
+- The mobile app connects directly to a **user-controlled desktop bridge** (no hosted service, no user accounts)
+- On startup, the app restores saved bridge pairings or guides through QR-code pairing
+- Remote access is achieved via secure tunnels (Tailscale, WireGuard) to the user's own bridge — not through unsupported third-party Claude Remote Control access
 
 ---
 

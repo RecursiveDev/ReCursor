@@ -1,0 +1,102 @@
+<article class="page">
+  <div class="page-header">
+    <div class="breadcrumb">Integration</div>
+    <h1>OpenCode UI Patterns</h1>
+    <p class="page-subtitle">Mapping OpenCode's terminal-native UI components to Flutter mobile widgets.</p>
+  </div>
+
+  <h2>Component Mapping</h2>
+  <table class="doc-table">
+    <thead><tr><th>OpenCode Component</th><th>ReCursor Widget</th><th>File</th></tr></thead>
+    <tbody>
+      <tr><td><code>BasicTool</code></td><td><code>ToolCard</code></td><td><code>lib/features/chat/widgets/tool_card.dart</code></td></tr>
+      <tr><td><code>DiffChanges</code></td><td><code>DiffViewer</code></td><td><code>lib/features/diff/widgets/diff_viewer.dart</code></td></tr>
+      <tr><td><code>SessionTurn</code></td><td><code>SessionTimeline</code></td><td><code>lib/features/session/widgets/session_timeline.dart</code></td></tr>
+      <tr><td><code>MessagePart</code></td><td><code>MessagePart</code></td><td><code>lib/features/chat/widgets/message_part.dart</code></td></tr>
+      <tr><td><code>ChatMessage</code></td><td><code>MessageBubble</code></td><td><code>lib/features/chat/widgets/message_bubble.dart</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Tool Cards</h2>
+  <p>OpenCode renders rich tool cards in the terminal. ReCursor adapts these as Flutter Material cards with four states:</p>
+  <table class="doc-table">
+    <thead><tr><th>State</th><th>OpenCode (Terminal)</th><th>ReCursor (Flutter)</th></tr></thead>
+    <tbody>
+      <tr><td>Pending</td><td>Spinner + "Running..."</td><td><code>CircularProgressIndicator</code> + pulse animation</td></tr>
+      <tr><td>Running</td><td>Live output stream</td><td>Streaming text with fade-in</td></tr>
+      <tr><td>Completed</td><td>Checkmark + result</td><td><code>Icons.check_circle</code> + expandable result</td></tr>
+      <tr><td>Error</td><td>Red X + error details</td><td><code>Icons.error</code> + error card</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Flutter Implementation</h3>
+  <div class="code-block" data-lang="dart">
+    <div class="code-header"><span>Dart</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>class ToolCard extends StatelessWidget {
+  final ToolUse tool;
+  final ToolResult? result;
+  final ToolStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ToolHeader(tool: tool, status: status),
+          _ToolParams(params: tool.params),
+          if (result != null) _ToolResult(result: result),
+        ],
+      ),
+    );
+  }
+}</code></pre>
+  </div>
+
+  <h2>Diff Viewer</h2>
+  <div class="code-block" data-lang="dart">
+    <div class="code-header"><span>Dart</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>class DiffViewer extends StatelessWidget {
+  final List&lt;DiffFile&gt; files;
+  final DiffViewMode viewMode;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: files.length,
+      itemBuilder: (context, index) {
+        return DiffFileCard(file: files[index], viewMode: viewMode);
+      },
+    );
+  }
+}</code></pre>
+  </div>
+
+  <h2>Theming</h2>
+  <p>ReCursor uses an OpenCode-inspired terminal color scheme adapted for Material You.</p>
+  <table class="doc-table">
+    <thead><tr><th>Element</th><th>Color</th><th>Usage</th></tr></thead>
+    <tbody>
+      <tr><td>Background</td><td><code class="color-swatch" style="background:#1e1e1e"></code> <code>#1E1E1E</code></td><td>App background</td></tr>
+      <tr><td>Text</td><td><code class="color-swatch" style="background:#d4d4d4"></code> <code>#D4D4D4</code></td><td>Primary text</td></tr>
+      <tr><td>Added lines</td><td><code class="color-swatch" style="background:#4ec9b0"></code> <code>#4EC9B0</code></td><td>Diff additions</td></tr>
+      <tr><td>Removed lines</td><td><code class="color-swatch" style="background:#f44747"></code> <code>#F44747</code></td><td>Diff deletions</td></tr>
+      <tr><td>Tool header</td><td><code class="color-swatch" style="background:#569cd6"></code> <code>#569CD6</code></td><td>Tool card headers</td></tr>
+      <tr><td>Accent</td><td><code class="color-swatch" style="background:#ce9178"></code> <code>#CE9178</code></td><td>Highlights, links</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Responsive Design</h2>
+  <table class="doc-table">
+    <thead><tr><th>Terminal (OpenCode)</th><th>Mobile (ReCursor)</th></tr></thead>
+    <tbody>
+      <tr><td>Fixed-width font</td><td>Dynamic font sizing</td></tr>
+      <tr><td>Horizontal scrolling</td><td>Horizontal swipe gestures</td></tr>
+      <tr><td>Keyboard shortcuts</td><td>Touch gestures + FABs</td></tr>
+      <tr><td>Split panes</td><td>Tab navigation</td></tr>
+      <tr><td>Mouse hover</td><td>Long-press menus</td></tr>
+    </tbody>
+  </table>
+</article>

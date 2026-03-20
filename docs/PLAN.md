@@ -1,6 +1,6 @@
 # ReCursor — Implementation Plan
 
-> **Flutter mobile app** providing OpenCode-like UI/UX for AI coding agents, with events sourced from Claude Code via supported integration mechanisms.
+> **Flutter mobile app** providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login: connects to your user-controlled desktop bridge.
 
 ---
 
@@ -42,16 +42,24 @@ flowchart TB
 
 > ⚠️ **Claude Code Remote Control is first-party only** — there is no public API for third-party clients to join or mirror existing Claude Code sessions.
 
-**Supported Integration Path:**
+**Supported Integration Paths:**
 - **Claude Code Hooks** — HTTP-based event observation (one-way)
 - **Agent SDK** — Parallel agent sessions (not mirroring)
 - **MCP (Model Context Protocol)** — Tool interoperability
+
+### Bridge-First, No-Login Workflow
+
+ReCursor uses a **bridge-first** connection model with no user accounts:
+- **No sign-in required** — the app opens to bridge pairing/restore, not a login screen
+- **User-controlled bridge** — the bridge runs on your development machine, not a hosted service
+- **Secure device pairing** — QR code pairing with device tokens stored in secure storage
+- **Remote access** — optional secure tunneling (Tailscale, WireGuard) to your own bridge
 
 ---
 
 ## Phase 1: Foundation
 
-**Goal:** Bootable app with auth, secure connectivity to bridge, and basic agent chat with OpenCode-style UI.
+**Goal:** Bootable app with direct bridge connectivity (no auth flow) and basic agent chat with OpenCode-style UI.
 
 ### 1.1 Project Scaffolding & CI/CD
 - [ ] Initialize Flutter project (iOS + Android targets)
@@ -61,21 +69,15 @@ flowchart TB
 - [ ] Configure Fastlane for iOS (Match) and Android (keystore)
 - [ ] **Tests:** Verify project builds on both platforms
 
-### 1.2 Authentication
-- [ ] Implement GitHub OAuth2 flow
-- [ ] Support Personal Access Token (PAT) auth as fallback
-- [ ] Secure token storage via `flutter_secure_storage`
-- [ ] Auth state management with Riverpod
-- [ ] **Tests:** Unit test auth provider state transitions
-
-### 1.3 Bridge Connection & Security
+### 1.2 Bridge Connection & Security (First Screen)
 - [ ] Define WebSocket protocol (see [bridge-protocol.md](bridge-protocol.md))
 - [ ] Implement WebSocket client service with `web_socket_channel`
-- [ ] Connection pairing via QR code (encode bridge URL + auth token)
+- [ ] Connection pairing via QR code (encode bridge URL + device pairing token)
+- [ ] Restore saved bridge pairings on startup before entering the main shell
 - [ ] Tailscale integration documentation / setup guide
 - [ ] Always use `wss://`; optional certificate pinning
 - [ ] Auto-reconnect with exponential backoff
-- [ ] **Tests:** Unit test WebSocket service with mocks
+- [ ] **Tests:** Unit test WebSocket service with mocks and startup restore logic
 
 ### 1.4 Basic Agent Chat Interface (OpenCode-style)
 - [ ] Chat UI with message list (user messages + agent responses)
@@ -91,7 +93,7 @@ flowchart TB
 - [ ] File viewer with syntax highlighting
 - [ ] **Tests:** Unit test bridge file commands
 
-**Phase 1 Deliverable:** App authenticates via GitHub, connects to bridge, sends messages to Agent SDK session, displays streamed responses with OpenCode-style UI.
+**Phase 1 Deliverable:** App connects directly to bridge (no auth flow), sends messages to Agent SDK session, displays streamed responses with OpenCode-style UI.
 
 ---
 
@@ -224,7 +226,7 @@ flowchart TB
 | **Unit** | `flutter_test` + `mockito` | Services, providers, models, serialization |
 | **Widget** | `flutter_test` | UI components with mock dependencies |
 | **Golden** | `alchemist` | Visual regression for key screens |
-| **Integration** | `integration_test` | Full flows: auth → connect → chat → hooks |
+| **Integration** | `integration_test` | Full flows: connect → chat → hooks |
 | **E2E** | `patrol` | Complete user journeys on real devices |
 
 ---
@@ -236,7 +238,7 @@ flowchart TB
 | Framework | Flutter | Cross-platform, CC Pocket precedent |
 | State | Riverpod | Type-safe, testable, Conduit pattern |
 | Networking | `web_socket_channel` | Standard Flutter WebSocket |
-| Auth | GitHub OAuth2 + PAT | `github_oauth` package |
+| UI State | Riverpod | Type-safe state management |
 | Local DB | Drift (SQLite) | Type-safe queries, migrations |
 | Cache | Hive | Fast key-value for ephemeral data |
 | Notifications | `flutter_local_notifications` | Local alerts when backgrounded |

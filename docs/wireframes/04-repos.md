@@ -62,11 +62,11 @@
 | lib/                                  |
 |   > core/                             |
 |   v features/                         |
-|     v auth/                           |
-|       > data/                         |
+|     v startup/                        |
 |       > domain/                       |
-|         login_screen.dart             |
-|         auth_provider.dart            |
+|         bridge_startup_controller..   |
+|         bridge_setup_screen.dart      |
+|         splash_screen.dart            |
 |     > chat/                           |
 |     > repos/                          |
 |   > shared/                           |
@@ -99,18 +99,18 @@
 
 ```
 +---------------------------------------+
-| [<]  login_screen.dart      [...]     |
-| lib/features/auth/  *  142 lines      |
+| [<]  bridge_setup_screen.dart [...]   |
+| lib/features/startup/  *  196 lines   |
 +---------------------------------------+
 |  1 | import 'package:flutter/mat..    |
 |  2 | import 'package:riverpod/ri..    |
 |  3 |                                  |
-|  4 | class LoginScreen extends St..   |
+|  4 | class BridgeSetupScreen exte..   |
 |  5 |   @override                      |
 |  6 |   Widget build(BuildContext c..  |
 |  7 |     return Scaffold(             |
 |  8 |       appBar: AppBar(            |
-|  9 |         title: Text('Login'),    |
+|  9 |         title: Text('Bridge Setup'),|
 | 10 |       ),                         |
 | 11 |       body: Padding(             |
 | 12 |         padding: EdgeInsets...   |

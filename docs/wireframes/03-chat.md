@@ -12,9 +12,9 @@
 +---------------------------------------+
 |                                       |
 |  +----------------------------------+ |
-|  | Fix auth bug in login.dart       | |
+|  | Improve bridge reconnect banner  | |
 |  | Claude Code  *  2 min ago        | |
-|  | "I've updated the OAuth..."      | |
+|  | "I've updated the reconnect..." | |
 |  +----------------------------------+ |
 |                                       |
 |  +----------------------------------+ |
@@ -52,29 +52,29 @@
 
 ```
 +---------------------------------------+
-| [<] Fix auth bug       (*) Connected  |
+| [<] Bridge reconnect   (*) Connected  |
 | Claude Code  *  main branch           |
 +---------------------------------------+
 |                                       |
 |  +----------------------------------+ |
 |  |  You            10:32 AM         | |
-|  |  Fix the OAuth redirect bug in   | |
-|  |  lib/auth/login.dart. The        | |
-|  |  callback URL is wrong.          | |
+|  |  Tighten the bridge startup      | |
+|  |  validation in                   | |
+|  |  lib/features/startup/...        | |
 |  +----------------------------------+ |
 |                                       |
 |        +-----------------------------+|
 |        | Claude Code      10:32 AM   ||
 |        |                             ||
-|        | I'll fix the OAuth redirect ||
-|        | in `login.dart`. The issue  ||
-|        | is on line 42 where the     ||
-|        | callback URL uses `http`    ||
-|        | instead of `https`.         ||
+|        | I'll tighten the bridge     ||
+|        | validation in the startup   ||
+|        | screen. The saved URL must  ||
+|        | continue using `wss://`     ||
+|        | before the app reconnects.  ||
 |        |                             ||
 |        | ```dart                     ||
 |        | // Before                   ||
-|        | callbackUrl: 'http://...'   ||
+|        | bridgeUrl: 'ws://...'       ||
 |        | // After                    ||
 |        | callbackUrl: 'https://...'  ||
 |        | ```                         ||
@@ -118,7 +118,7 @@
 
 ```
 +---------------------------------------+
-| [<] Fix auth bug       (*) Connected  |
+| [<] Bridge startup     (*) Connected  |
 +---------------------------------------+
 |                                       |
 |  ... (previous messages) ...          |
@@ -130,11 +130,11 @@
 |        |                             ||
 |        | +-------------------------+ ||
 |        | | TOOL: Edit File         | ||
-|        | | File: lib/auth/login.da | ||
+|        | | File: startup/splash... | ||
 |        | | Lines: 42-45            | ||
 |        | |                         | ||
-|        | | - url: 'http://cb'      | ||
-|        | | + url: 'https://cb'     | ||
+|        | | - allowWs(url);         | ||
+|        | | + requireWss(url);      | ||
 |        | |                         | ||
 |        | | [Approve] [Reject]      | ||
 |        | | [View Full]  [Modify]   | ||
@@ -156,7 +156,7 @@
 
 ```
 +---------------------------------------+
-| [<] Fix auth bug       (*) Connected  |
+| [<] Bridge startup     (*) Connected  |
 +---------------------------------------+
 |                                       |
 |  ... (previous messages) ...          |

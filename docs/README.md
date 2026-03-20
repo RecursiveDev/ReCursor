@@ -1,6 +1,6 @@
 # ReCursor Documentation
 
-> **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents, with events sourced from Claude Code via supported integration mechanisms (Hooks/Agent SDK).
+> **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
 
 ---
 
@@ -101,10 +101,12 @@ flowchart TB
 
 > ⚠️ **Claude Code Remote Control Protocol**: The Remote Control feature is designed exclusively for first-party Anthropic clients. There is no public API for third-party clients to join or mirror existing Claude Code sessions.
 >
-> **Supported Integration Path:**
+> **Supported Integration Paths:**
 > - **Claude Code Hooks** — HTTP-based event observation (one-way)
 > - **Agent SDK** — Parallel agent sessions (not mirroring)
 > - **MCP (Model Context Protocol)** — Tool interoperability
+>
+> **Bridge-First Workflow:** ReCursor uses a bridge-first, no-login model. The mobile app connects directly to a user-controlled desktop bridge. No hosted accounts, no sign-in required — just secure device pairing via QR code and optional tunneling for remote access.
 
 ---
 

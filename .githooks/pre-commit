@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+mapfile -t STAGED_DART_FILES < <(
+  git diff --cached --name-only --diff-filter=ACMR \
+    | grep -E '^apps/mobile/.*\.dart$' \
+    | grep -Ev '\.(g|freezed)\.dart$' \
+    || true
+)
+
+mapfile -t STAGED_BRIDGE_FILES < <(
+  git diff --cached --name-only --diff-filter=ACMR \
+    | grep -E '^packages/bridge/' \
+    | grep -Ev '^packages/bridge/(dist|node_modules)/' \
+    | grep -E '\.(ts|js|cjs|mjs|json)$' \
+    || true
+)
+
+if [[ ${#STAGED_DART_FILES[@]} -eq 0 && ${#STAGED_BRIDGE_FILES[@]} -eq 0 ]]; then
+  echo "pre-commit: no staged mobile or bridge source files found; skipping checks."
+  exit 0
+fi
+
+if [[ ${#STAGED_DART_FILES[@]} -gt 0 ]]; then
+  echo "pre-commit: formatting staged Dart files"
+  dart format "${STAGED_DART_FILES[@]}"
+  git add "${STAGED_DART_FILES[@]}"
+
+  ANALYZE_TARGETS=()
+  for file in "${STAGED_DART_FILES[@]}"; do
+    ANALYZE_TARGETS+=("${file#apps/mobile/}")
+  done
+
+  echo "pre-commit: analyzing staged Dart files"
+  pushd apps/mobile > /dev/null
+  flutter analyze "${ANALYZE_TARGETS[@]}"
+  popd > /dev/null
+fi
+
+if [[ ${#STAGED_BRIDGE_FILES[@]} -gt 0 ]]; then
+  if [[ ! -d packages/bridge/node_modules ]]; then
+    echo "pre-commit: packages/bridge/node_modules is missing. Run 'cd packages/bridge && npm ci' first." >&2
+    exit 1
+  fi
+
+  BRIDGE_RELATIVE_FILES=()
+  for file in "${STAGED_BRIDGE_FILES[@]}"; do
+    BRIDGE_RELATIVE_FILES+=("${file#packages/bridge/}")
+  done
+
+  echo "pre-commit: formatting staged bridge files"
+  pushd packages/bridge > /dev/null
+  npm exec prettier -- --write "${BRIDGE_RELATIVE_FILES[@]}"
+  popd > /dev/null
+  git add "${STAGED_BRIDGE_FILES[@]}"
+
+  echo "pre-commit: typechecking bridge"
+  pushd packages/bridge > /dev/null
+  npm run typecheck
+
+  echo "pre-commit: running bridge tests"
+  npm run test:ci
+
+  echo "pre-commit: building bridge"
+  npm run build
+  popd > /dev/null
+fi

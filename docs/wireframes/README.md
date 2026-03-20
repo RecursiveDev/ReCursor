@@ -1,30 +1,33 @@
 # ReCursor - UI/UX Wireframes
 
 > Modular ASCII wireframes for every screen in the mobile app.
-> Each file maps to a feature module. Screens are ordered by user flow.
+> Each file maps to a feature module. Screens are ordered by the bridge-first, no-login user flow.
 
 ---
 
-## Navigation Architecture
+## Navigation Architecture (Bridge-First, No-Login)
 
 ```
                           +------------------+
-                          |   Splash Screen  |
+                          |  Splash / Restore |
+                          | (No login screen) |
                           +--------+---------+
                                    |
-                          +--------v---------+
-                          |   Login Screen   |
-                          +--------+---------+
+                    +--------------v--------------+
+                    |     Saved Pairing?          |
+                    |  (Restore or New Pairing)  |
+                    +--------------+--------------+
                                    |
                           +--------v---------+
-                          | Bridge Pairing   |
+                          |   Bridge Setup   |
+                          |   (QR Pairing)   |
                           +--------+---------+
                                    |
                     +--------------v--------------+
                     |     Main Shell (Bottom Nav)  |
                     +-+--------+--------+--------+-+
                       |        |        |        |
-                  +---v--+ +---v--+ +---v--+ +---v------+
+                  +---v--+ +---v--+ +---v--+ +---v------+ 
                   | Chat | | Repos| |  Git | | Settings |
                   +---+--+ +---+--+ +---+--+ +----------+
                       |        |        |
@@ -33,6 +36,8 @@
                  |List   | |Browser | |Viewer    |
                  +-------+ +-------+ +----------+
 ```
+
+**Key:** No login screen, no user accounts — the app opens directly to bridge pairing restoration or setup.
 
 ## Bottom Navigation Tabs
 
@@ -47,7 +52,7 @@
 
 | File | Screens | Phase |
 |------|---------|-------|
-| [`01-auth.md`](01-auth.md) | Splash, Login, OAuth WebView | 1 |
+| [`01-startup.md`](01-startup.md) | Splash, Saved Pairing Restore, Startup Fallback | 1 |
 | [`02-bridge.md`](02-bridge.md) | QR Pairing, Connection Status | 1 |
 | [`03-chat.md`](03-chat.md) | Chat, Session List, Streaming, Voice Input | 1, 3 |
 | [`04-repos.md`](04-repos.md) | Repo List, File Tree, File Viewer | 1 |

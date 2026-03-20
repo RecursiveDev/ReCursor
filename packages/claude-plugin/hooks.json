@@ -1,0 +1,93 @@
+{
+  "description": "ReCursor bridge integration — forward Claude Code events to mobile app",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST \"${RECURSOR_BRIDGE_URL:-http://localhost:3000}/hooks/event\" -H 'Content-Type: application/json' -H \"Authorization: Bearer ${RECURSOR_HOOK_TOKEN}\" -d @- || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

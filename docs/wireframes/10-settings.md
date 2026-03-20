@@ -11,12 +11,6 @@
 | [=]     Settings                      |
 +---------------------------------------+
 |                                       |
-|  ACCOUNT                              |
-|  +----------------------------------+ |
-|  | GitHub Account                   | |
-|  | @username                    [>] | |
-|  +----------------------------------+ |
-|                                       |
 |  CONNECTIONS                          |
 |  +----------------------------------+ |
 |  | My Agents                        | |
@@ -58,7 +52,7 @@
 |  | Open Source Licenses             | |
 |  +----------------------------------+ |
 |                                       |
-|  [         Sign Out                 ] |
+|  [      Disconnect Bridge         ] |
 |                                       |
 +---------------------------------------+
 |  Agent  |  Repos  |   Git  | Settings |
@@ -67,26 +61,25 @@
 
 ---
 
-## 10B. Account
+## 10B. Bridge Connection
 
 ```
 +---------------------------------------+
-| [<]     Account                       |
+| [<]     Bridge Connection             |
 +---------------------------------------+
 |                                       |
-|          [ avatar image ]             |
-|          @username                    |
+|          [ App Icon ]                 |
 |                                       |
 |  +----------------------------------+ |
-|  | Auth method                      | |
-|  | GitHub OAuth                     | |
+|  | Bridge URL                       | |
+|  | wss://100.x.x.x:3000        [>] | |
 |  +----------------------------------+ |
-|  | Token expires                    | |
-|  | March 20, 2026                   | |
+|  | Device paired                    | |
+|  | March 20, 2026                 | |
 |  +----------------------------------+ |
 |                                       |
-|  [      Re-authenticate            ] |
-|  [      Switch Account             ] |
+|  [      Re-pair Bridge             ] |
+|  [      Reset Connection           ] |
 |                                       |
 +---------------------------------------+
 ```

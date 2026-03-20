@@ -9,25 +9,25 @@
 ```
 +---------------------------------------+
 | [<]  Changes           3 files changed|
-| abc1234 Fix OAuth redirect            |
+| abc1234 Tighten bridge startup        |
 +---------------------------------------+
 |                                       |
 |  +5 -2  across 3 files               |
 |                                       |
 |  +----------------------------------+ |
-|  |  lib/auth/login.dart             | |
+|  |  lib/features/startup/splash... | |
 |  |  +2 -1                           | |
 |  |  ████████░░  80% changed         | |
 |  +----------------------------------+ |
 |                                       |
 |  +----------------------------------+ |
-|  |  lib/auth/oauth.dart             | |
+|  |  lib/features/startup/bridge... | |
 |  |  +2 -1                           | |
 |  |  ██░░░░░░░░  20% changed         | |
 |  +----------------------------------+ |
 |                                       |
 |  +----------------------------------+ |
-|  |  test/auth_test.dart             | |
+|  |  test/startup_restore_test.dart | |
 |  |  +1 -0  (new file)               | |
 |  |  ██████████  100% new             | |
 |  +----------------------------------+ |
@@ -49,18 +49,18 @@
 
 ```
 +---------------------------------------+
-| [<]  login.dart   [Unified|Split]     |
+| [<]  bridge_setup_screen.dart [Unified|Split] |
 | File 1 of 3            [< prev][next >]|
 +---------------------------------------+
 |                                       |
-|  @@ -40,7 +40,8 @@ class LoginScr...  |
+|  @@ -40,7 +40,8 @@ class BridgeSet... |
 |                                       |
-|  40 |   final config = OAuthConfig(   |
-|  41 |     clientId: env.clientId,      |
-|  42 |- callbackUrl: 'http://localhost' |
-|  42 |+ callbackUrl: 'https://localhos' |
-|  43 |+ redirectValidation: true,       |
-|  44 |   );                             |
+|  40 |   final result = validator(     |
+|  41 |     url: normalizedUrl,         |
+|  42 |- allowWs: true,                 |
+|  42 |+ requireWss: true,              |
+|  43 |+ ensureTokenPresent: true,      |
+|  44 |   );                            |
 |  45 |                                  |
 |                                       |
 |  @@ -78,4 +79,4 @@ void _handleRe...  |
@@ -92,18 +92,18 @@
 
 ```
 +-------------------------------------------------------------------+
-| [<]  login.dart              [Unified|Split]   [< prev] [next >]  |
+| [<]  bridge_setup_screen.dart [Unified|Split] [< prev] [next >]   |
 +-------------------------------------------------------------------+
 |  OLD                         |  NEW                               |
 +------------------------------+------------------------------------+
-|  40 | final config = OAuth.. | 40 | final config = OAuth..        |
-|  41 | clientId: env.client.. | 41 | clientId: env.client..        |
-|  42 | callbackUrl: 'http://. | 42 | callbackUrl: 'https://.       |
-|     |                        | 43 | redirectValidation: true,     |
+|  40 | final validator = Br.. | 40 | final validator = Br..        |
+|  41 | url: normalizedUrl,    | 41 | url: normalizedUrl,           |
+|  42 | allowWs: true,         | 42 | requireWss: true,            |
+|     |                        | 43 | ensureTokenPresent: true,    |
 |  43 | );                     | 44 | );                            |
 |     |                        |                                    |
-|  78 | if (uri.scheme != ...  | 79 | if (uri.scheme != ...         |
-|  79 | throw AuthError('Inv.. | 79 | throw AuthError('Invalid p..  |
+|  78 | if (token.isEmpty) ..  | 79 | if (token.isEmpty) ..         |
+|  79 | return invalid(..)     | 79 | return invalid(..)            |
 |  80 | }                      | 80 | }                             |
 +------------------------------+------------------------------------+
 ```
@@ -121,7 +121,7 @@
 +---------------------------------------+
 |                                       |
 |   Comment on line 42:                 |
-|   login.dart                          |
+|   bridge_setup_screen.dart            |
 |                                       |
 |   +----------------------------------+|
 |   | Should we also update the        ||

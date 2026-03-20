@@ -1,3 +1,18 @@
 include: package:flutter_lints/flutter.yaml
 
-# Scaffold-only: customize analysis/lints as the app is implemented.
+analyzer:
+  exclude:
+    - '**/*.g.dart'
+    - '**/*.freezed.dart'
+
+linter:
+  rules:
+    always_declare_return_types: true
+    avoid_print: true
+    directives_ordering: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_fields: true
+    prefer_final_locals: true
+    sort_child_properties_last: true
+    unawaited_futures: true

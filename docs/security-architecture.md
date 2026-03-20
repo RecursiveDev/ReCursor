@@ -6,13 +6,13 @@
 
 ## Network Layer
 
-- **Use Tailscale as the primary networking layer.** It wraps WireGuard encryption, handles NAT traversal, and creates a zero-config mesh VPN between phone and dev machine. DERP relay servers never see unencrypted data.
-- **Always use `wss://` (WebSocket Secure).** TLS at the application layer + WireGuard at the network layer = defense in depth.
-- **Never expose the bridge on a public IP.** The bridge should only be reachable within the Tailscale network or via SSH tunnel.
+- **Use a secure tunnel for remote access.** Tailscale (recommended) wraps WireGuard encryption, handles NAT traversal, and creates a zero-config mesh VPN between phone and dev machine. DERP relay servers never see unencrypted data. Other options include WireGuard, Cloudflare Tunnel, or SSH tunneling.
+- **Always use `wss://` (WebSocket Secure).** TLS at the application layer + tunnel encryption at the network layer = defense in depth.
+- **Never expose the bridge on a public IP without tunnel protection.** The bridge should only be reachable within your secure tunnel network.
 
 ---
 
-## Authentication Flow
+## Bridge Connection Security
 
 ```mermaid
 sequenceDiagram
@@ -20,9 +20,9 @@ sequenceDiagram
     participant Bridge as Bridge Server
     participant Hooks as Claude Code Hooks
 
-    Note over Mobile,Hooks: Connection Authentication
-    Mobile->>Bridge: wss:// + auth_token
-    Bridge->>Bridge: Validate token (Firebase/JWT)
+    Note over Mobile,Hooks: Connection Pairing
+    Mobile->>Bridge: wss:// connect + device_token
+    Bridge->>Bridge: Validate device_token
     Bridge-->>Mobile: connection_ack
 
     Note over Mobile,Hooks: Hook Event Authentication
@@ -35,21 +35,21 @@ sequenceDiagram
 
 | Token Type | Purpose | Storage |
 |------------|---------|---------|
-| Bridge Auth Token | Authenticate mobile app to bridge | `flutter_secure_storage` |
+| Device Pairing Token | Authenticate mobile app to bridge (generated at pairing) | `flutter_secure_storage` |
 | Hook Token | Authenticate Claude Code Hooks to bridge | Bridge server env only |
-| GitHub OAuth Token | GitHub API access | `flutter_secure_storage` |
-| GitHub PAT | Fallback auth | `flutter_secure_storage` |
 
 ---
 
 ## Token Management
 
-### Bridge Auth Token
+### Device Pairing Token
 
-- **Generate**: 32+ character random string (crypto-safe)
-- **Storage**: Bridge server environment variable
+- **Generate**: 32+ character random string (crypto-safe), generated during bridge setup
+- **Storage**: Bridge server environment variable or config file
 - **Mobile**: Encrypted with `flutter_secure_storage` (Keychain/EncryptedSharedPreferences)
 - **QR Code**: Bridge URL + token encoded for easy pairing
+- **No User Accounts**: Tokens are per-device, not tied to any user identity or hosted account
+- **Bridge-First**: No login flow — the app opens to bridge pairing/restore, not sign-in
 
 ```dart
 // Token generation (bridge server)
@@ -59,9 +59,9 @@ const token = crypto.randomBytes(32).toString('hex'); // 64 chars
 
 ### Token Rotation
 
-- Rotate bridge auth tokens on suspicious activity
-- Invalidate tokens on logout
-- Support token revocation list
+- Rotate device tokens if bridge is reinstalled or security concern arises
+- Clear token from mobile app via "Disconnect Bridge" in Settings
+- Support token revocation list on bridge server
 
 ---
 

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-> System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI consuming Claude Code events via supported integration mechanisms.
+> System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
 
 ---
 
@@ -46,12 +46,12 @@ flowchart TB
 
 | Approach | Status | Notes |
 |----------|--------|-------|
-| Direct Remote Control Protocol | ❌ Not Available | First-party only (claude.ai/code, official apps) |
+| Direct Remote Control Protocol | ❌ Not Available | First-party only (claude.ai/code, official apps). No public API for third-party clients. |
 | **Claude Code Hooks** | ✅ Supported | HTTP-based event observation (one-way) |
-| **Agent SDK** | ✅ Supported | Parallel agent sessions |
+| **Agent SDK** | ✅ Supported | Parallel agent sessions (not mirroring) |
 | MCP (Model Context Protocol) | ✅ Supported | Tool interoperability |
 
-**Selected Architecture:** Hybrid approach using Hooks for event observation + Agent SDK for parallel sessions.
+**Selected Architecture:** Hybrid approach using Hooks for event observation + Agent SDK for parallel sessions. ReCursor does not claim to mirror or control existing Claude Code sessions.
 
 ### 2. UI/UX Pattern
 
@@ -114,7 +114,7 @@ flowchart LR
     subgraph Network["Network Layers"]
         WireGuard["WireGuard/Tailscale\n(Network Layer)"]
         TLS["TLS 1.3\n(Transport Layer)"]
-        Auth["Token Auth\n(Application Layer)"]
+        Auth["Device Pairing Token\n(Application Layer)"]
     end
 
     Phone["📱 Mobile"] --> WireGuard
@@ -123,9 +123,9 @@ flowchart LR
     Auth --> Bridge["Bridge Server"]
 ```
 
-1. **Network Layer**: Tailscale/WireGuard mesh VPN
+1. **Network Layer**: Tailscale/WireGuard mesh VPN (or your preferred secure tunnel)
 2. **Transport Layer**: WSS (WebSocket Secure) with TLS 1.3
-3. **Application Layer**: Token-based authentication on WebSocket handshake
+3. **Application Layer**: Device pairing token on WebSocket handshake (no user accounts, no login)
 
 ---
 

@@ -13,17 +13,17 @@
 |                             |                                     |
 |  CHAT                       |  DIFF / FILE VIEWER                |
 |                             |                                     |
-|  +------------------------+ | login.dart                          |
+|  +------------------------+ | bridge_setup_screen.dart            |
 |  | You         10:32 AM   | |                                     |
-|  | Fix the OAuth redirect | | @@ -40,7 +40,8 @@                 |
-|  | bug in login.dart      | |                                     |
-|  +------------------------+ |  40 | final config = OAu..          |
-|                             |  41 | clientId: env.cli..           |
-|  +------------------------+ |  42 |- callbackUrl: 'http..         |
-|  | Claude Code   10:32 AM | |  42 |+ callbackUrl: 'https..        |
-|  |                        | |  43 |+ redirectValidation..         |
-|  | I'll fix the OAuth     | |  44 | );                            |
-|  | redirect. The issue    | |                                     |
+|  | Tighten bridge startup | | @@ -40,7 +40,8 @@                 |
+|  | validation flow        | |                                     |
+|  +------------------------+ |  40 | final validator = Br..       |
+|                             |  41 | if (url.isEmpty) re..        |
+|  +------------------------+ |  42 |- return allowWs(url);        |
+|  | Claude Code   10:32 AM | |  42 |+ return requireWss(url);    |
+|  |                        | |  43 |+ ensureTokenPresent();      |
+|  | I'll tighten the       | |  44 | );                            |
+|  | bridge startup flow.   | |                                     |
 |  | is on line 42...       | |                                     |
 |  |                        | |                                     |
 |  | [View Diff]            | |                                     |
@@ -52,14 +52,14 @@
 |                             |                                     |
 |  FILE TREE                  |  FILE VIEWER                        |
 |                             |                                     |
-|  lib/                       |  login_screen.dart                  |
-|    v core/                  |  lib/features/auth/  *  142 lines  |
+|  lib/                       |  bridge_setup_screen.dart           |
+|    v core/                  |  lib/features/startup/ * 196 lines  |
 |    v features/              |                                     |
-|      v auth/                |   1 | import 'package:flu..         |
-|        > data/              |   2 | import 'package:riv..         |
-|        > domain/            |   3 |                               |
-|        * login_screen.dart  |   4 | class LoginScreen e..         |
-|          auth_provider.dart |   5 |   @override                   |
+|      v startup/             |   1 | import 'package:flu..         |
+|        > domain/            |   2 | import 'package:riv..         |
+|        * bridge_setup_..    |   3 |                               |
+|        * splash_screen.dart |   4 | class BridgeSetupScreen..     |
+|          bridge_startup..   |   5 |   @override                   |
 |      > chat/                |   6 |   Widget build(Buil..         |
 |      > repos/               |   7 |     return Scaffold(          |
 |    > shared/                |   8 |       appBar: AppBar(         |
@@ -90,19 +90,19 @@
 |                             |                                     |
 |  COMMIT                     |  DIFF PREVIEW                      |
 |                             |                                     |
-|  Message:                   |  login.dart                        |
+|  Message:                   |  bridge_setup_screen.dart          |
 |  +------------------------+ |                                     |
-|  | Fix OAuth redirect bug | |  @@ -40,7 +40,8 @@               |
-|  +------------------------+ |   40 | final config = OA..          |
-|  +------------------------+ |   41 | clientId: env.cl..           |
-|  | Updated callback URL   | |   42 |- callbackUrl: 'ht..         |
-|  | from http to https...  | |   42 |+ callbackUrl: 'ht..         |
-|  +------------------------+ |   43 |+ redirectValidati..          |
+|  | Tighten bridge startup | |  @@ -40,7 +40,8 @@               |
+|  +------------------------+ |   40 | final validator = Br..       |
+|  +------------------------+ |   41 | if (url.isEmpty) re..        |
+|  | Require WSS and a      | |   42 |- return allowWs(url);       |
+|  | pairing token first... | |   42 |+ return requireWss(url);    |
+|  +------------------------+ |   43 |+ ensureTokenPresent();      |
 |                             |                                     |
-|  Files:                     |  oauth.dart                        |
-|  [x] M login.dart      [>] |                                     |
-|  [x] M oauth.dart       [>]|  @@ -12,3 +12,5 @@               |
-|  [ ] ? auth_test.dart   [>]|   12 | validateRedirect(..          |
+|  Files:                     |  bridge_setup_screen.dart          |
+|  [x] M splash_screen.. [>] |                                     |
+|  [x] M bridge_setup..  [>]|  @@ -12,3 +12,5 @@               |
+|  [ ] ? startup_test..  [>]|   12 | requireWss(..                |
 |                             |   13 |+ if (!uri.isScheme..         |
 |  [ Commit ]                 |                                     |
 |                             |                                     |
@@ -131,8 +131,8 @@
 |  $ git status                                                     |
 |  On branch main                                                   |
 |  Changes not staged for commit:                                   |
-|    modified:   lib/auth/login.dart                                |
-|    modified:   lib/auth/oauth.dart                                |
+|    modified:   lib/features/startup/bridge_setup_screen.dart      |
+|    modified:   lib/features/startup/splash_screen.dart            |
 |                                                                   |
 |  $ _                                                              |
 +-------------------------------------------------------------------+

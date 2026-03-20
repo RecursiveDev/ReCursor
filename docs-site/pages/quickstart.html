@@ -1,0 +1,76 @@
+<article class="page">
+  <div class="page-header">
+    <div class="breadcrumb">Getting Started</div>
+    <h1>Quickstart</h1>
+    <p class="page-subtitle">Get ReCursor running in minutes with your development machine.</p>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5M10 6.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="callout-content">
+      <strong>Prerequisites:</strong> Node.js 20+, Flutter 3.x, Claude Code CLI installed, and an Anthropic API key.
+    </div>
+  </div>
+
+  <h2>Step 1: Start the Bridge Server</h2>
+  <p>The bridge server runs on your development machine and relays events between Claude Code and the mobile app.</p>
+  <div class="code-block" data-lang="bash">
+    <div class="code-header"><span>Terminal</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>cd packages/bridge
+npm install
+cp .env.example .env   # Add your ANTHROPIC_API_KEY
+npm run dev</code></pre>
+  </div>
+
+  <h2>Step 2: Configure Claude Code Hooks</h2>
+  <p>Set up Claude Code to forward events to the bridge.</p>
+  <div class="code-block" data-lang="json">
+    <div class="code-header"><span>~/.claude-code/plugins/recursor-bridge/hooks.json</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>{
+  "description": "ReCursor bridge integration",
+  "hooks": {
+    "PostToolUse": [{
+      "hooks": [{
+        "type": "command",
+        "command": "curl -X POST https://localhost:3000/hooks/event -H 'Content-Type: application/json' -H 'Authorization: Bearer $BRIDGE_TOKEN' -d @-",
+        "timeout": 10
+      }]
+    }]
+  }
+}</code></pre>
+  </div>
+
+  <h2>Step 3: Install the Mobile App</h2>
+  <div class="code-block" data-lang="bash">
+    <div class="code-header"><span>Terminal</span><div class="copy-actions"><button class="copy-btn" data-mode="code">Copy</button><button class="copy-btn" data-mode="markdown">Copy as MD</button></div></div>
+    <pre><code>cd apps/mobile
+flutter pub get
+flutter run</code></pre>
+  </div>
+
+  <h2>Step 4: Pair Your Device</h2>
+  <ol>
+    <li>Open the ReCursor app on your mobile device</li>
+    <li>The app opens directly to bridge pairing (no login required)</li>
+    <li>Scan the QR code displayed by the bridge server</li>
+    <li>The app connects and restores any active sessions</li>
+  </ol>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2a6 6 0 014 10.47V15a2 2 0 01-2 2H8a2 2 0 01-2-2v-2.53A6 6 0 0110 2z" stroke="currentColor" stroke-width="1.5"/><path d="M8 18h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="callout-content">
+      <strong>Remote access:</strong> For access outside your local network, set up <a href="#security">Tailscale or WireGuard</a> for secure tunneling to your bridge.
+    </div>
+  </div>
+
+  <h2>What's Next?</h2>
+  <ul>
+    <li><a href="#bridge-protocol">Bridge Protocol</a> &mdash; Understand the WebSocket message format</li>
+    <li><a href="#hooks">Claude Code Hooks</a> &mdash; Configure all supported hook events</li>
+    <li><a href="#security">Security</a> &mdash; Set up secure remote access</li>
+  </ul>
+</article>
