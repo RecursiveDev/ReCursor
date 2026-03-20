@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import 'daos/message_dao.dart';
@@ -28,6 +29,12 @@ part 'database.g.dart';
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+
+  AppDatabase.forTesting(super.executor);
+
+  factory AppDatabase.inMemory() {
+    return AppDatabase.forTesting(NativeDatabase.memory());
+  }
 
   @override
   int get schemaVersion => 1;
