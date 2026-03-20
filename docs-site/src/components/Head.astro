@@ -6,8 +6,6 @@ interface Props {
   title?: string;
   description?: string;
 }
-
-const { title, description } = Astro.props;
 ---
 
 <Default><slot /></Default>
@@ -16,14 +14,14 @@ const { title, description } = Astro.props;
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link 
-  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" 
+  href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" 
   rel="stylesheet" 
 />
 
 <!-- Favicon and theme color -->
 <link rel="icon" type="image/svg+xml" href={favicon} />
-<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
-<meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#FDFCF8" media="(prefers-color-scheme: light)" />
 
 <!-- Skip link for keyboard navigation -->
 <style>
@@ -34,12 +32,13 @@ const { title, description } = Astro.props;
     transform: translateX(-50%);
     z-index: 9999;
     padding: 0.75rem 1.25rem;
-    background: var(--sl-color-accent, #0ea5e9);
+    background: var(--sl-color-accent, #3d4f6f);
     color: white;
     font-weight: 600;
-    border-radius: 0.5rem;
+    border-radius: 9999px;
     text-decoration: none;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    font-family: var(--sl-font);
   }
   
   .skip-link:focus {

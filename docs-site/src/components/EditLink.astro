@@ -17,6 +17,31 @@ function toMarkdownAssetPath(pathname: string, basePath: string): string {
 ---
 
 <div class="recursor-meta-actions" role="list" aria-label="Page actions">
+  {hasMarkdownCopy && markdownUrl && (
+    <button
+      type="button"
+      class="recursor-meta-action recursor-copy-markdown print:hidden"
+      data-copy-markdown
+      data-markdown-url={markdownUrl}
+      data-default-label="Copy Markdown"
+      data-success-label="Copied"
+      data-error-label="Copy failed"
+      role="listitem"
+      aria-label="Copy page content as Markdown"
+    >
+      <span aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" style="display: none;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+      <span data-copy-markdown-label>Copy Markdown</span>
+    </button>
+  )}
+
   {editUrl && (
     <a 
       href={editUrl} 
@@ -32,31 +57,6 @@ function toMarkdownAssetPath(pathname: string, basePath: string): string {
       </span>
       <span>{editLabel}</span>
     </a>
-  )}
-
-  {hasMarkdownCopy && markdownUrl && (
-    <button
-      type="button"
-      class="recursor-meta-action recursor-copy-markdown print:hidden"
-      data-copy-markdown
-      data-markdown-url={markdownUrl}
-      data-default-label="Copy page as Markdown"
-      data-success-label="Copied!"
-      data-error-label="Copy failed"
-      role="listitem"
-      aria-label="Copy page content as Markdown"
-    >
-      <span aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" style="display: none;">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </span>
-      <span data-copy-markdown-label>Copy page as Markdown</span>
-    </button>
   )}
 </div>
 
@@ -106,8 +106,8 @@ function toMarkdownAssetPath(pathname: string, basePath: string): string {
       return;
     }
 
-    const defaultLabel = button.dataset.defaultLabel ?? 'Copy page as Markdown';
-    const successLabel = button.dataset.successLabel ?? 'Copied!';
+    const defaultLabel = button.dataset.defaultLabel ?? 'Copy Markdown';
+    const successLabel = button.dataset.successLabel ?? 'Copied';
     const errorLabel = button.dataset.errorLabel ?? 'Copy failed';
 
     button.disabled = true;
@@ -154,31 +154,36 @@ function toMarkdownAssetPath(pathname: string, basePath: string): string {
     .recursor-meta-actions {
       display: flex;
       flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 0.5rem;
       align-items: center;
     }
-    
+
     .recursor-meta-action {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      background: var(--sl-color-bg-nav);
-      border: 1px solid var(--sl-color-gray-5);
-      border-radius: 0.5rem;
+      min-height: 2.5rem;
+      padding: 0.5rem 0.875rem;
+      background: var(--recursor-card-bg, var(--sl-color-bg-nav));
+      border: 1px solid var(--recursor-border, var(--sl-color-gray-5));
+      border-radius: 0.625rem;
       font: inherit;
       font-size: 0.875rem;
       font-weight: 500;
       text-decoration: none;
       color: var(--sl-color-text);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition:
+        border-color 150ms ease,
+        background-color 150ms ease,
+        color 150ms ease;
     }
 
     .recursor-meta-action:hover:not(:disabled) {
       background: var(--sl-color-gray-6);
-      border-color: var(--sl-color-gray-4);
-      color: var(--sl-color-white);
+      border-color: var(--sl-color-accent);
+      color: var(--sl-color-text-accent);
     }
 
     .recursor-meta-action:focus-visible {
@@ -193,6 +198,12 @@ function toMarkdownAssetPath(pathname: string, basePath: string): string {
 
     .recursor-meta-action svg {
       flex-shrink: 0;
+    }
+
+    @media (max-width: 50rem) {
+      .recursor-meta-actions {
+        justify-content: flex-start;
+      }
     }
   }
 </style>
