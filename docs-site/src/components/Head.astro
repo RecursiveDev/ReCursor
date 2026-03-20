@@ -1,11 +1,55 @@
 ---
 import Default from '@astrojs/starlight/components/Head.astro';
 import favicon from '../assets/recursor-logo-light.svg?url';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
 ---
 
 <Default><slot /></Default>
+
+<!-- Preconnect to font sources -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link 
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" 
+  rel="stylesheet" 
+/>
+
+<!-- Favicon and theme color -->
 <link rel="icon" type="image/svg+xml" href={favicon} />
-<meta name="theme-color" content="#0f172a" />
+<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+
+<!-- Skip link for keyboard navigation -->
+<style>
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 0.75rem 1.25rem;
+    background: var(--sl-color-accent, #0ea5e9);
+    color: white;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .skip-link:focus {
+    top: 1rem;
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
+</style>
+
+<!-- Mermaid diagram support -->
 <script>
   import mermaid from 'mermaid';
 
@@ -82,5 +126,26 @@ import favicon from '../assets/recursor-logo-light.svg?url';
   document.addEventListener('astro:page-load', () => {
     attachThemeObserver();
     void renderMermaid();
+  });
+</script>
+
+<!-- Smooth scroll for anchor links -->
+<script is:inline>
+  document.addEventListener('astro:page-load', () => {
+    // Add smooth scroll behavior for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href && href !== '#') {
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Update URL without jump
+            history.pushState(null, '', href);
+          }
+        }
+      });
+    });
   });
 </script>

@@ -1,45 +1,748 @@
+/* ==========================================================================
+   ReCursor Documentation Site - Custom Styles
+   A polished, accessible, and responsive theme for Astro Starlight
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   CSS Custom Properties - Design Tokens
+   -------------------------------------------------------------------------- */
 :root {
-  --sl-color-accent-low: #0f172a;
-  --sl-color-accent: #38bdf8;
+  /* Primary Accent Colors - Sky Blue Palette */
+  --sl-color-accent-low: #082f49;
+  --sl-color-accent: #0ea5e9;
   --sl-color-accent-high: #e0f2fe;
-  --sl-font: Inter, ui-sans-serif, system-ui, sans-serif;
+  
+  /* Extended accent palette for richer UI */
+  --recursor-accent-50: #f0f9ff;
+  --recursor-accent-100: #e0f2fe;
+  --recursor-accent-200: #bae6fd;
+  --recursor-accent-300: #7dd3fc;
+  --recursor-accent-400: #38bdf8;
+  --recursor-accent-500: #0ea5e9;
+  --recursor-accent-600: #0284c7;
+  --recursor-accent-700: #0369a1;
+  --recursor-accent-800: #075985;
+  --recursor-accent-900: #0c4a6e;
+  
+  /* Neutral Gray Scale */
+  --recursor-gray-50: #f8fafc;
+  --recursor-gray-100: #f1f5f9;
+  --recursor-gray-200: #e2e8f0;
+  --recursor-gray-300: #cbd5e1;
+  --recursor-gray-400: #94a3b8;
+  --recursor-gray-500: #64748b;
+  --recursor-gray-600: #475569;
+  --recursor-gray-700: #334155;
+  --recursor-gray-800: #1e293b;
+  --recursor-gray-900: #0f172a;
+  
+  /* Typography */
+  --sl-font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --recursor-font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  
+  /* Spacing Scale */
+  --recursor-space-1: 0.25rem;
+  --recursor-space-2: 0.5rem;
+  --recursor-space-3: 0.75rem;
+  --recursor-space-4: 1rem;
+  --recursor-space-5: 1.25rem;
+  --recursor-space-6: 1.5rem;
+  --recursor-space-8: 2rem;
+  --recursor-space-10: 2.5rem;
+  --recursor-space-12: 3rem;
+  --recursor-space-16: 4rem;
+  
+  /* Border Radius */
+  --recursor-radius-sm: 0.375rem;
+  --recursor-radius-md: 0.5rem;
+  --recursor-radius-lg: 0.75rem;
+  --recursor-radius-xl: 1rem;
+  --recursor-radius-2xl: 1.5rem;
+  
+  /* Shadows */
+  --recursor-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --recursor-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --recursor-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --recursor-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  
+  /* Transitions */
+  --recursor-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --recursor-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --recursor-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Light Theme Overrides */
 :root[data-theme='light'] {
   --sl-color-bg: #f8fafc;
   --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #ffffff;
   --sl-color-text: #0f172a;
+  --sl-color-text-accent: #0369a1;
+  
+  /* Card backgrounds */
+  --recursor-card-bg: #ffffff;
+  --recursor-card-border: #e2e8f0;
+  
+  /* Code block styling */
+  --recursor-code-bg: #f1f5f9;
+  --recursor-code-border: #e2e8f0;
 }
 
+/* Dark Theme Overrides */
 :root[data-theme='dark'] {
-  --sl-color-accent-low: #082f49;
+  --sl-color-accent-low: #0c4a6e;
   --sl-color-accent: #38bdf8;
   --sl-color-accent-high: #e0f2fe;
+  --sl-color-bg: #0f172a;
+  --sl-color-bg-nav: #1e293b;
+  --sl-color-bg-sidebar: #1e293b;
+  --sl-color-text: #f1f5f9;
+  --sl-color-text-accent: #7dd3fc;
+  
+  /* Card backgrounds */
+  --recursor-card-bg: #1e293b;
+  --recursor-card-border: #334155;
+  
+  /* Code block styling */
+  --recursor-code-bg: #1e293b;
+  --recursor-code-border: #334155;
 }
 
+/* --------------------------------------------------------------------------
+   Global Smooth Transitions for Theme Switching
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0ms;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: var(--recursor-transition-fast);
+  }
+}
+
+/* Disable transitions for motion-sensitive users */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Typography Enhancements
+   -------------------------------------------------------------------------- */
+.sl-markdown-content {
+  line-height: 1.7;
+}
+
+.sl-markdown-content h1 {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.sl-markdown-content h2 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-top: var(--recursor-space-12);
+  padding-bottom: var(--recursor-space-3);
+  border-bottom: 1px solid var(--recursor-gray-200);
+}
+
+:root[data-theme='dark'] .sl-markdown-content h2 {
+  border-bottom-color: var(--recursor-gray-700);
+}
+
+.sl-markdown-content h3 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin-top: var(--recursor-space-8);
+}
+
+.sl-markdown-content h4 {
+  font-weight: 600;
+  margin-top: var(--recursor-space-6);
+}
+
+.sl-markdown-content p {
+  margin-bottom: var(--recursor-space-5);
+}
+
+/* Enhanced Link Styling */
+.sl-markdown-content a:not(.header-anchor) {
+  color: var(--sl-color-text-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 30%, transparent);
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: 0.1em;
+  transition: var(--recursor-transition-fast);
+}
+
+.sl-markdown-content a:not(.header-anchor):hover {
+  text-decoration-color: currentColor;
+}
+
+.sl-markdown-content a:not(.header-anchor):focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--recursor-radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Hero Section - Enhanced Homepage Styling
+   -------------------------------------------------------------------------- */
 .hero-note {
+  position: relative;
   border-left: 4px solid var(--sl-color-accent);
-  padding: 1rem 1.25rem;
-  background: color-mix(in srgb, var(--sl-color-accent) 10%, var(--sl-color-bg));
-  border-radius: 0.75rem;
+  padding: var(--recursor-space-5) var(--recursor-space-6);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sl-color-accent) 8%, var(--sl-color-bg)) 0%,
+    color-mix(in srgb, var(--sl-color-accent) 4%, var(--sl-color-bg)) 100%
+  );
+  border-radius: var(--recursor-radius-lg);
+  margin-bottom: var(--recursor-space-8);
+  box-shadow: var(--recursor-shadow-sm);
+}
+
+.hero-note::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--sl-color-accent) 30%, transparent) 50%,
+    transparent 100%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   Card Grid Enhancements
+   -------------------------------------------------------------------------- */
+.starlight-card {
+  background: var(--recursor-card-bg) !important;
+  border: 1px solid var(--recursor-card-border) !important;
+  border-radius: var(--recursor-radius-xl) !important;
+  box-shadow: var(--recursor-shadow-sm) !important;
+  transition: var(--recursor-transition-base) !important;
+  transition-property: transform, box-shadow, border-color !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starlight-card {
+    transition: none !important;
+  }
+}
+
+.starlight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--recursor-shadow-lg) !important;
+  border-color: color-mix(in srgb, var(--sl-color-accent) 50%, var(--recursor-card-border)) !important;
+}
+
+.starlight-card:focus-within {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}
+
+.starlight-card a {
+  text-decoration: none !important;
+}
+
+.starlight-card .card-title {
+  font-weight: 600;
+  color: var(--sl-color-text);
+}
+
+.starlight-card svg.icon {
+  color: var(--sl-color-accent);
+}
+
+/* Stagger animation for card grid */
+.starlight-card-grid {
+  --stagger-delay: 50ms;
+}
+
+.starlight-card-grid > *:nth-child(1) { animation-delay: calc(var(--stagger-delay) * 0); }
+.starlight-card-grid > *:nth-child(2) { animation-delay: calc(var(--stagger-delay) * 1); }
+.starlight-card-grid > *:nth-child(3) { animation-delay: calc(var(--stagger-delay) * 2); }
+.starlight-card-grid > *:nth-child(4) { animation-delay: calc(var(--stagger-delay) * 3); }
+.starlight-card-grid > *:nth-child(5) { animation-delay: calc(var(--stagger-delay) * 4); }
+.starlight-card-grid > *:nth-child(6) { animation-delay: calc(var(--stagger-delay) * 5); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .starlight-card-grid > * {
+    opacity: 0;
+    animation: card-fade-in 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}
+
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Site Link List - AI Artifacts Section
+   -------------------------------------------------------------------------- */
+.site-link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--recursor-space-3);
+  margin: var(--recursor-space-6) 0;
 }
 
 .site-link-list a {
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--recursor-space-2);
+  padding: var(--recursor-space-3) var(--recursor-space-4);
+  background: var(--recursor-card-bg);
+  border: 1px solid var(--recursor-card-border);
+  border-radius: var(--recursor-radius-lg);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  color: var(--sl-color-text-accent) !important;
+  text-decoration: none !important;
+  transition: var(--recursor-transition-fast);
 }
 
+.site-link-list a::before {
+  content: '→';
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: var(--recursor-transition-fast);
+}
+
+.site-link-list a:hover {
+  background: color-mix(in srgb, var(--sl-color-accent) 8%, var(--recursor-card-bg));
+  border-color: color-mix(in srgb, var(--sl-color-accent) 50%, var(--recursor-card-border));
+  padding-right: var(--recursor-space-5);
+}
+
+.site-link-list a:hover::before {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.site-link-list a:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Mermaid Diagram Styling
+   -------------------------------------------------------------------------- */
 .mermaid {
   display: flex;
   justify-content: center;
   overflow-x: auto;
-  padding: 1rem;
-  margin: 1.5rem 0;
-  border: 1px solid var(--sl-color-gray-5);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--sl-color-bg-nav) 88%, transparent);
+  padding: var(--recursor-space-6);
+  margin: var(--recursor-space-8) 0;
+  border: 1px solid var(--recursor-card-border);
+  border-radius: var(--recursor-radius-xl);
+  background: linear-gradient(
+    135deg,
+    var(--recursor-card-bg) 0%,
+    color-mix(in srgb, var(--sl-color-bg) 95%, var(--sl-color-accent)) 100%
+  );
+  box-shadow: inset var(--recursor-shadow-sm);
 }
 
 .mermaid svg {
   max-width: 100%;
   height: auto;
+}
+
+/* Mermaid theme adjustments */
+.mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node polygon {
+  stroke-width: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Code Block Enhancements
+   -------------------------------------------------------------------------- */
+.expressive-code {
+  border-radius: var(--recursor-radius-xl) !important;
+  overflow: hidden;
+  margin: var(--recursor-space-6) 0 !important;
+}
+
+.expressive-code pre {
+  border-radius: var(--recursor-radius-xl) !important;
+}
+
+.expressive-code .frame {
+  border-radius: var(--recursor-radius-xl) !important;
+  border: 1px solid var(--recursor-code-border) !important;
+}
+
+/* Inline code styling */
+.sl-markdown-content code:not(pre code) {
+  background: var(--recursor-code-bg);
+  border: 1px solid var(--recursor-code-border);
+  border-radius: var(--recursor-radius-sm);
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+  font-family: var(--recursor-font-mono);
+  color: var(--sl-color-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Table Enhancements
+   -------------------------------------------------------------------------- */
+.sl-markdown-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: var(--recursor-space-6) 0;
+  border-radius: var(--recursor-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--recursor-card-border);
+}
+
+.sl-markdown-content th {
+  background: color-mix(in srgb, var(--sl-color-accent) 8%, var(--recursor-card-bg));
+  font-weight: 600;
+  text-align: left;
+  padding: var(--recursor-space-3) var(--recursor-space-4);
+  border-bottom: 1px solid var(--recursor-card-border);
+}
+
+.sl-markdown-content td {
+  padding: var(--recursor-space-3) var(--recursor-space-4);
+  border-bottom: 1px solid var(--recursor-card-border);
+}
+
+.sl-markdown-content tr:last-child td {
+  border-bottom: none;
+}
+
+.sl-markdown-content tr:hover td {
+  background: color-mix(in srgb, var(--sl-color-accent) 3%, var(--recursor-card-bg));
+}
+
+/* --------------------------------------------------------------------------
+   Blockquote Styling
+   -------------------------------------------------------------------------- */
+.sl-markdown-content blockquote {
+  border-left: 4px solid var(--sl-color-accent);
+  background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
+  padding: var(--recursor-space-4) var(--recursor-space-5);
+  margin: var(--recursor-space-6) 0;
+  border-radius: 0 var(--recursor-radius-lg) var(--recursor-radius-lg) 0;
+  font-style: italic;
+}
+
+.sl-markdown-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   List Enhancements
+   -------------------------------------------------------------------------- */
+.sl-markdown-content ul,
+.sl-markdown-content ol {
+  padding-left: var(--recursor-space-6);
+  margin: var(--recursor-space-4) 0;
+}
+
+.sl-markdown-content li {
+  margin-bottom: var(--recursor-space-2);
+}
+
+.sl-markdown-content ul li::marker {
+  color: var(--sl-color-accent);
+}
+
+/* Nested lists */
+.sl-markdown-content li > ul,
+.sl-markdown-content li > ol {
+  margin-top: var(--recursor-space-2);
+}
+
+/* --------------------------------------------------------------------------
+   Focus States & Accessibility
+   -------------------------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: var(--recursor-space-3) var(--recursor-space-5);
+  background: var(--sl-color-accent);
+  color: var(--sl-color-bg);
+  font-weight: 600;
+  border-radius: var(--recursor-radius-md);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--recursor-space-4);
+}
+
+/* --------------------------------------------------------------------------
+   Meta Actions (Edit Link, Copy Markdown)
+   -------------------------------------------------------------------------- */
+.recursor-meta-action {
+  gap: var(--recursor-space-2) !important;
+  align-items: center;
+  border: 1px solid var(--recursor-card-border) !important;
+  padding: var(--recursor-space-2) var(--recursor-space-3) !important;
+  background: var(--recursor-card-bg) !important;
+  border-radius: var(--recursor-radius-md) !important;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--sl-color-text) !important;
+  cursor: pointer;
+  transition: var(--recursor-transition-fast);
+}
+
+.recursor-meta-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sl-color-accent) 8%, var(--recursor-card-bg)) !important;
+  border-color: color-mix(in srgb, var(--sl-color-accent) 50%, var(--recursor-card-border)) !important;
+  color: var(--sl-color-text-accent) !important;
+}
+
+.recursor-meta-action:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}
+
+.recursor-copy-markdown:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar Navigation Enhancements
+   -------------------------------------------------------------------------- */
+.sidebar-content a {
+  border-radius: var(--recursor-radius-md);
+  transition: var(--recursor-transition-fast);
+}
+
+.sidebar-content a:hover {
+  background: color-mix(in srgb, var(--sl-color-accent) 8%, transparent);
+}
+
+.sidebar-content a[aria-current='page'] {
+  background: color-mix(in srgb, var(--sl-color-accent) 12%, transparent);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Right Sidebar (On This Page)
+   -------------------------------------------------------------------------- */
+.right-sidebar a {
+  border-radius: var(--recursor-radius-sm);
+  transition: var(--recursor-transition-fast);
+}
+
+.right-sidebar a:hover {
+  color: var(--sl-color-text-accent);
+}
+
+.right-sidebar a[aria-current='true'] {
+  color: var(--sl-color-accent);
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Search Input Enhancement
+   -------------------------------------------------------------------------- */
+.search-input {
+  border-radius: var(--recursor-radius-lg) !important;
+  border: 1px solid var(--recursor-card-border) !important;
+  transition: var(--recursor-transition-fast) !important;
+}
+
+.search-input:hover,
+.search-input:focus-within {
+  border-color: color-mix(in srgb, var(--sl-color-accent) 50%, var(--recursor-card-border)) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sl-color-accent) 15%, transparent) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Badge/Tag Component
+   -------------------------------------------------------------------------- */
+.recursor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--recursor-space-1);
+  padding: var(--recursor-space-1) var(--recursor-space-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border-radius: var(--recursor-radius-md);
+  background: color-mix(in srgb, var(--sl-color-accent) 15%, var(--recursor-card-bg));
+  color: var(--sl-color-text-accent);
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 30%, var(--recursor-card-border));
+}
+
+.recursor-badge--success {
+  background: color-mix(in srgb, #22c55e 15%, var(--recursor-card-bg));
+  color: #22c55e;
+  border-color: color-mix(in srgb, #22c55e 30%, var(--recursor-card-border));
+}
+
+.recursor-badge--warning {
+  background: color-mix(in srgb, #f59e0b 15%, var(--recursor-card-bg));
+  color: #f59e0b;
+  border-color: color-mix(in srgb, #f59e0b 30%, var(--recursor-card-border));
+}
+
+.recursor-badge--error {
+  background: color-mix(in srgb, #ef4444 15%, var(--recursor-card-bg));
+  color: #ef4444;
+  border-color: color-mix(in srgb, #ef4444 30%, var(--recursor-card-border));
+}
+
+:root[data-theme='dark'] .recursor-badge--success { color: #4ade80; }
+:root[data-theme='dark'] .recursor-badge--warning { color: #fbbf24; }
+:root[data-theme='dark'] .recursor-badge--error { color: #f87171; }
+
+/* --------------------------------------------------------------------------
+   Callout/Aside Component Override
+   -------------------------------------------------------------------------- */
+.starlight-aside {
+  border-radius: var(--recursor-radius-lg);
+  border-left-width: 4px;
+}
+
+.starlight-aside--note {
+  border-left-color: var(--sl-color-accent);
+  background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
+}
+
+.starlight-aside--tip {
+  border-left-color: #22c55e;
+  background: color-mix(in srgb, #22c55e 5%, var(--sl-color-bg));
+}
+
+.starlight-aside--caution {
+  border-left-color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 5%, var(--sl-color-bg));
+}
+
+.starlight-aside--danger {
+  border-left-color: #ef4444;
+  background: color-mix(in srgb, #ef4444 5%, var(--sl-color-bg));
+}
+
+/* --------------------------------------------------------------------------
+   Print Styles
+   -------------------------------------------------------------------------- */
+@media print {
+  .hero-note {
+    border: 1px solid #cbd5e1;
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .starlight-card {
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  
+  .mermaid {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .recursor-meta-action,
+  .site-link-list a::before {
+    display: none;
+  }
+  
+  .site-link-list a {
+    border: 1px solid #e2e8f0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile Responsiveness
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .hero-note {
+    padding: var(--recursor-space-4);
+    margin-bottom: var(--recursor-space-6);
+  }
+  
+  .starlight-card {
+    margin-bottom: var(--recursor-space-4);
+  }
+  
+  .sl-markdown-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .sl-markdown-content h2 {
+    font-size: 1.375rem;
+    margin-top: var(--recursor-space-8);
+  }
+  
+  .site-link-list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .site-link-list a {
+    justify-content: center;
+  }
+  
+  .mermaid {
+    padding: var(--recursor-space-4);
+    margin: var(--recursor-space-6) 0;
+  }
+  
+  .recursor-meta-action {
+    padding: var(--recursor-space-2) var(--recursor-space-3);
+  }
+}
+
+/* Touch target improvements for mobile */
+@media (pointer: coarse) {
+  .site-link-list a,
+  .recursor-meta-action,
+  .sidebar-content a {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

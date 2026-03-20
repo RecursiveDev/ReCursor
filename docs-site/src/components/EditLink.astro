@@ -1,0 +1,198 @@
+---
+const { editUrl, entry } = Astro.locals.starlightRoute;
+const hasMarkdownCopy = entry.id !== '404' && !entry.id.endsWith('/404');
+const markdownUrl = hasMarkdownCopy
+  ? `${import.meta.env.BASE_URL}page-markdown/${toMarkdownAssetPath(Astro.url.pathname, import.meta.env.BASE_URL)}`
+  : null;
+const editLabel = Astro.locals.t('page.editLink');
+
+function toMarkdownAssetPath(pathname: string, basePath: string): string {
+  const normalizedBase = basePath === '/' ? '/' : `${basePath.replace(/\/$/, '')}/`;
+  const routePath = pathname.startsWith(normalizedBase)
+    ? pathname.slice(normalizedBase.length)
+    : pathname.replace(/^\//, '');
+  const normalizedRoute = routePath.replace(/\/$/, '');
+  return normalizedRoute ? `${normalizedRoute}.md` : 'index.md';
+}
+---
+
+<div class="recursor-meta-actions" role="list" aria-label="Page actions">
+  {editUrl && (
+    <a 
+      href={editUrl} 
+      class="recursor-meta-action print:hidden"
+      role="listitem"
+      aria-label="Edit this page on GitHub"
+    >
+      <span aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+      </span>
+      <span>{editLabel}</span>
+    </a>
+  )}
+
+  {hasMarkdownCopy && markdownUrl && (
+    <button
+      type="button"
+      class="recursor-meta-action recursor-copy-markdown print:hidden"
+      data-copy-markdown
+      data-markdown-url={markdownUrl}
+      data-default-label="Copy page as Markdown"
+      data-success-label="Copied!"
+      data-error-label="Copy failed"
+      role="listitem"
+      aria-label="Copy page content as Markdown"
+    >
+      <span aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" style="display: none;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+      <span data-copy-markdown-label>Copy page as Markdown</span>
+    </button>
+  )}
+</div>
+
+<script>
+  async function copyText(text: string): Promise<void> {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.append(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+  }
+
+  function setButtonLabel(button: HTMLButtonElement, label: string): void {
+    const labelTarget = button.querySelector('[data-copy-markdown-label]');
+    if (labelTarget) {
+      labelTarget.textContent = label;
+    }
+  }
+
+  function toggleIcons(button: HTMLButtonElement, showCheck: boolean): void {
+    const copyIcon = button.querySelector('.copy-icon');
+    const checkIcon = button.querySelector('.check-icon');
+    if (copyIcon && checkIcon) {
+      (copyIcon as HTMLElement).style.display = showCheck ? 'none' : 'inline';
+      (checkIcon as HTMLElement).style.display = showCheck ? 'inline' : 'none';
+    }
+  }
+
+  async function handleCopy(event: Event): Promise<void> {
+    const button = event.currentTarget as HTMLButtonElement;
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const markdownUrl = button.dataset.markdownUrl;
+    if (!markdownUrl) {
+      return;
+    }
+
+    const defaultLabel = button.dataset.defaultLabel ?? 'Copy page as Markdown';
+    const successLabel = button.dataset.successLabel ?? 'Copied!';
+    const errorLabel = button.dataset.errorLabel ?? 'Copy failed';
+
+    button.disabled = true;
+
+    try {
+      const response = await fetch(markdownUrl);
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const markdown = await response.text();
+      await copyText(markdown);
+      setButtonLabel(button, successLabel);
+      toggleIcons(button, true);
+    } catch (error) {
+      console.error('Failed to copy page as Markdown.', error);
+      setButtonLabel(button, errorLabel);
+    } finally {
+      window.setTimeout(() => {
+        setButtonLabel(button, defaultLabel);
+        toggleIcons(button, false);
+        button.disabled = false;
+      }, 2000);
+    }
+  }
+
+  function bindCopyButtons(): void {
+    for (const button of document.querySelectorAll('[data-copy-markdown]')) {
+      if (!(button instanceof HTMLButtonElement) || button.dataset.copyMarkdownBound === 'true') {
+        continue;
+      }
+
+      button.addEventListener('click', handleCopy);
+      button.dataset.copyMarkdownBound = 'true';
+    }
+  }
+
+  bindCopyButtons();
+  document.addEventListener('astro:page-load', bindCopyButtons);
+</script>
+
+<style>
+  @layer starlight.core {
+    .recursor-meta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .recursor-meta-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--sl-color-bg-nav);
+      border: 1px solid var(--sl-color-gray-5);
+      border-radius: 0.5rem;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      color: var(--sl-color-text);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .recursor-meta-action:hover:not(:disabled) {
+      background: var(--sl-color-gray-6);
+      border-color: var(--sl-color-gray-4);
+      color: var(--sl-color-white);
+    }
+
+    .recursor-meta-action:focus-visible {
+      outline: 2px solid var(--sl-color-accent);
+      outline-offset: 2px;
+    }
+
+    .recursor-copy-markdown:disabled {
+      cursor: progress;
+      opacity: 0.7;
+    }
+
+    .recursor-meta-action svg {
+      flex-shrink: 0;
+    }
+  }
+</style>

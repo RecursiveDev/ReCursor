@@ -1,12 +1,4 @@
----
-title: Getting started
-description: Orientation pages for the ReCursor project, its documentation corpus, and the current execution plan.
-editUrl: false
-sidebar:
-  order: 1
----
-
-import { Card, CardGrid } from '@astrojs/starlight/components';
+# Getting started
 
 The published docs site is generated from the repository's canonical `/docs` directory. Use this section to understand the project intent before diving into architecture or implementation details.
 
@@ -14,17 +6,9 @@ The published docs site is generated from the repository's canonical `/docs` dir
   **New here?** Start with the [Product vision](/getting-started/product-vision/) to understand what ReCursor aims to achieve and why it uses a bridge-first architecture.
 </div>
 
-<CardGrid>
-  <Card title="Documentation index" icon="list-format" href="/getting-started/documentation-index/">
-    The source-of-truth index for the entire documentation corpus. Find what you need across all sections.
-  </Card>
-  <Card title="Product vision" icon="rocket" href="/getting-started/product-vision/">
-    The product concept, bridge-first UX, and OpenCode parity goals. Understand the "why" behind ReCursor.
-  </Card>
-  <Card title="Implementation plan" icon="approve-check-circle" href="/getting-started/implementation-plan/">
-    The phased roadmap used to sequence delivery work across the project. See what's planned and when.
-  </Card>
-</CardGrid>
+- [Documentation index](/getting-started/documentation-index/): The source-of-truth index for the entire documentation corpus. Find what you need across all sections.
+- [Product vision](/getting-started/product-vision/): The product concept, bridge-first UX, and OpenCode parity goals. Understand the "why" behind ReCursor.
+- [Implementation plan](/getting-started/implementation-plan/): The phased roadmap used to sequence delivery work across the project. See what's planned and when.
 
 ## Quick navigation
 

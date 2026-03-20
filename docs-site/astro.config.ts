@@ -14,7 +14,8 @@ export default defineConfig({
       description:
         'Bridge-first documentation for the ReCursor mobile companion UI and bridge architecture.',
       logo: {
-        src: './src/assets/recursor-logo-light.svg',
+        light: './src/assets/recursor-logo-light.svg',
+        dark: './src/assets/recursor-logo-dark.svg',
         replacesTitle: false,
       },
       social: [
@@ -30,6 +31,7 @@ export default defineConfig({
       customCss: ['./src/styles/custom.css'],
       components: {
         Head: './src/components/Head.astro',
+        EditLink: './src/components/EditLink.astro',
       },
       sidebar: [
         { label: 'Home', link: '/' },

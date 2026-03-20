@@ -6,7 +6,7 @@
   "description": "ReCursor documentation site powered by Astro Starlight",
   "packageManager": "npm@11.11.0",
   "scripts": {
-    "generate": "node ./scripts/generate-docs.mjs && node ./scripts/generate-llms.mjs",
+    "generate": "node ./scripts/generate-docs.mjs && node ./scripts/generate-page-markdown.mjs && node ./scripts/generate-llms.mjs",
     "dev": "npm run generate && astro dev",
     "build": "npm run generate && astro build",
     "check": "npm run generate && astro check && astro build",

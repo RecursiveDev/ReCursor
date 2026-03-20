@@ -1,12 +1,4 @@
----
-title: Architecture
-description: System design, data flow, and structural documentation for ReCursor.
-editUrl: false
-sidebar:
-  order: 1
----
-
-import { Card, CardGrid } from '@astrojs/starlight/components';
+# Architecture
 
 The architecture section describes the bridge-first system design and the constraints that shape ReCursor's mobile experience.
 
@@ -16,23 +8,11 @@ The architecture section describes the bridge-first system design and the constr
 
 ## Core concepts
 
-<CardGrid>
-  <Card title="System overview" icon="seti:config" href="/architecture/system-overview/">
-    The core component model: mobile app, bridge server, and Claude Code integration points.
-  </Card>
-  <Card title="Data flow" icon="seti:graphql" href="/architecture/data-flow/">
-    Message-level sequence diagrams showing how commands travel from mobile to desktop.
-  </Card>
-  <Card title="Bridge protocol" icon="seti:json" href="/architecture/bridge-protocol/">
-    The HTTP/WebSocket protocol specification for bridge communication.
-  </Card>
-  <Card title="Data models" icon="seti:db" href="/architecture/data-models/">
-    Core data structures: requests, responses, sessions, and repositories.
-  </Card>
-  <Card title="Project structure" icon="seti:folder" href="/architecture/project-structure/">
-    Repository organization: Flutter app, bridge server, and documentation.
-  </Card>
-</CardGrid>
+- [System overview](/architecture/system-overview/): The core component model: mobile app, bridge server, and Claude Code integration points.
+- [Data flow](/architecture/data-flow/): Message-level sequence diagrams showing how commands travel from mobile to desktop.
+- [Bridge protocol](/architecture/bridge-protocol/): The HTTP/WebSocket protocol specification for bridge communication.
+- [Data models](/architecture/data-models/): Core data structures: requests, responses, sessions, and repositories.
+- [Project structure](/architecture/project-structure/): Repository organization: Flutter app, bridge server, and documentation.
 
 ## Design principles
 

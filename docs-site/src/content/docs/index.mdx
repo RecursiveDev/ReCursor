@@ -2,13 +2,16 @@
 title: ReCursor documentation
 description: Bridge-first project docs for the ReCursor mobile companion UI, published with Astro Starlight.
 editUrl: false
+template: splash
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkButton } from '@astrojs/starlight/components';
 
-<div className="hero-note">
-  <strong>Source of truth:</strong> The canonical documentation lives in <code>/docs</code> in this repository. This site is generated from that corpus and preserves the project constraint that Claude Code Remote Control is first-party only.
-</div>
+<section class="hero-section">
+  <div class="hero-note">
+    **Source of truth:** The canonical documentation lives in `/docs` in this repository. This site is generated from that corpus and preserves the project constraint that Claude Code Remote Control is first-party only.
+  </div>
+</section>
 
 ## Start here
 
@@ -31,7 +34,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
   <Card title="Wireframes" icon="seti:html" href="/wireframes/">
     Screen-by-screen mobile UI wireframes covering the bridge-first workflow.
   </Card>
-  <Card title="Research" icon="seti:mdx" href="/research/">
+  <Card title="Research" icon="magnifier" href="/research/">
     Background research documents that informed the current architecture.
   </Card>
   <Card title="Legal" icon="seti:license" href="/legal/">
@@ -41,7 +44,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## AI-friendly artifacts
 
-<div className="site-link-list">
+<div class="site-link-list">
 
 - [Compact AI index](/llms.txt)
 - [Full concatenated AI context](/llms-full.txt)
