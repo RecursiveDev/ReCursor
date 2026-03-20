@@ -159,7 +159,7 @@ class _AgentConfigScreenState extends ConsumerState<AgentConfigScreen> {
 
             // Agent type dropdown
             DropdownButtonFormField<AgentType>(
-              value: _agentType,
+              initialValue: _agentType,
               decoration: const InputDecoration(labelText: 'Agent Type'),
               dropdownColor: const Color(0xFF252526),
               items: AgentType.values
@@ -204,9 +204,8 @@ class _AgentConfigScreenState extends ConsumerState<AgentConfigScreen> {
               decoration: InputDecoration(
                 labelText: 'Auth Token',
                 suffixIcon: IconButton(
-                  icon: Icon(_obscureToken
-                      ? Icons.visibility_off
-                      : Icons.visibility),
+                  icon: Icon(
+                      _obscureToken ? Icons.visibility_off : Icons.visibility),
                   onPressed: () =>
                       setState(() => _obscureToken = !_obscureToken),
                 ),

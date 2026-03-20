@@ -61,7 +61,7 @@ class FileTreeNodeWidget extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   static String _formatSize(int bytes) {
-    if (bytes < 1024) return '${bytes} B';
+    if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) {
       final kb = bytes / 1024;
       return '${kb.toStringAsFixed(kb < 10 ? 1 : 0)} KB';

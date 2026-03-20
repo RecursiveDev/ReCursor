@@ -26,7 +26,8 @@ class _GitScreenState extends ConsumerState<GitScreen> {
     super.initState();
     if (widget.sessionId.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(gitStatusProvider(widget.sessionId).notifier)
+        ref
+            .read(gitStatusProvider(widget.sessionId).notifier)
             .fetchStatus(widget.sessionId);
       });
     }
@@ -120,12 +121,11 @@ class _GitScreenState extends ConsumerState<GitScreen> {
   }
 
   Widget _emptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.check_circle_outline,
-              size: 48, color: Color(0xFF4CAF50)),
+        children: [
+          Icon(Icons.check_circle_outline, size: 48, color: Color(0xFF4CAF50)),
           SizedBox(height: 12),
           Text(
             'Repository is clean',

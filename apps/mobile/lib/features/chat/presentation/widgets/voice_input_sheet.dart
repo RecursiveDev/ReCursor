@@ -1,4 +1,5 @@
-import 'dart:math';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -57,7 +58,7 @@ class _VoiceInputSheetState extends State<VoiceInputSheet>
       pauseFor: const Duration(seconds: 3),
     );
     if (mounted) setState(() => _listening = true);
-    _pulseController.repeat(reverse: true);
+    unawaited(_pulseController.repeat(reverse: true));
   }
 
   Future<void> _stopListening() async {
@@ -105,20 +106,16 @@ class _VoiceInputSheetState extends State<VoiceInputSheet>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _listening
-                    ? const Color(0xFF569CD6).withOpacity(0.2)
+                    ? const Color(0xFF569CD6).withValues(alpha: 0.2)
                     : const Color(0xFF3C3C3C),
                 border: Border.all(
-                  color: _listening
-                      ? const Color(0xFF569CD6)
-                      : Colors.grey,
+                  color: _listening ? const Color(0xFF569CD6) : Colors.grey,
                   width: 2,
                 ),
               ),
               child: Icon(
                 _listening ? Icons.mic : Icons.mic_off,
-                color: _listening
-                    ? const Color(0xFF569CD6)
-                    : Colors.grey,
+                color: _listening ? const Color(0xFF569CD6) : Colors.grey,
                 size: 36,
               ),
             ),
@@ -127,9 +124,7 @@ class _VoiceInputSheetState extends State<VoiceInputSheet>
           Text(
             _listening ? 'Listening…' : 'Tap mic to start',
             style: TextStyle(
-              color: _listening
-                  ? const Color(0xFF569CD6)
-                  : Colors.grey,
+              color: _listening ? const Color(0xFF569CD6) : Colors.grey,
               fontSize: 14,
             ),
           ),
@@ -143,12 +138,13 @@ class _VoiceInputSheetState extends State<VoiceInputSheet>
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              _transcript.isEmpty ? 'Your words will appear here…' : _transcript,
+              _transcript.isEmpty
+                  ? 'Your words will appear here…'
+                  : _transcript,
               style: TextStyle(
                 color: _transcript.isEmpty ? Colors.grey : Colors.white,
-                fontStyle: _transcript.isEmpty
-                    ? FontStyle.italic
-                    : FontStyle.normal,
+                fontStyle:
+                    _transcript.isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
             ),
           ),

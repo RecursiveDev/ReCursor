@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/git_models.dart';
 import '../../domain/providers/diff_provider.dart';
-import '../widgets/diff_viewer.dart';
 import '../widgets/diff_hunk_view.dart';
+import '../widgets/diff_viewer.dart';
 
 class DiffViewerScreen extends ConsumerStatefulWidget {
   const DiffViewerScreen({super.key});
@@ -46,9 +46,7 @@ class _DiffViewerScreenState extends ConsumerState<DiffViewerScreen> {
         return InkWell(
           onTap: () => setState(() => _selectedFileIndex = index),
           child: Container(
-            color: isSelected
-                ? const Color(0xFF2A2D2E)
-                : Colors.transparent,
+            color: isSelected ? const Color(0xFF2A2D2E) : Colors.transparent,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               children: [
@@ -56,7 +54,7 @@ class _DiffViewerScreenState extends ConsumerState<DiffViewerScreen> {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(3),
                   ),
                   alignment: Alignment.center,

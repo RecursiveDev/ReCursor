@@ -72,8 +72,7 @@ class _AgentListScreenState extends ConsumerState<AgentListScreen> {
                   alignment: Alignment.centerRight,
                   color: const Color(0xFFF44747),
                   padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete_outline,
-                      color: Colors.white),
+                  child: const Icon(Icons.delete_outline, color: Colors.white),
                 ),
                 onDismissed: (_) => _delete(agent.id, agent.displayName),
                 child: AgentCard(
@@ -95,10 +94,10 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        children: [
           Icon(Icons.smart_toy_outlined, size: 64, color: Color(0xFF9E9E9E)),
           SizedBox(height: 16),
           Text(

@@ -56,7 +56,7 @@ class _BreadcrumbNavState extends State<BreadcrumbNav> {
 
     final segments = <_Segment>[];
     // Root segment.
-    segments.add(_Segment(label: '/', cumulativePath: '/'));
+    segments.add(const _Segment(label: '/', cumulativePath: '/'));
 
     for (var i = 0; i < parts.length; i++) {
       final cumulative = '/${parts.sublist(0, i + 1).join('/')}';
@@ -105,8 +105,7 @@ class _BreadcrumbNavState extends State<BreadcrumbNav> {
               seg.label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight:
-                    isCurrent ? FontWeight.w700 : FontWeight.w400,
+                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
                 color: isCurrent ? kPrimary : kTextSecondary,
               ),
             ),
