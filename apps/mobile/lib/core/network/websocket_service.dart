@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'bridge_connection_validator.dart';
@@ -9,15 +10,6 @@ import 'websocket_messages.dart';
 
 typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri);
 
-/// WebSocket client service for communication with the ReCursor bridge server.
-///
-/// Responsibilities:
-/// - Connect / disconnect lifecycle
-/// - Authentication handshake
-/// - Heartbeat (ping every 15 s, expect pong within 10 s)
-/// - Automatic reconnect with exponential back-off (1 → 2 → 4 → 8 … max 30 s)
-/// - Serialize outgoing [BridgeMessage] to JSON
-/// - Parse incoming JSON into [BridgeMessage]
 class WebSocketService {
   WebSocketService({WebSocketChannelFactory? channelFactory})
       : _channelFactory = channelFactory ?? WebSocketChannel.connect;
@@ -25,7 +17,9 @@ class WebSocketService {
   static const int _heartbeatIntervalSeconds = 15;
   static const int _heartbeatTimeoutSeconds = 10;
   static const int _authTimeoutSeconds = 10;
+  static const int _requestTimeoutSeconds = 10;
   static const int _maxReconnectDelaySeconds = 30;
+  static const Uuid _uuid = Uuid();
 
   final WebSocketChannelFactory _channelFactory;
 
@@ -33,6 +27,7 @@ class WebSocketService {
   String? _url;
   String? _token;
   Map<String, dynamic>? _lastConnectionAckPayload;
+  Map<String, dynamic>? _lastHealthStatusPayload;
 
   final StreamController<BridgeMessage> _messageController =
       StreamController<BridgeMessage>.broadcast();
@@ -44,6 +39,8 @@ class WebSocketService {
   bool _intentionalDisconnect = false;
   bool _authFailed = false;
   Completer<void>? _authCompleter;
+  Completer<Map<String, dynamic>>? _healthCheckCompleter;
+  Completer<Map<String, dynamic>>? _warningAckCompleter;
 
   Timer? _heartbeatTimer;
   Timer? _pongTimeoutTimer;
@@ -54,6 +51,7 @@ class WebSocketService {
   ConnectionStatus get currentStatus => _status;
   Map<String, dynamic>? get lastConnectionAckPayload =>
       _lastConnectionAckPayload;
+  Map<String, dynamic>? get lastHealthStatusPayload => _lastHealthStatusPayload;
 
   Future<void> connect({required String url, required String token}) async {
     final validation = BridgeConnectionValidator.validate(
@@ -69,7 +67,72 @@ class WebSocketService {
     _intentionalDisconnect = false;
     _authFailed = false;
     _reconnectAttempts = 0;
+    _lastHealthStatusPayload = null;
     await _doConnect();
+  }
+
+  Future<Map<String, dynamic>> requestHealthCheck() async {
+    _ensureConnected();
+    _completePendingRequest(
+      _healthCheckCompleter,
+      const BridgeConnectionException('Bridge health check was superseded.'),
+    );
+    _healthCheckCompleter = Completer<Map<String, dynamic>>();
+
+    final sent = _sendInternal(
+      BridgeMessage.healthCheck(clientNonce: _uuid.v4()),
+    );
+    if (!sent) {
+      _completePendingRequest(
+        _healthCheckCompleter,
+        const BridgeConnectionException('Unable to send bridge health check.'),
+      );
+      throw const BridgeConnectionException(
+        'Unable to send bridge health check.',
+      );
+    }
+
+    return _healthCheckCompleter!.future.timeout(
+      const Duration(seconds: _requestTimeoutSeconds),
+      onTimeout: () {
+        throw const BridgeConnectionException(
+          'Bridge health verification timed out.',
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> acknowledgeWarning(String warningCode) async {
+    _ensureConnected();
+    _completePendingRequest(
+      _warningAckCompleter,
+      const BridgeConnectionException(
+          'Bridge warning acknowledgment was superseded.'),
+    );
+    _warningAckCompleter = Completer<Map<String, dynamic>>();
+
+    final sent = _sendInternal(
+      BridgeMessage.acknowledgeWarning(warningCode: warningCode),
+    );
+    if (!sent) {
+      _completePendingRequest(
+        _warningAckCompleter,
+        const BridgeConnectionException(
+            'Unable to acknowledge bridge warning.'),
+      );
+      throw const BridgeConnectionException(
+        'Unable to acknowledge bridge warning.',
+      );
+    }
+
+    return _warningAckCompleter!.future.timeout(
+      const Duration(seconds: _requestTimeoutSeconds),
+      onTimeout: () {
+        throw const BridgeConnectionException(
+          'Bridge warning acknowledgment timed out.',
+        );
+      },
+    );
   }
 
   Future<void> _doConnect() async {
@@ -136,6 +199,9 @@ class WebSocketService {
     _completeAuthError(
       const BridgeConnectionException('Bridge connection closed.'),
     );
+    _failPendingRequests(
+      const BridgeConnectionException('Bridge connection closed.'),
+    );
     _cleanUp();
     _setStatus(ConnectionStatus.disconnected);
   }
@@ -179,13 +245,43 @@ class WebSocketService {
       }
 
       if (message.type == BridgeMessageType.connectionError) {
-        _authFailed = true;
         final String detail = message.payload['message'] as String? ??
-            'Bridge rejected the auth token.';
-        _completeAuthError(BridgeConnectionException(detail));
+            'Bridge rejected the connection.';
+        final BridgeConnectionException exception =
+            BridgeConnectionException(detail);
+
+        if (_authCompleter != null && !_authCompleter!.isCompleted) {
+          _authFailed = true;
+          _completeAuthError(exception);
+          _setStatus(ConnectionStatus.error);
+          _cleanUp(closeChannel: true, cancelReconnect: false);
+          return;
+        }
+
+        _failPendingRequests(exception);
         _setStatus(ConnectionStatus.error);
         _cleanUp(closeChannel: true, cancelReconnect: false);
         return;
+      }
+
+      if (message.type == BridgeMessageType.healthStatus) {
+        final payload = Map<String, dynamic>.unmodifiable(
+          Map<String, dynamic>.from(message.payload),
+        );
+        _lastHealthStatusPayload = payload;
+        _completePendingMap(_healthCheckCompleter, payload);
+      }
+
+      if (message.type == BridgeMessageType.acknowledgmentAccepted) {
+        final payload = Map<String, dynamic>.unmodifiable(
+          Map<String, dynamic>.from(message.payload),
+        );
+        _lastHealthStatusPayload = <String, dynamic>{
+          ...?_lastHealthStatusPayload,
+          'ready': true,
+          'requires_acknowledgment': false,
+        };
+        _completePendingMap(_warningAckCompleter, payload);
       }
 
       if (message.type == BridgeMessageType.heartbeatPong) {
@@ -203,17 +299,18 @@ class WebSocketService {
   }
 
   void _onError(Object error) {
-    _completeAuthError(
-        BridgeConnectionException('Bridge socket error: $error'));
+    final exception = BridgeConnectionException('Bridge socket error: $error');
+    _completeAuthError(exception);
+    _failPendingRequests(exception);
     _setStatus(ConnectionStatus.error);
     _cleanUp(closeChannel: false, cancelReconnect: false);
     _scheduleReconnectIfNeeded();
   }
 
   void _onDone() {
-    _completeAuthError(
-      const BridgeConnectionException('Bridge connection closed.'),
-    );
+    const exception = BridgeConnectionException('Bridge connection closed.');
+    _completeAuthError(exception);
+    _failPendingRequests(exception);
     _setStatus(ConnectionStatus.disconnected);
     _cleanUp(closeChannel: false, cancelReconnect: false);
     _scheduleReconnectIfNeeded();
@@ -245,6 +342,10 @@ class WebSocketService {
   }
 
   void _onPongTimeout() {
+    const exception = BridgeConnectionException(
+      'Bridge heartbeat timed out.',
+    );
+    _failPendingRequests(exception);
     _cleanUp(closeChannel: true, cancelReconnect: false);
     _setStatus(ConnectionStatus.reconnecting);
     _scheduleReconnectIfNeeded();
@@ -282,6 +383,14 @@ class WebSocketService {
     return delay;
   }
 
+  void _ensureConnected() {
+    if (_channel == null || _status != ConnectionStatus.connected) {
+      throw const BridgeConnectionException(
+        'Bridge is not connected.',
+      );
+    }
+  }
+
   void _completeAuthSuccess() {
     final Completer<void>? completer = _authCompleter;
     if (completer != null && !completer.isCompleted) {
@@ -294,6 +403,29 @@ class WebSocketService {
     if (completer != null && !completer.isCompleted) {
       completer.completeError(error);
     }
+  }
+
+  void _completePendingMap(
+    Completer<Map<String, dynamic>>? completer,
+    Map<String, dynamic> payload,
+  ) {
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(payload);
+    }
+  }
+
+  void _completePendingRequest(
+    Completer<Map<String, dynamic>>? completer,
+    Object error,
+  ) {
+    if (completer != null && !completer.isCompleted) {
+      completer.completeError(error);
+    }
+  }
+
+  void _failPendingRequests(BridgeConnectionException exception) {
+    _completePendingRequest(_healthCheckCompleter, exception);
+    _completePendingRequest(_warningAckCompleter, exception);
   }
 
   void _cleanUp({
@@ -328,9 +460,9 @@ class WebSocketService {
 
   void dispose() {
     _intentionalDisconnect = true;
-    _completeAuthError(
-      const BridgeConnectionException('Bridge connection disposed.'),
-    );
+    const exception = BridgeConnectionException('Bridge connection disposed.');
+    _completeAuthError(exception);
+    _failPendingRequests(exception);
     _cleanUp();
     _messageController.close();
     _statusController.close();

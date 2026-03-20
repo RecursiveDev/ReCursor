@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:uuid/uuid.dart';
 
 enum BridgeMessageType {
@@ -6,6 +7,10 @@ enum BridgeMessageType {
   auth,
   connectionAck,
   connectionError,
+  healthCheck,
+  healthStatus,
+  acknowledgeWarning,
+  acknowledgmentAccepted,
   heartbeatPing,
   heartbeatPong,
   // Sessions
@@ -41,12 +46,15 @@ enum BridgeMessageType {
   error,
 }
 
-/// Converts a string message type (snake_case) to [BridgeMessageType].
 BridgeMessageType _typeFromString(String type) {
   return switch (type) {
     'auth' => BridgeMessageType.auth,
     'connection_ack' => BridgeMessageType.connectionAck,
     'connection_error' => BridgeMessageType.connectionError,
+    'health_check' => BridgeMessageType.healthCheck,
+    'health_status' => BridgeMessageType.healthStatus,
+    'acknowledge_warning' => BridgeMessageType.acknowledgeWarning,
+    'acknowledgment_accepted' => BridgeMessageType.acknowledgmentAccepted,
     'heartbeat_ping' => BridgeMessageType.heartbeatPing,
     'heartbeat_pong' => BridgeMessageType.heartbeatPong,
     'session_start' => BridgeMessageType.sessionStart,
@@ -82,6 +90,10 @@ String _typeToString(BridgeMessageType type) {
     BridgeMessageType.auth => 'auth',
     BridgeMessageType.connectionAck => 'connection_ack',
     BridgeMessageType.connectionError => 'connection_error',
+    BridgeMessageType.healthCheck => 'health_check',
+    BridgeMessageType.healthStatus => 'health_status',
+    BridgeMessageType.acknowledgeWarning => 'acknowledge_warning',
+    BridgeMessageType.acknowledgmentAccepted => 'acknowledgment_accepted',
     BridgeMessageType.heartbeatPing => 'heartbeat_ping',
     BridgeMessageType.heartbeatPong => 'heartbeat_pong',
     BridgeMessageType.sessionStart => 'session_start',
@@ -126,10 +138,6 @@ class BridgeMessage {
     required this.payload,
   });
 
-  // ---------------------------------------------------------------------------
-  // Factories
-  // ---------------------------------------------------------------------------
-
   factory BridgeMessage.auth({
     required String token,
     required String clientVersion,
@@ -143,6 +151,32 @@ class BridgeMessage {
         'token': token,
         'client_version': clientVersion,
         'platform': platform,
+      },
+    );
+  }
+
+  factory BridgeMessage.healthCheck({required String clientNonce}) {
+    return BridgeMessage(
+      type: BridgeMessageType.healthCheck,
+      id: 'health-${_uuid.v4()}',
+      timestamp: DateTime.now().toUtc(),
+      payload: {
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+        'client_nonce': clientNonce,
+        'client_capabilities': ['health_v1', 'acknowledgment_v1'],
+      },
+    );
+  }
+
+  factory BridgeMessage.acknowledgeWarning({required String warningCode}) {
+    return BridgeMessage(
+      type: BridgeMessageType.acknowledgeWarning,
+      id: 'ack-${_uuid.v4()}',
+      timestamp: DateTime.now().toUtc(),
+      payload: {
+        'warning_code': warningCode,
+        'acknowledged': true,
+        'acknowledged_at': DateTime.now().toUtc().toIso8601String(),
       },
     );
   }
@@ -309,10 +343,6 @@ class BridgeMessage {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Serialization
-  // ---------------------------------------------------------------------------
-
   factory BridgeMessage.fromJson(Map<String, dynamic> json) {
     return BridgeMessage(
       type: _typeFromString(json['type'] as String),
@@ -330,7 +360,9 @@ class BridgeMessage {
       'timestamp': timestamp.toIso8601String(),
       'payload': payload,
     };
-    if (id != null) map['id'] = id;
+    if (id != null) {
+      map['id'] = id;
+    }
     return map;
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,11 +28,12 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
   bool _connecting = false;
   String? _error;
   bool _scanned = false;
+  bool _hasSavedPairing = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 0);
     unawaited(_loadSavedBridgeConfig());
   }
 
@@ -47,11 +49,16 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
     }
 
     setState(() {
+      _hasSavedPairing = (savedUrl != null && savedUrl.isNotEmpty) ||
+          (savedToken != null && savedToken.isNotEmpty);
       if (savedUrl != null && savedUrl.isNotEmpty) {
         _urlController.text = savedUrl;
       }
       if (savedToken != null && savedToken.isNotEmpty) {
         _tokenController.text = savedToken;
+      }
+      if (_hasSavedPairing) {
+        _tabController.animateTo(1);
       }
       if (startupError != null && startupError.isNotEmpty) {
         _error = startupError;
@@ -74,26 +81,35 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
       return;
     }
 
-    final raw = capture.barcodes.firstOrNull?.rawValue;
-    if (raw == null) {
+    final raw = capture.barcodes.firstOrNull?.rawValue?.trim();
+    if (raw == null || raw.isEmpty) {
       return;
     }
 
-    final uri = Uri.tryParse(raw);
-    if (uri == null) {
-      _setError('QR code did not contain a valid bridge pairing URI.');
-      return;
+    String url = '';
+    String token = '';
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        url = (decoded['url'] as String? ?? '').trim();
+        token = (decoded['token'] as String? ?? '').trim();
+      }
+    } catch (_) {
+      final uri = Uri.tryParse(raw);
+      if (uri != null) {
+        url = (uri.queryParameters['url'] ?? '').trim();
+        token = (uri.queryParameters['token'] ?? '').trim();
+      }
     }
 
-    final url = uri.queryParameters['url'] ?? '';
-    final token = uri.queryParameters['token'] ?? '';
     final validation = BridgeConnectionValidator.validate(
       url: url,
       token: token,
     );
 
     if (!validation.isValid) {
-      _setError(validation.errorMessage!);
+      _setError('QR code did not contain a valid bridge pairing payload.');
       return;
     }
 
@@ -102,6 +118,7 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
       _error = null;
       _urlController.text = url;
       _tokenController.text = token;
+      _hasSavedPairing = true;
     });
     _tabController.animateTo(1);
   }
@@ -136,7 +153,10 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
       await ref.read(tokenStorageProvider).saveToken(kBridgeToken, token);
       ref.read(bridgeStartupErrorProvider.notifier).state = null;
       if (mounted) {
-        context.go('/home/chat');
+        setState(() {
+          _hasSavedPairing = true;
+        });
+        context.go('/health-verification');
       }
     } catch (error) {
       _setError(error.toString());
@@ -162,6 +182,7 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
           tokenController: _tokenController,
           connecting: _connecting,
           error: _error,
+          hasSavedPairing: _hasSavedPairing,
           onConnect: _connect,
         );
       },
@@ -210,8 +231,8 @@ class _QrTab extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'Scan a QR code that contains your private wss:// bridge URL and '
-            'bridge pairing token.',
+            'Scan a QR code that contains a bridge pairing payload with the '
+            'secure wss:// URL and bridge pairing token.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF9CDCFE)),
           ),
@@ -227,6 +248,7 @@ class _ManualTab extends StatelessWidget {
     required this.tokenController,
     required this.connecting,
     required this.error,
+    required this.hasSavedPairing,
     required this.onConnect,
   });
 
@@ -234,6 +256,7 @@ class _ManualTab extends StatelessWidget {
   final TextEditingController tokenController;
   final bool connecting;
   final String? error;
+  final bool hasSavedPairing;
   final VoidCallback onConnect;
 
   @override
@@ -253,10 +276,11 @@ class _ManualTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Start by pairing with your local bridge. No account sign-in is '
-            'required.',
-            style: TextStyle(
+          Text(
+            hasSavedPairing
+                ? 'Unable to reconnect to the saved bridge. Update the saved pairing or try scanning again.'
+                : 'Pair with your bridge using the QR code or enter the bridge URL and token manually.',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -264,8 +288,7 @@ class _ManualTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Use the bridge\'s private Tailscale/WireGuard address. Public '
-            'internet bridge endpoints are outside the docs contract.',
+            'Use a secure wss:// bridge URL. Tailscale or WireGuard is recommended; direct public remote access requires an explicit warning acknowledgment.',
             style: TextStyle(color: Color(0xFF9CDCFE)),
           ),
           const SizedBox(height: 16),
@@ -317,7 +340,12 @@ class _ManualTab extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : const Text('Connect', style: TextStyle(fontSize: 16)),
+                : Text(
+                    hasSavedPairing
+                        ? 'Reconnect to Bridge'
+                        : 'Connect Manually',
+                    style: const TextStyle(fontSize: 16),
+                  ),
           ),
         ],
       ),

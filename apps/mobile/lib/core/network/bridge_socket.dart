@@ -1,16 +1,19 @@
 // Re-exports for backwards compatibility with generated code
-export '../providers/websocket_provider.dart'
-    show webSocketServiceProvider, connectionStatusProvider, bridgeMessagesProvider;
-export 'connection_state.dart' show ConnectionStatus;
-
 // Aliases
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'websocket_messages.dart';
-import 'websocket_service.dart';
+
 import '../providers/websocket_provider.dart';
 import 'connection_state.dart';
+import 'websocket_service.dart';
+
+export '../providers/websocket_provider.dart'
+    show
+        webSocketServiceProvider,
+        connectionStatusProvider,
+        bridgeMessagesProvider;
+export 'connection_state.dart' show ConnectionStatus;
 
 /// Thin facade over [WebSocketService] that exposes a map-based API used by
 /// feature providers generated before the typed-message redesign.

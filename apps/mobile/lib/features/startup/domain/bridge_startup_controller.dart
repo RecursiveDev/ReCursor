@@ -20,7 +20,7 @@ final bridgeStartupControllerProvider =
 
 final bridgeStartupErrorProvider = StateProvider<String?>((ref) => null);
 
-enum AppStartupDestination { bridgeSetup, home }
+enum AppStartupDestination { bridgeSetup, healthVerification, home }
 
 class AppStartupResult {
   const AppStartupResult._({required this.destination, this.message});
@@ -30,6 +30,9 @@ class AppStartupResult {
           destination: AppStartupDestination.bridgeSetup,
           message: message,
         );
+
+  const AppStartupResult.healthVerification()
+      : this._(destination: AppStartupDestination.healthVerification);
 
   const AppStartupResult.home()
       : this._(destination: AppStartupDestination.home);
@@ -76,12 +79,12 @@ class BridgeStartupController {
     }
 
     if (_webSocketService.currentStatus == ConnectionStatus.connected) {
-      return const AppStartupResult.home();
+      return const AppStartupResult.healthVerification();
     }
 
     try {
       await _webSocketService.connect(url: savedUrl, token: normalizedToken);
-      return const AppStartupResult.home();
+      return const AppStartupResult.healthVerification();
     } catch (error) {
       return AppStartupResult.bridgeSetup(
         message: 'Unable to reconnect to the saved bridge. $error',

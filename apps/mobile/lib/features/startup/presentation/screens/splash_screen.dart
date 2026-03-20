@@ -44,6 +44,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       case AppStartupDestination.bridgeSetup:
         context.go('/bridge-setup');
         return;
+      case AppStartupDestination.healthVerification:
+        context.go('/health-verification');
+        return;
       case AppStartupDestination.home:
         context.go('/home/chat');
         return;
