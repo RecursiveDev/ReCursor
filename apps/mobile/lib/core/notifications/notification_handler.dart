@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/scheduler.dart';
 
@@ -21,8 +20,7 @@ class NotificationHandler {
   final NotificationCenter _center;
   final NotificationService _service;
 
-  final _controller =
-      StreamController<AppNotification>.broadcast();
+  final _controller = StreamController<AppNotification>.broadcast();
 
   Stream<AppNotification> get notificationStream => _controller.stream;
 
@@ -36,7 +34,7 @@ class NotificationHandler {
     _controller.add(notification);
 
     // Determine if the app is in the foreground.
-    final lifecycleState = SchedulerBinding.instance?.lifecycleState;
+    final lifecycleState = SchedulerBinding.instance.lifecycleState;
     final isForeground = lifecycleState == AppLifecycleState.resumed;
 
     if (isForeground) {
@@ -50,8 +48,7 @@ class NotificationHandler {
   AppNotification? _parseNotification(
       String? id, Map<String, dynamic> payload) {
     try {
-      final typeString =
-          payload['notification_type'] as String? ?? 'info';
+      final typeString = payload['notification_type'] as String? ?? 'info';
       final type = _parseType(typeString);
       final priorityString = payload['priority'] as String? ?? 'normal';
       final priority = _parsePriority(priorityString);

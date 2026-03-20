@@ -270,6 +270,8 @@ class ChatNotifier extends _$ChatNotifier {
           'description': _stringValue(payload['description']),
           'risk_level': _stringValue(payload['risk_level']),
           'source': _stringValue(payload['source']),
+          'session_id': sessionId,
+          'tool_call_id': _stringValue(payload['tool_call_id']),
         },
         createdAt: now,
         updatedAt: now,
@@ -286,7 +288,12 @@ class ChatNotifier extends _$ChatNotifier {
     await _ensureSessionExists(sessionId);
     final resultMap = _mapValue(payload['result']);
     final toolName = _stringValue(payload['tool'], fallback: 'unknown_tool');
-    final metadata = <String, dynamic>{'tool': toolName};
+    final metadata = <String, dynamic>{
+      'tool': toolName,
+      'session_id': sessionId,
+      'tool_call_id': _stringValue(payload['tool_call_id']),
+      'source': _stringValue(payload['source']),
+    };
     final diff = resultMap['diff'] as String?;
     if (diff != null && diff.isNotEmpty) {
       metadata['diff'] = diff;

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/file_models.dart';
 import '../../../../core/network/websocket_messages.dart';
-import '../../../../core/network/websocket_service.dart';
 import '../../../../core/providers/websocket_provider.dart';
 
 // ---------------------------------------------------------------------------
@@ -79,7 +78,7 @@ class RepoNotifier extends FamilyAsyncNotifier<RepoState, String> {
     });
 
     // Start at root of session working directory.
-    final initial = const RepoState();
+    const initial = RepoState();
     await _fetchDirectory(initial.currentPath);
     return state.value ?? initial;
   }
@@ -202,7 +201,9 @@ class RepoNotifier extends FamilyAsyncNotifier<RepoState, String> {
   /// Navigate to the parent directory.
   Future<void> navigateUp() {
     final current = state.value?.currentPath ?? '.';
-    if (current == '.' || current == '/' || current.isEmpty) return Future.value();
+    if (current == '.' || current == '/' || current.isEmpty) {
+      return Future.value();
+    }
 
     final normalised = current.replaceAll('\\', '/');
     final segments = normalised.split('/').where((s) => s.isNotEmpty).toList();

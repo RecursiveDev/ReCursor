@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config/router.dart';
 import 'core/config/theme.dart';
+import 'core/providers/notification_handler_provider.dart';
 import 'core/providers/theme_provider.dart';
 
 class ReCursorApp extends ConsumerWidget {
@@ -10,6 +11,8 @@ class ReCursorApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(notificationBootstrapProvider);
+
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     final highContrast = ref.watch(highContrastProvider);

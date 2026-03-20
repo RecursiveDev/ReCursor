@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 class SentryService {
@@ -18,7 +17,8 @@ class SentryService {
     await SentryFlutter.init(
       (options) {
         options.dsn = _dsn;
-        options.environment = const String.fromEnvironment('APP_ENV', defaultValue: 'development');
+        options.environment = const String.fromEnvironment('APP_ENV',
+            defaultValue: 'development');
         options.tracesSampleRate = 0.2;
         options.profilesSampleRate = 0.1;
         options.attachScreenshot = true;
@@ -29,13 +29,15 @@ class SentryService {
   }
 
   // Capture an exception manually
-  static Future<void> captureException(Object exception, {StackTrace? stackTrace}) async {
+  static Future<void> captureException(Object exception,
+      {StackTrace? stackTrace}) async {
     if (!isConfigured) return;
     await Sentry.captureException(exception, stackTrace: stackTrace);
   }
 
   // Add breadcrumb
-  static void addBreadcrumb(String message, {String? category, Map<String, dynamic>? data}) {
+  static void addBreadcrumb(String message,
+      {String? category, Map<String, dynamic>? data}) {
     if (!isConfigured) return;
     Sentry.addBreadcrumb(Breadcrumb(
       message: message,

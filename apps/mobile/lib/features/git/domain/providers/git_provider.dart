@@ -5,13 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/git_models.dart';
 import '../../../../core/network/websocket_messages.dart';
 import '../../../../core/providers/websocket_provider.dart';
+import '../../../../shared/utils/bridge_payload_normalizer.dart';
 import '../../../diff/domain/providers/diff_provider.dart';
 
 // ---------------------------------------------------------------------------
 // GitStatus provider (AsyncNotifierProvider.family)
 // ---------------------------------------------------------------------------
 
-final gitStatusProvider = AsyncNotifierProvider.family<GitNotifier, GitStatus?, String>(
+final gitStatusProvider =
+    AsyncNotifierProvider.family<GitNotifier, GitStatus?, String>(
   GitNotifier.new,
 );
 
@@ -22,7 +24,10 @@ class GitNotifier extends FamilyAsyncNotifier<GitStatus?, String> {
   Future<GitStatus?> build(String arg) async {
     final service = ref.watch(webSocketServiceProvider);
 
-    _sub?.cancel();
+    final previousSubscription = _sub;
+    if (previousSubscription != null) {
+      unawaited(previousSubscription.cancel());
+    }
     _sub = service.messages.listen(_handleMessage);
     ref.onDispose(() => _sub?.cancel());
 
@@ -33,7 +38,7 @@ class GitNotifier extends FamilyAsyncNotifier<GitStatus?, String> {
     if (msg.type == BridgeMessageType.gitStatusResponse) {
       final payload = msg.payload;
       try {
-        final status = GitStatus.fromJson(payload);
+        final status = GitStatus.fromJson(normalizeGitStatusPayload(payload));
         state = AsyncValue.data(status);
       } catch (_) {
         // Malformed payload — ignore.
@@ -44,6 +49,7 @@ class GitNotifier extends FamilyAsyncNotifier<GitStatus?, String> {
       final rawFiles = msg.payload['files'] as List<dynamic>? ?? [];
       final files = rawFiles
           .whereType<Map<String, dynamic>>()
+          .map(normalizeDiffFile)
           .map(DiffFile.fromJson)
           .toList();
       ref.read(currentDiffProvider.notifier).state = files;

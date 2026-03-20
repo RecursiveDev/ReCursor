@@ -1,15 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../../core/models/agent_models.dart';
 import '../../../../core/providers/database_provider.dart';
 import '../../../../core/storage/database.dart';
-import '../../../../core/storage/tables/agents_table.dart';
 
 const _uuid = Uuid();
 
@@ -141,7 +140,7 @@ class AgentNotifier extends AsyncNotifier<List<AgentConfig>> {
 
       final result = await completer.future;
       timeout.cancel();
-      sub.cancel();
+      await sub.cancel();
       await channel.sink.close();
       return result;
     } catch (_) {
