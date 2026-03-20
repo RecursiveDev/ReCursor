@@ -2,12 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/models/message_models.dart';
 
+/// Visual state of a tool card in the chat timeline.
+enum ToolState {
+  /// Tool is pending user approval.
+  pendingApproval,
+
+  /// Tool is executing (running).
+  running,
+
+  /// Tool completed successfully.
+  completed,
+
+  /// Tool failed.
+  failed,
+}
+
 class ToolCard extends StatefulWidget {
   final String toolName;
   final Map<String, dynamic> params;
   final String? id;
   final bool isCompleted;
   final ToolResult? result;
+
+  /// Optional metadata from parent message (contains approval state like 'risk_level').
+  final Map<String, dynamic>? metadata;
 
   const ToolCard({
     super.key,
@@ -16,6 +34,7 @@ class ToolCard extends StatefulWidget {
     this.id,
     required this.isCompleted,
     this.result,
+    this.metadata,
   });
 
   @override
@@ -28,6 +47,29 @@ class _ToolCardState extends State<ToolCard>
   bool _resultExpanded = false;
   late AnimationController _expandController;
   late Animation<double> _expandAnimation;
+
+  /// Determines the visual state of this tool card.
+  ToolState get _state {
+    final riskLevel = widget.metadata?['risk_level'] as String?;
+    // If risk_level exists in metadata and tool is not completed, it's pending approval
+    if (riskLevel != null && !widget.isCompleted) {
+      return ToolState.pendingApproval;
+    }
+    if (!widget.isCompleted) return ToolState.running;
+    if (widget.result?.success ?? false) return ToolState.completed;
+    return ToolState.failed;
+  }
+
+  /// The risk level from metadata (defaults to low if not set).
+  RiskLevel get _riskLevel {
+    final level = widget.metadata?['risk_level'] as String?;
+    return switch (level) {
+      'medium' => RiskLevel.medium,
+      'high' => RiskLevel.high,
+      'critical' => RiskLevel.critical,
+      _ => RiskLevel.low,
+    };
+  }
 
   @override
   void initState() {
@@ -59,80 +101,183 @@ class _ToolCardState extends State<ToolCard>
   }
 
   Color get _statusColor {
-    if (!widget.isCompleted) return const Color(0xFF569CD6);
-    return (widget.result?.success ?? false)
-        ? const Color(0xFF4EC9B0)
-        : Colors.redAccent;
+    return switch (_state) {
+      ToolState.pendingApproval => _riskBadgeColor,
+      ToolState.running => const Color(0xFF569CD6),
+      ToolState.completed => const Color(0xFF4EC9B0),
+      ToolState.failed => Colors.redAccent,
+    };
+  }
+
+  Color get _riskBadgeColor {
+    return switch (_riskLevel) {
+      RiskLevel.low => const Color(0xFF4CAF50),
+      RiskLevel.medium => const Color(0xFFFF9800),
+      RiskLevel.high => const Color(0xFFF44747),
+      RiskLevel.critical => const Color(0xFF8B0000),
+    };
   }
 
   IconData get _statusIcon {
-    if (!widget.isCompleted) return Icons.hourglass_empty;
-    return (widget.result?.success ?? false) ? Icons.check_circle : Icons.error;
+    return switch (_state) {
+      ToolState.pendingApproval => Icons.pending_actions,
+      ToolState.running => Icons.hourglass_empty,
+      ToolState.completed => Icons.check_circle,
+      ToolState.failed => Icons.error,
+    };
   }
 
   String get _statusLabel {
-    if (!widget.isCompleted) return 'running';
-    return (widget.result?.success ?? false) ? 'succeeded' : 'failed';
+    return switch (_state) {
+      ToolState.pendingApproval => 'approval required',
+      ToolState.running => 'running',
+      ToolState.completed => 'succeeded',
+      ToolState.failed => 'failed',
+    };
   }
 
   @override
   Widget build(BuildContext context) {
+    final isPendingApproval = _state == ToolState.pendingApproval;
+
     return Semantics(
       label: 'Tool: ${widget.toolName}, status: $_statusLabel',
       child: Card(
-      color: const Color(0xFF2D2D2D),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                _ToolIcon(toolName: widget.toolName),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.toolName,
-                    style: const TextStyle(
+        color: const Color(0xFF2D2D2D),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: isPendingApproval
+              ? BorderSide(
+                  color: _riskBadgeColor.withValues(alpha: 0.5), width: 2)
+              : BorderSide.none,
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with risk badge for pending approvals
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  _ToolIcon(toolName: widget.toolName),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.toolName,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'JetBrainsMono',
-                        fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                Icon(_statusIcon, color: _statusColor, size: 18),
-              ],
-            ),
-          ),
-          // Params expandable
-          if (widget.params.isNotEmpty)
-            _ExpandableSection(
-              label: 'Parameters',
-              expanded: _paramsExpanded,
-              onTap: () =>
-                  setState(() => _paramsExpanded = !_paramsExpanded),
-              child: _KeyValueList(map: widget.params),
-            ),
-          // Result expandable
-          if (widget.isCompleted && widget.result != null)
-            SizeTransition(
-              sizeFactor: _expandAnimation,
-              child: _ExpandableSection(
-                label: 'Result',
-                expanded: _resultExpanded,
-                onTap: () =>
-                    setState(() => _resultExpanded = !_resultExpanded),
-                child: _ResultContent(result: widget.result!),
+                  if (isPendingApproval) ...[
+                    _RiskBadge(level: _riskLevel, color: _riskBadgeColor),
+                    const SizedBox(width: 8),
+                  ],
+                  Icon(_statusIcon, color: _statusColor, size: 18),
+                ],
               ),
             ),
+            // Approval required banner
+            if (isPendingApproval) _ApprovalBanner(riskLevel: _riskLevel),
+            if (widget.params.isNotEmpty)
+              _ExpandableSection(
+                label: 'Parameters',
+                expanded: _paramsExpanded,
+                onTap: () => setState(() => _paramsExpanded = !_paramsExpanded),
+                child: _KeyValueList(map: widget.params),
+              ),
+            if (widget.isCompleted && widget.result != null)
+              SizeTransition(
+                sizeFactor: _expandAnimation,
+                child: _ExpandableSection(
+                  label: 'Result',
+                  expanded: _resultExpanded,
+                  onTap: () =>
+                      setState(() => _resultExpanded = !_resultExpanded),
+                  child: _ResultContent(result: widget.result!),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Risk level badge shown in pending approval state.
+class _RiskBadge extends StatelessWidget {
+  final RiskLevel level;
+  final Color color;
+
+  const _RiskBadge({required this.level, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        level.name.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// Banner shown when approval is required for a tool.
+class _ApprovalBanner extends StatelessWidget {
+  final RiskLevel riskLevel;
+
+  const _ApprovalBanner({required this.riskLevel});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (riskLevel) {
+      RiskLevel.low => const Color(0xFF4CAF50),
+      RiskLevel.medium => const Color(0xFFFF9800),
+      RiskLevel.high => const Color(0xFFF44747),
+      RiskLevel.critical => const Color(0xFF8B0000),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.pending_actions, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Approval required — check Approvals tab',
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
-    ),
     );
   }
 }
@@ -143,10 +288,14 @@ class _ToolIcon extends StatelessWidget {
 
   IconData get _icon {
     final name = toolName.toLowerCase();
-    if (name.contains('file') || name.contains('read') || name.contains('write')) {
+    if (name.contains('file') ||
+        name.contains('read') ||
+        name.contains('write')) {
       return Icons.description;
     }
-    if (name.contains('bash') || name.contains('shell') || name.contains('exec')) {
+    if (name.contains('bash') ||
+        name.contains('shell') ||
+        name.contains('exec')) {
       return Icons.terminal;
     }
     if (name.contains('search') || name.contains('grep')) {

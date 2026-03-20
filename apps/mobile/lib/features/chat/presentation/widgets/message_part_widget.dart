@@ -6,7 +6,15 @@ import 'tool_card.dart';
 
 class MessagePartWidget extends StatelessWidget {
   final MessagePart part;
-  const MessagePartWidget({super.key, required this.part});
+
+  /// Optional metadata from the parent message (used for approval state).
+  final Map<String, dynamic>? metadata;
+
+  const MessagePartWidget({
+    super.key,
+    required this.part,
+    this.metadata,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +32,10 @@ class MessagePartWidget extends StatelessWidget {
             color: const Color(0xFF1E1E1E),
             borderRadius: BorderRadius.circular(6),
           ),
-          h1: const TextStyle(color: Color(0xFF569CD6), fontWeight: FontWeight.bold),
-          h2: const TextStyle(color: Color(0xFF569CD6), fontWeight: FontWeight.bold),
+          h1: const TextStyle(
+              color: Color(0xFF569CD6), fontWeight: FontWeight.bold),
+          h2: const TextStyle(
+              color: Color(0xFF569CD6), fontWeight: FontWeight.bold),
           h3: const TextStyle(color: Color(0xFF569CD6)),
           blockquote: const TextStyle(color: Color(0xFF9CDCFE)),
           listBullet: const TextStyle(color: Colors.grey),
@@ -36,13 +46,15 @@ class MessagePartWidget extends StatelessWidget {
         params: params,
         id: id,
         isCompleted: false,
+        metadata: metadata,
       ),
       toolResult: (toolCallId, result) => ToolCard(
-        toolName: toolCallId,
+        toolName: (result.metadata?['tool'] as String?) ?? toolCallId,
         params: const {},
         id: toolCallId,
         isCompleted: true,
         result: result,
+        metadata: metadata,
       ),
       thinking: (content) => _ThinkingBlock(content: content),
     );

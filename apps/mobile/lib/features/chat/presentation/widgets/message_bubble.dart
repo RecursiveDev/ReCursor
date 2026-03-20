@@ -57,7 +57,10 @@ class MessageBubble extends StatelessWidget {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: msg.parts
-                      .map((p) => MessagePartWidget(part: p))
+                      .map((p) => MessagePartWidget(
+                            part: p,
+                            metadata: msg.metadata,
+                          ))
                       .toList(),
                 ),
         ),
@@ -93,8 +96,8 @@ class _BubbleLayout extends StatelessWidget {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.78),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
         decoration: BoxDecoration(
           color: isUser ? const Color(0xFF569CD6) : const Color(0xFF252526),
           borderRadius: BorderRadius.only(

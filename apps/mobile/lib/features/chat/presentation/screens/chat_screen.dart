@@ -59,13 +59,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(chatNotifierProvider);
     final session = ref.watch(activeSessionProvider(widget.sessionId));
     final messagesAsync = ref.watch(messagesProvider(widget.sessionId));
     final streamingMap = ref.watch(streamingMessageProvider);
     final streamingText = streamingMap[widget.sessionId];
 
     // Auto-scroll when messages change
-    ref.listen(messagesProvider(widget.sessionId), (_, __) => _scrollToBottom());
+    ref.listen(
+        messagesProvider(widget.sessionId), (_, __) => _scrollToBottom());
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -74,12 +76,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         if (isTablet) {
           return Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 300,
-                child: const SessionListScreen(),
+                child: SessionListScreen(),
               ),
               const VerticalDivider(width: 1, color: Color(0xFF3C3C3C)),
-              Expanded(child: _ChatBody(
+              Expanded(
+                  child: _ChatBody(
                 sessionId: widget.sessionId,
                 sessionTitle: session?.title ?? 'Chat',
                 branch: session?.branch,
@@ -155,7 +158,8 @@ class _ChatBody extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.call_split, size: 12, color: Color(0xFF4EC9B0)),
+                    const Icon(Icons.call_split,
+                        size: 12, color: Color(0xFF4EC9B0)),
                     const SizedBox(width: 4),
                     Text(
                       branch!,
@@ -178,7 +182,8 @@ class _ChatBody extends StatelessWidget {
                     style: const TextStyle(color: Colors.redAccent)),
               ),
               data: (messages) {
-                final hasStreaming = streamingText != null && streamingText!.isNotEmpty;
+                final hasStreaming =
+                    streamingText != null && streamingText!.isNotEmpty;
                 final itemCount = messages.length + (hasStreaming ? 1 : 0);
 
                 if (itemCount == 0) {
@@ -192,8 +197,8 @@ class _ChatBody extends StatelessWidget {
 
                 return ListView.builder(
                   controller: scrollController,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: itemCount,
                   itemBuilder: (context, i) {
                     if (i < messages.length) {
