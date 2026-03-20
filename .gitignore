@@ -18,6 +18,7 @@ coverage/
 
 # --- Node / TypeScript ---
 node_modules/
+.astro/
 dist/
 coverage/
 *.tsbuildinfo
