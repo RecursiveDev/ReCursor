@@ -1,8 +1,38 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
+val isWindows = System.getProperty("os.name").contains("Windows", ignoreCase = true)
+val flutterSdk = localProperties.getProperty("flutter.sdk") ?: System.getenv("FLUTTER_ROOT")
+val flutterExecutable = when {
+    !flutterSdk.isNullOrBlank() && isWindows -> "$flutterSdk\\bin\\flutter.bat"
+    !flutterSdk.isNullOrBlank() -> "$flutterSdk/bin/flutter"
+    isWindows -> "flutter.bat"
+    else -> "flutter"
+}
+val flutterProjectDir = rootProject.projectDir.parentFile
+
+val analyzeFlutterBeforeBuild = tasks.register<Exec>("analyzeFlutterBeforeBuild") {
+    group = "verification"
+    description = "Runs flutter analyze before Android builds."
+    workingDir = flutterProjectDir
+    commandLine(flutterExecutable, "analyze", "--no-fatal-infos", "--no-fatal-warnings")
+}
+
+tasks.named("preBuild") {
+    dependsOn(analyzeFlutterBeforeBuild)
 }
 
 android {
