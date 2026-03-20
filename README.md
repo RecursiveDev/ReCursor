@@ -108,7 +108,9 @@ C:/Repository/ReCursor/
 
 ## Documentation
 
-- **Docs index:** `docs/README.md`
+- **Canonical docs index:** `docs/README.md`
+- **Published docs site source:** `docs-site/`
+- **Run the docs site locally:** `cd docs-site && npm install && npm run dev`
 - **Architecture overview:** `docs/architecture/overview.md`
 - **Data flow diagrams:** `docs/architecture/data-flow.md`
 - **Integrations:**
