@@ -21,7 +21,15 @@ describe("MessageHandler", () => {
         sentMessages.push({ clientId, message });
       }),
       authenticateClient: jest.fn(),
-      getClient: jest.fn(),
+      acknowledgeWarning: jest.fn(),
+      getClient: jest.fn(() => ({
+        authenticated: true,
+        sessionIds: [],
+        connectionMode: "secure_remote",
+        connectionModeDescription: "Secure tunnel connection (devbox.tailnet.ts.net)",
+        bridgeUrl: "wss://devbox.tailnet.ts.net:3000",
+        warningAcknowledged: false,
+      })),
       addSessionToClient: jest.fn(),
       getClientsForSession: jest.fn(),
       broadcast: jest.fn(),
@@ -46,6 +54,9 @@ describe("MessageHandler", () => {
 
     const agentSessionManager = {
       getActiveSessions: jest.fn(() => [activeSession]),
+      getSession: jest.fn((sessionId: string) =>
+        sessionId === activeSession.id ? activeSession : undefined,
+      ),
     };
 
     const gitService = {
@@ -116,6 +127,10 @@ describe("MessageHandler", () => {
       payload: {
         server_version: "0.1.0",
         supported_agents: ["claude-code"],
+        connection_mode: "secure_remote",
+        connection_mode_description: "Secure tunnel connection (devbox.tailnet.ts.net)",
+        bridge_url: "wss://devbox.tailnet.ts.net:3000",
+        requires_health_verification: true,
         active_sessions: [
           {
             session_id: activeSession.id,
@@ -130,9 +145,155 @@ describe("MessageHandler", () => {
     expect(sentMessages[1]?.message.type).toBe("notification");
   });
 
+  it("returns health_status after auth for the initial verification flow", async () => {
+    const { handler, sentMessages, connectionManager } = createDependencies();
+    connectionManager.getClient.mockReturnValue({
+      authenticated: true,
+      sessionIds: [],
+      connectionMode: "secure_remote",
+      connectionModeDescription: "Secure tunnel connection (devbox.tailnet.ts.net)",
+      bridgeUrl: "wss://devbox.tailnet.ts.net:3000",
+      warningAcknowledged: false,
+    });
+
+    await handler.handle(
+      "client-1",
+      JSON.stringify({
+        type: "health_check",
+        id: "health-1",
+        timestamp: new Date().toISOString(),
+        payload: {
+          timestamp: new Date().toISOString(),
+          client_nonce: "nonce-123",
+          client_capabilities: ["health_v1"],
+        },
+      }),
+    );
+
+    expect(sentMessages[0]?.message).toMatchObject({
+      type: "health_status",
+      id: "health-1",
+      payload: {
+        status: "healthy",
+        connection_mode: "secure_remote",
+        warnings: [],
+        checks: {
+          tls_valid: true,
+          clock_sync: true,
+          version_compatible: true,
+          token_permissions: true,
+        },
+        ready: true,
+      },
+    });
+  });
+
+  it("requires acknowledgment before direct public connections become ready", async () => {
+    const { handler, sentMessages, connectionManager } = createDependencies();
+    connectionManager.getClient.mockReturnValue({
+      authenticated: true,
+      sessionIds: [],
+      connectionMode: "direct_public",
+      connectionModeDescription: "Direct public connection (203.0.113.42)",
+      bridgeUrl: "wss://203.0.113.42:3000",
+      warningAcknowledged: false,
+    });
+
+    await handler.handle(
+      "client-1",
+      JSON.stringify({
+        type: "health_check",
+        id: "health-2",
+        timestamp: new Date().toISOString(),
+        payload: {
+          timestamp: new Date().toISOString(),
+          client_nonce: "nonce-456",
+          client_capabilities: ["health_v1", "acknowledgment_v1"],
+        },
+      }),
+    );
+
+    expect(sentMessages[0]?.message).toMatchObject({
+      type: "health_status",
+      payload: {
+        status: "warning",
+        connection_mode: "direct_public",
+        warnings: ["DIRECT_PUBLIC_CONNECTION"],
+        requires_acknowledgment: true,
+        ready: false,
+      },
+    });
+
+    sentMessages.length = 0;
+
+    await handler.handle(
+      "client-1",
+      JSON.stringify({
+        type: "acknowledge_warning",
+        id: "ack-1",
+        timestamp: new Date().toISOString(),
+        payload: {
+          warning_code: "DIRECT_PUBLIC_CONNECTION",
+          acknowledged: true,
+          acknowledged_at: new Date().toISOString(),
+        },
+      }),
+    );
+
+    expect(connectionManager.acknowledgeWarning).toHaveBeenCalledWith("client-1");
+    expect(sentMessages[0]?.message).toMatchObject({
+      type: "acknowledgment_accepted",
+      id: "ack-1",
+      payload: {
+        warning_code: "DIRECT_PUBLIC_CONNECTION",
+        ready: true,
+        session_timeout: "8h",
+      },
+    });
+  });
+
+  it("rejects insecure websocket transports during auth", async () => {
+    const { handler, sentMessages, connectionManager } = createDependencies();
+    connectionManager.getClient.mockReturnValue({
+      authenticated: false,
+      sessionIds: [],
+      connectionMode: "misconfigured",
+      connectionModeDescription: "Unencrypted transport detected",
+      bridgeUrl: "ws://devbox:3000",
+      warningAcknowledged: false,
+    });
+
+    await handler.handle(
+      "client-1",
+      JSON.stringify({
+        type: "auth",
+        id: "auth-2",
+        timestamp: new Date().toISOString(),
+        payload: {
+          token: "test-bridge-token",
+        },
+      }),
+    );
+
+    expect(sentMessages[0]?.message).toMatchObject({
+      type: "connection_error",
+      id: "auth-2",
+      payload: {
+        code: "INSECURE_TRANSPORT",
+      },
+    });
+  });
+
   it("passes the original request id through session_start handling", async () => {
     const { handler, connectionManager, agentSdkAdapter } = createDependencies();
-    connectionManager.getClient.mockReturnValue({ authenticated: true, sessionIds: [] });
+    connectionManager.getClient.mockReturnValue({
+      authenticated: true,
+      sessionIds: [],
+      connectionMode: "secure_remote",
+      connectionModeDescription: "Secure tunnel connection (devbox.tailnet.ts.net)",
+      bridgeUrl: "wss://devbox.tailnet.ts.net:3000",
+      warningAcknowledged: false,
+    });
 
     const payload: SessionStartPayload = {
       agent: "claude-code",
@@ -155,7 +316,14 @@ describe("MessageHandler", () => {
 
   it("acknowledges notification ids from the client", async () => {
     const { handler, connectionManager, eventQueue } = createDependencies();
-    connectionManager.getClient.mockReturnValue({ authenticated: true, sessionIds: [] });
+    connectionManager.getClient.mockReturnValue({
+      authenticated: true,
+      sessionIds: [],
+      connectionMode: "secure_remote",
+      connectionModeDescription: "Secure tunnel connection (devbox.tailnet.ts.net)",
+      bridgeUrl: "wss://devbox.tailnet.ts.net:3000",
+      warningAcknowledged: false,
+    });
 
     await handler.handle(
       "client-1",
@@ -179,7 +347,13 @@ describe("MessageHandler", () => {
         sentMessages.push({ clientId, message });
       }),
       authenticateClient: jest.fn(),
-      getClient: jest.fn(),
+      acknowledgeWarning: jest.fn(),
+      getClient: jest.fn(() => ({
+        authenticated: false,
+        sessionIds: [],
+        connectionMode: "secure_remote",
+        bridgeUrl: "wss://devbox.tailnet.ts.net:3000",
+      })),
       addSessionToClient: jest.fn(),
       getClientsForSession: jest.fn(() => []),
       broadcast: jest.fn(),
@@ -192,6 +366,7 @@ describe("MessageHandler", () => {
     };
     const agentSessionManager = {
       getActiveSessions: jest.fn(() => []),
+      getSession: jest.fn(),
     };
     const gitService = {
       getStatus: jest.fn(),

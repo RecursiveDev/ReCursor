@@ -13,9 +13,12 @@ function createMockConnectionManager(): {
   const manager = {
     sendToClient: jest.fn(),
     authenticateClient: jest.fn(),
+    acknowledgeWarning: jest.fn(),
     getClient: jest.fn(),
     addSessionToClient: jest.fn(),
     getClientsForSession: jest.fn(() => []),
+    getAuthenticatedClientCount: jest.fn(() => 0),
+    getTotalClientCount: jest.fn(() => 0),
     broadcast: jest.fn((message: BridgeMessage) => {
       broadcastMessages.push(message);
     }),
@@ -26,14 +29,12 @@ function createMockConnectionManager(): {
 describe("createHooksRouter", () => {
   let eventQueue: EventQueue;
   let mockConnectionManager: jest.Mocked<ConnectionManager>;
-  let broadcastMessages: BridgeMessage[];
   let app: express.Application;
 
   beforeEach(() => {
     eventQueue = new EventQueue();
     const result = createMockConnectionManager();
     mockConnectionManager = result.manager;
-    broadcastMessages = result.broadcastMessages;
 
     app = express();
     app.use(express.json());
@@ -41,7 +42,7 @@ describe("createHooksRouter", () => {
   });
 
   describe("POST /hooks/event", () => {
-    it("should accept valid hook events with valid token", async () => {
+    it("accepts valid hook events with valid token", async () => {
       const response = await request(app)
         .post("/hooks/event")
         .set("Authorization", "Bearer test-hook-token")
@@ -53,10 +54,30 @@ describe("createHooksRouter", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ received: true });
+      expect(response.body).toMatchObject({
+        received: true,
+        event_id: expect.any(String),
+        broadcast_count: 1,
+        timestamp: expect.any(String),
+      });
     });
 
-    it("should reject requests without token", async () => {
+    it("accepts the docs alias field name event as well as event_type", async () => {
+      const response = await request(app)
+        .post("/hooks/event")
+        .set("Authorization", "Bearer test-hook-token")
+        .send({
+          event: "SessionStart",
+          session_id: "sess-123",
+          timestamp: new Date().toISOString(),
+          payload: { working_directory: "/repo/project" },
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.received).toBe(true);
+    });
+
+    it("rejects requests without token", async () => {
       const response = await request(app).post("/hooks/event").send({
         event_type: "SessionStart",
         session_id: "sess-123",
@@ -65,9 +86,10 @@ describe("createHooksRouter", () => {
       });
 
       expect(response.status).toBe(401);
+      expect(response.body.code).toBe("HOOK_AUTH_FAILED");
     });
 
-    it("should reject requests with invalid token", async () => {
+    it("rejects requests with invalid token", async () => {
       const response = await request(app)
         .post("/hooks/event")
         .set("Authorization", "Bearer invalid-token")
@@ -79,9 +101,10 @@ describe("createHooksRouter", () => {
         });
 
       expect(response.status).toBe(401);
+      expect(response.body.code).toBe("HOOK_AUTH_FAILED");
     });
 
-    it("should reject invalid hook event shape", async () => {
+    it("rejects invalid hook event shape", async () => {
       const response = await request(app)
         .post("/hooks/event")
         .set("Authorization", "Bearer test-hook-token")
@@ -93,10 +116,10 @@ describe("createHooksRouter", () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe("Bad Request");
+      expect(response.body.code).toBe("HOOK_INVALID_PAYLOAD");
     });
 
-    it("should reject stale timestamps", async () => {
+    it("rejects stale timestamps", async () => {
       const staleTimestamp = new Date(Date.now() - 10 * 60 * 1000).toISOString();
       const response = await request(app)
         .post("/hooks/event")
@@ -109,9 +132,10 @@ describe("createHooksRouter", () => {
         });
 
       expect(response.status).toBe(400);
+      expect(response.body.code).toBe("HOOK_INVALID_PAYLOAD");
     });
 
-    it("should enqueue events after validation", async () => {
+    it("enqueues events after validation", async () => {
       const initialSize = eventQueue.size();
 
       await request(app)
@@ -127,7 +151,7 @@ describe("createHooksRouter", () => {
       expect(eventQueue.size()).toBe(initialSize + 1);
     });
 
-    it("should broadcast events to connected clients", async () => {
+    it("broadcasts events to connected clients", async () => {
       await request(app)
         .post("/hooks/event")
         .set("Authorization", "Bearer test-hook-token")
@@ -141,41 +165,7 @@ describe("createHooksRouter", () => {
       expect(mockConnectionManager.broadcast).toHaveBeenCalled();
     });
 
-    it("should handle UserPromptSubmit events", async () => {
-      const response = await request(app)
-        .post("/hooks/event")
-        .set("Authorization", "Bearer test-hook-token")
-        .send({
-          event_type: "UserPromptSubmit",
-          session_id: "sess-456",
-          timestamp: new Date().toISOString(),
-          payload: {
-            prompt: "Write a function that sorts an array",
-          },
-        });
-
-      expect(response.status).toBe(200);
-    });
-
-    it("should handle PostToolUse events", async () => {
-      const response = await request(app)
-        .post("/hooks/event")
-        .set("Authorization", "Bearer test-hook-token")
-        .send({
-          event_type: "PostToolUse",
-          session_id: "sess-789",
-          timestamp: new Date().toISOString(),
-          payload: {
-            tool: "read",
-            params: { path: "/src/index.ts" },
-            result: "file contents",
-          },
-        });
-
-      expect(response.status).toBe(200);
-    });
-
-    it("should handle PreToolUse events", async () => {
+    it("creates notification side-effects for hook events that need user attention", async () => {
       const response = await request(app)
         .post("/hooks/event")
         .set("Authorization", "Bearer test-hook-token")
@@ -184,51 +174,72 @@ describe("createHooksRouter", () => {
           session_id: "sess-123",
           timestamp: new Date().toISOString(),
           payload: {
-            tool: "write",
-            params: { path: "/src/new.ts" },
+            tool: "edit_file",
+            tool_call_id: "tool-123",
+            risk_level: "high",
+            description: "Update startup validation",
+            params: {
+              file_path: "apps/mobile/lib/main.dart",
+            },
           },
         });
 
       expect(response.status).toBe(200);
+      expect(response.body.broadcast_count).toBe(3);
+      expect(eventQueue.replay("sess-123")).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "claude_event" }),
+          expect.objectContaining({ type: "approval_required" }),
+          expect.objectContaining({
+            type: "notification",
+            payload: expect.objectContaining({
+              notification_type: "approval_required",
+              data: expect.objectContaining({
+                tool_call_id: "tool-123",
+                screen: "approval_detail",
+              }),
+            }),
+          }),
+        ]),
+      );
     });
+  });
 
-    it("should handle SessionEnd events", async () => {
+  describe("POST /hooks/batch", () => {
+    it("accepts batches of valid events", async () => {
       const response = await request(app)
-        .post("/hooks/event")
+        .post("/hooks/batch")
         .set("Authorization", "Bearer test-hook-token")
         .send({
-          event_type: "SessionEnd",
-          session_id: "sess-123",
-          timestamp: new Date().toISOString(),
-          payload: {
-            reason: "completed",
-          },
+          events: [
+            {
+              event_type: "SessionStart",
+              session_id: "sess-123",
+              timestamp: new Date().toISOString(),
+              payload: {},
+            },
+            {
+              event: "PostToolUse",
+              session_id: "sess-123",
+              timestamp: new Date().toISOString(),
+              payload: { tool: "read" },
+            },
+          ],
         });
 
       expect(response.status).toBe(200);
-    });
-
-    it("should handle Notification events", async () => {
-      const response = await request(app)
-        .post("/hooks/event")
-        .set("Authorization", "Bearer test-hook-token")
-        .send({
-          event_type: "Notification",
-          session_id: "sess-123",
-          timestamp: new Date().toISOString(),
-          payload: {
-            notification_type: "info",
-            title: "Test notification",
-            body: "Test message",
-          },
-        });
-
-      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        received: true,
+        count: 2,
+        accepted: 2,
+        rejected: 0,
+      });
+      expect(response.body.event_ids).toHaveLength(2);
     });
   });
 
   describe("session routing", () => {
-    it("should route events by session_id", async () => {
+    it("routes events by session_id", async () => {
       await request(app).post("/hooks/event").set("Authorization", "Bearer test-hook-token").send({
         event_type: "SessionStart",
         session_id: "specific-session-123",
@@ -239,7 +250,6 @@ describe("createHooksRouter", () => {
       const messages = eventQueue.replay();
       expect(messages).toHaveLength(1);
 
-      // Replay with session ID filter
       const sessionMessages = eventQueue.replay("specific-session-123");
       expect(sessionMessages).toHaveLength(1);
 
