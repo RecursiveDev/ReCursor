@@ -2,13 +2,14 @@ import { v4 as uuidv4 } from "uuid";
 import { AgentSessionManager } from "./session_manager";
 import type { ConnectionManager } from "../websocket/connection_manager";
 import type {
-  SessionStartPayload,
-  MessagePayload,
   ApprovalResponsePayload,
-  SessionEndPayload,
   BridgeMessage,
-  SessionReadyPayload,
   ErrorPayload,
+  MessagePayload,
+  SessionEndPayload,
+  SessionReadyPayload,
+  SessionStartPayload,
+  SupportedAgent,
 } from "../types";
 
 function log(msg: string): void {
@@ -17,6 +18,14 @@ function log(msg: string): void {
 
 function ts(): string {
   return new Date().toISOString();
+}
+
+function resolveSupportedAgent(agent?: string): SupportedAgent {
+  if (!agent || agent === "claude-code") {
+    return "claude-code";
+  }
+
+  throw new Error(`Unsupported agent: ${agent}. Only claude-code is currently supported.`);
 }
 
 export class AgentSdkAdapter {
@@ -28,27 +37,46 @@ export class AgentSdkAdapter {
     this.connectionManager = connectionManager;
   }
 
-  async handleSessionStart(payload: SessionStartPayload, clientId: string): Promise<void> {
+  async handleSessionStart(
+    payload: SessionStartPayload,
+    clientId: string,
+    requestId?: string,
+  ): Promise<void> {
     try {
-      const sessionId = await this.sessionManager.createSession({
-        sessionId: payload.session_id,
-        workingDirectory: payload.working_directory,
-        systemPrompt: payload.system_prompt,
-        model: payload.model,
-      });
+      const agent = resolveSupportedAgent(payload.agent);
+      const shouldResume = payload.resume === true && typeof payload.session_id === "string";
+      let sessionId: string;
+
+      if (shouldResume && payload.session_id) {
+        await this.sessionManager.resumeSession(payload.session_id);
+        sessionId = payload.session_id;
+      } else {
+        sessionId = await this.sessionManager.createSession({
+          agent,
+          sessionId: payload.session_id ?? undefined,
+          workingDirectory: payload.working_directory,
+          systemPrompt: payload.system_prompt,
+          model: payload.model,
+        });
+      }
 
       this.connectionManager.addSessionToClient(clientId, sessionId);
 
-      const sessions = this.sessionManager.getActiveSessions();
-      const session = sessions.find((s) => s.id === sessionId);
+      const session = this.sessionManager.getSession(sessionId);
+      if (!session) {
+        throw new Error(`Session not found after start: ${sessionId}`);
+      }
 
       const readyMsg: BridgeMessage<SessionReadyPayload> = {
         type: "session_ready",
-        id: uuidv4(),
+        id: requestId ?? uuidv4(),
         timestamp: ts(),
         payload: {
           session_id: sessionId,
-          model: session?.model ?? "unknown",
+          agent: session.agent,
+          working_directory: session.working_directory,
+          status: "ready",
+          model: session.model,
         },
       };
       this.connectionManager.sendToClient(clientId, readyMsg);
@@ -57,12 +85,13 @@ export class AgentSdkAdapter {
       log(`Failed to start session: ${String(err)}`);
       const errorMsg: BridgeMessage<ErrorPayload> = {
         type: "error",
-        id: uuidv4(),
+        id: requestId ?? uuidv4(),
         timestamp: ts(),
         payload: {
-          code: "SESSION_START_FAILED",
+          code: "BRIDGE_ERROR",
           message: String(err),
           request_type: "session_start",
+          recoverable: false,
         },
       };
       this.connectionManager.sendToClient(clientId, errorMsg);
@@ -79,9 +108,11 @@ export class AgentSdkAdapter {
         id: uuidv4(),
         timestamp: ts(),
         payload: {
-          code: "MESSAGE_FAILED",
+          code: "AGENT_ERROR",
           message: String(err),
           request_type: "message",
+          session_id: payload.session_id,
+          recoverable: true,
         },
       };
       this.connectionManager.sendToClient(clientId, errorMsg);
@@ -94,6 +125,7 @@ export class AgentSdkAdapter {
         payload.session_id,
         payload.tool_call_id,
         payload.decision,
+        payload.modifications,
       );
     } catch (err) {
       log(`Failed to handle approval response: ${String(err)}`);
@@ -102,9 +134,11 @@ export class AgentSdkAdapter {
         id: uuidv4(),
         timestamp: ts(),
         payload: {
-          code: "APPROVAL_FAILED",
+          code: "TOOL_ERROR",
           message: String(err),
           request_type: "approval_response",
+          session_id: payload.session_id,
+          recoverable: true,
         },
       };
       this.connectionManager.sendToClient(clientId, errorMsg);

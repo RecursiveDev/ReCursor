@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import { promisify } from "util";
 import { config } from "../config";
 import type { ToolResult } from "../types";
+import type { AgentToolDefinition } from "./agent_runtime";
 
 const readFileAsync = promisify(fs.readFile);
 const writeFileAsync = promisify(fs.writeFile);
@@ -16,26 +17,132 @@ function log(msg: string): void {
 
 const ALLOWED_COMMANDS = ["git", "flutter", "npm", "node", "dart"];
 
-function isWithinAllowedRoot(filePath: string): boolean {
+function normalizeToolName(tool: string): string {
+  switch (tool) {
+    case "Read":
+      return "read_file";
+    case "Edit":
+      return "edit_file";
+    case "Bash":
+    case "bash_command":
+      return "run_command";
+    case "Glob":
+      return "glob";
+    case "Grep":
+      return "grep";
+    case "LS":
+    case "list_files":
+      return "ls";
+    default:
+      return tool;
+  }
+}
+
+export function isWithinAllowedRoot(filePath: string): boolean {
   const resolved = path.resolve(filePath);
   const allowed = path.resolve(config.ALLOWED_PROJECT_ROOT);
   return resolved.startsWith(allowed + path.sep) || resolved === allowed;
 }
 
 function resolveWithinRoot(filePath: string, workingDir: string): string {
-  const resolved = path.isAbsolute(filePath)
-    ? path.resolve(filePath)
-    : path.resolve(workingDir, filePath);
-  return resolved;
+  return path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workingDir, filePath);
 }
 
 export class ToolExecutor {
+  getToolDefinitions(): AgentToolDefinition[] {
+    return [
+      {
+        name: "read_file",
+        description: "Read the UTF-8 contents of a file within the allowed project root.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            path: {
+              type: "string",
+              description:
+                "File path to read, absolute or relative to the session working directory.",
+            },
+          },
+          required: ["path"],
+        },
+      },
+      {
+        name: "edit_file",
+        description: "Replace exact text in a file within the allowed project root.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            path: { type: "string" },
+            old_string: { type: "string" },
+            new_string: { type: "string" },
+          },
+          required: ["path", "old_string", "new_string"],
+        },
+      },
+      {
+        name: "run_command",
+        description:
+          "Run an allowlisted command inside the session working directory. Allowed commands: git, flutter, npm, node, dart.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            command: { type: "string" },
+            description: { type: "string" },
+          },
+          required: ["command"],
+        },
+      },
+      {
+        name: "glob",
+        description: "List files matching a glob pattern within the allowed project root.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            pattern: { type: "string" },
+            base_dir: { type: "string" },
+          },
+          required: ["pattern"],
+        },
+      },
+      {
+        name: "grep",
+        description:
+          "Search file contents for a regular expression within the allowed project root.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            pattern: { type: "string" },
+            path: { type: "string" },
+          },
+          required: ["pattern"],
+        },
+      },
+      {
+        name: "ls",
+        description: "List files and directories within the allowed project root.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            path: { type: "string" },
+          },
+        },
+      },
+    ];
+  }
+
   async execute(
     tool: string,
     params: Record<string, unknown>,
     workingDir: string,
   ): Promise<ToolResult> {
     const start = Date.now();
+    const normalizedTool = normalizeToolName(tool);
 
     if (!isWithinAllowedRoot(workingDir)) {
       return {
@@ -48,15 +155,15 @@ export class ToolExecutor {
 
     try {
       let result: ToolResult;
-      switch (tool) {
+      switch (normalizedTool) {
         case "read_file":
           result = await this.readFile(params, workingDir, start);
           break;
         case "edit_file":
           result = await this.editFile(params, workingDir, start);
           break;
-        case "bash_command":
-          result = await this.bashCommand(params, workingDir, start);
+        case "run_command":
+          result = await this.runCommand(params, workingDir, start);
           break;
         case "glob":
           result = await this.glob(params, workingDir, start);
@@ -64,7 +171,7 @@ export class ToolExecutor {
         case "grep":
           result = await this.grep(params, workingDir, start);
           break;
-        case "list_files":
+        case "ls":
           result = await this.listFiles(params, workingDir, start);
           break;
         default:
@@ -77,6 +184,7 @@ export class ToolExecutor {
       }
       return result;
     } catch (err) {
+      log(`Tool ${normalizedTool} failed: ${String(err)}`);
       return {
         success: false,
         content: "",
@@ -138,18 +246,36 @@ export class ToolExecutor {
 
     const updated = original.replace(oldStr, newStr);
     await writeFileAsync(resolved, updated, "utf8");
-    return { success: true, content: "File updated successfully", durationMs: Date.now() - start };
+    return {
+      success: true,
+      content: "File updated successfully",
+      durationMs: Date.now() - start,
+      diff: `--- ${filePath}\n+++ ${filePath}\n- ${oldStr}\n+ ${newStr}`,
+    };
   }
 
-  private bashCommand(
+  private runCommand(
     params: Record<string, unknown>,
     workingDir: string,
     start: number,
   ): Promise<ToolResult> {
     return new Promise((resolve) => {
       const command = String(params["command"] ?? "");
-      const parts = command.trim().split(/\s+/);
+      const parts = command
+        .trim()
+        .split(/\s+/)
+        .filter((part) => part.length > 0);
       const executable = parts[0];
+
+      if (!executable) {
+        resolve({
+          success: false,
+          content: "",
+          error: "Command is required",
+          durationMs: Date.now() - start,
+        });
+        return;
+      }
 
       if (!ALLOWED_COMMANDS.includes(executable)) {
         resolve({
@@ -215,7 +341,6 @@ export class ToolExecutor {
       };
     }
 
-    // Use native fs walk for glob
     const results: string[] = [];
     await this.walkGlob(baseDir, baseDir, pattern, results);
     return { success: true, content: results.join("\n"), durationMs: Date.now() - start };
@@ -247,11 +372,8 @@ export class ToolExecutor {
 
       if (stat.isDirectory()) {
         await this.walkGlob(base, full, pattern, results);
-      } else {
-        // Simple glob: support * and **
-        if (this.matchGlob(rel, pattern)) {
-          results.push(rel);
-        }
+      } else if (this.matchGlob(rel, pattern)) {
+        results.push(rel);
       }
     }
   }

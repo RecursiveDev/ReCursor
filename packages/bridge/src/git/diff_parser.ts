@@ -5,6 +5,23 @@ const OLD_FILE_RE = /^--- (?:a\/(.*)|\/(dev\/null))$/;
 const NEW_FILE_RE = /^\+\+\+ (?:b\/(.*)|\/(dev\/null))$/;
 const HUNK_HEADER_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
 
+function determineFileStatus(
+  isNew: boolean,
+  isDeleted: boolean,
+  isRenamed: boolean,
+): DiffFile["status"] {
+  if (isNew) {
+    return "added";
+  }
+  if (isDeleted) {
+    return "deleted";
+  }
+  if (isRenamed) {
+    return "renamed";
+  }
+  return "modified";
+}
+
 export function parseDiff(rawDiff: string): DiffFile[] {
   const files: DiffFile[] = [];
   if (!rawDiff || rawDiff.trim().length === 0) {
@@ -33,12 +50,10 @@ export function parseDiff(rawDiff: string): DiffFile[] {
     let isDeleted = false;
     let isRenamed = oldPath !== newPath;
 
-    // Skip "index ..." lines
     while (i < lines.length && lines[i].startsWith("index ")) {
       i++;
     }
 
-    // Parse --- line
     if (i < lines.length) {
       const oldMatch = OLD_FILE_RE.exec(lines[i]);
       if (oldMatch) {
@@ -51,7 +66,6 @@ export function parseDiff(rawDiff: string): DiffFile[] {
       }
     }
 
-    // Parse +++ line
     if (i < lines.length) {
       const newMatch = NEW_FILE_RE.exec(lines[i]);
       if (newMatch) {
@@ -65,12 +79,12 @@ export function parseDiff(rawDiff: string): DiffFile[] {
     }
 
     const hunks: DiffHunk[] = [];
+    let additions = 0;
+    let deletions = 0;
 
-    // Parse hunks
     while (i < lines.length) {
       const hunkLine = lines[i];
 
-      // Stop if we hit the next file header
       if (FILE_HEADER_RE.test(hunkLine)) {
         break;
       }
@@ -82,9 +96,9 @@ export function parseDiff(rawDiff: string): DiffFile[] {
       }
 
       const oldStart = parseInt(hunkMatch[1], 10);
-      const oldCount = hunkMatch[2] !== undefined ? parseInt(hunkMatch[2], 10) : 1;
+      const oldLines = hunkMatch[2] !== undefined ? parseInt(hunkMatch[2], 10) : 1;
       const newStart = parseInt(hunkMatch[3], 10);
-      const newCount = hunkMatch[4] !== undefined ? parseInt(hunkMatch[4], 10) : 1;
+      const newLines = hunkMatch[4] !== undefined ? parseInt(hunkMatch[4], 10) : 1;
       const header = hunkLine;
       i++;
 
@@ -93,33 +107,33 @@ export function parseDiff(rawDiff: string): DiffFile[] {
       let newLineNum = newStart;
 
       while (i < lines.length) {
-        const dl = lines[i];
+        const diffLine = lines[i];
 
-        if (FILE_HEADER_RE.test(dl) || HUNK_HEADER_RE.test(dl)) {
+        if (FILE_HEADER_RE.test(diffLine) || HUNK_HEADER_RE.test(diffLine)) {
           break;
         }
 
-        if (dl.startsWith("+")) {
+        if (diffLine.startsWith("+")) {
+          additions++;
           diffLines.push({
-            type: "addition",
-            content: dl.slice(1),
+            type: "added",
+            content: diffLine.slice(1),
             new_line_number: newLineNum++,
           });
-        } else if (dl.startsWith("-")) {
+        } else if (diffLine.startsWith("-")) {
+          deletions++;
           diffLines.push({
-            type: "deletion",
-            content: dl.slice(1),
+            type: "removed",
+            content: diffLine.slice(1),
             old_line_number: oldLineNum++,
           });
-        } else if (dl.startsWith(" ") || dl === "") {
+        } else if (diffLine.startsWith(" ") || diffLine === "") {
           diffLines.push({
             type: "context",
-            content: dl.startsWith(" ") ? dl.slice(1) : dl,
+            content: diffLine.startsWith(" ") ? diffLine.slice(1) : diffLine,
             old_line_number: oldLineNum++,
             new_line_number: newLineNum++,
           });
-        } else if (dl.startsWith("\\")) {
-          // "\ No newline at end of file" — skip
         }
 
         i++;
@@ -127,20 +141,21 @@ export function parseDiff(rawDiff: string): DiffFile[] {
 
       hunks.push({
         old_start: oldStart,
-        old_count: oldCount,
+        old_lines: oldLines,
         new_start: newStart,
-        new_count: newCount,
+        new_lines: newLines,
         header,
         lines: diffLines,
       });
     }
 
     files.push({
+      path: isDeleted ? oldPath : newPath,
       old_path: oldPath,
       new_path: newPath,
-      is_new: isNew,
-      is_deleted: isDeleted,
-      is_renamed: isRenamed,
+      status: determineFileStatus(isNew, isDeleted, isRenamed),
+      additions,
+      deletions,
       hunks,
     });
   }

@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { v4 as uuidv4 } from "uuid";
 import { validateHookToken } from "../auth/token_validator";
 import { validateHookEvent } from "./validator";
 import { EventQueue } from "./event_queue";
-import { eventBus } from "../notifications/event_bus";
 import type { ConnectionManager } from "../websocket/connection_manager";
-import type { BridgeMessage, ClaudeEventPayload, HookEvent } from "../types";
+import type { HookEvent } from "../types";
+import { buildHookProtocolMessages } from "./protocol_mapper";
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [HookReceiver] ${msg}`);
@@ -28,25 +27,23 @@ export function createHooksRouter(
     const event: HookEvent = body;
     log(`Received event: ${event.event_type} (session=${event.session_id})`);
 
-    eventQueue.enqueue(event);
+    const messages = buildHookProtocolMessages(event);
+    for (const message of messages) {
+      const notificationId =
+        message.type === "notification" &&
+        typeof message.payload === "object" &&
+        message.payload !== null &&
+        "notification_id" in message.payload &&
+        typeof (message.payload as { notification_id?: unknown }).notification_id === "string"
+          ? ((message.payload as { notification_id: string }).notification_id as string)
+          : undefined;
 
-    const claudeEventPayload: ClaudeEventPayload = {
-      event_type: event.event_type,
-      session_id: event.session_id,
-      timestamp: event.timestamp,
-      payload: event.payload,
-    };
-
-    eventBus.emitTyped("claude-event", claudeEventPayload);
-
-    const msg: BridgeMessage<ClaudeEventPayload> = {
-      type: "claude_event",
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
-      payload: claudeEventPayload,
-    };
-
-    connectionManager.broadcast(msg);
+      eventQueue.enqueue(message, {
+        sessionId: event.session_id,
+        notificationId,
+      });
+      connectionManager.broadcast(message);
+    }
 
     res.status(200).json({ received: true });
   });

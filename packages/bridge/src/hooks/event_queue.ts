@@ -1,34 +1,62 @@
-import type { HookEvent } from "../types";
+import type { BridgeMessage } from "../types";
 
 const MAX_QUEUE_SIZE = 1000;
 
-export class EventQueue {
-  private queue: HookEvent[] = [];
+interface QueuedMessage {
+  message: BridgeMessage<unknown>;
+  sessionId?: string;
+  notificationId?: string;
+}
 
-  enqueue(event: HookEvent): void {
+export class EventQueue {
+  private queue: QueuedMessage[] = [];
+
+  enqueue(
+    message: BridgeMessage<unknown>,
+    options: { sessionId?: string; notificationId?: string } = {},
+  ): void {
     if (this.queue.length >= MAX_QUEUE_SIZE) {
-      this.queue.shift(); // drop oldest
+      this.queue.shift();
     }
-    this.queue.push(event);
+
+    this.queue.push({
+      message,
+      sessionId: options.sessionId,
+      notificationId: options.notificationId,
+    });
   }
 
-  dequeue(sessionId?: string): HookEvent[] {
+  replay(sessionId?: string): BridgeMessage<unknown>[] {
     if (!sessionId) {
-      const all = [...this.queue];
-      this.queue = [];
-      return all;
+      return this.queue.map((entry) => entry.message);
     }
-    const matching = this.queue.filter((e) => e.session_id === sessionId);
-    this.queue = this.queue.filter((e) => e.session_id !== sessionId);
-    return matching;
+
+    return this.queue
+      .filter((entry) => entry.sessionId === sessionId)
+      .map((entry) => entry.message);
+  }
+
+  acknowledgeNotifications(notificationIds: string[]): void {
+    if (notificationIds.length === 0) {
+      return;
+    }
+
+    const acknowledged = new Set(notificationIds);
+    this.queue = this.queue.filter((entry) => {
+      if (!entry.notificationId) {
+        return true;
+      }
+      return !acknowledged.has(entry.notificationId);
+    });
   }
 
   clear(sessionId?: string): void {
     if (!sessionId) {
       this.queue = [];
-    } else {
-      this.queue = this.queue.filter((e) => e.session_id !== sessionId);
+      return;
     }
+
+    this.queue = this.queue.filter((entry) => entry.sessionId !== sessionId);
   }
 
   size(): number {

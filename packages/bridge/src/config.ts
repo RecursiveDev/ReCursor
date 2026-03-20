@@ -9,6 +9,10 @@ const configSchema = z.object({
   HOOK_TOKEN: z.string().min(1, "HOOK_TOKEN is required"),
   ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
   AGENT_MODEL: z.string().default("claude-opus-4-6"),
+  AGENT_MAX_ITERATIONS: z
+    .string()
+    .default("25")
+    .transform((v) => parseInt(v, 10)),
   ALLOWED_PROJECT_ROOT: z.string().min(1, "ALLOWED_PROJECT_ROOT is required"),
 });
 

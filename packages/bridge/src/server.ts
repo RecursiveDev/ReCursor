@@ -25,14 +25,15 @@ export async function startServer(): Promise<void> {
   const gitService = new GitService(config.ALLOWED_PROJECT_ROOT);
   const eventQueue = new EventQueue();
 
-  // Dispatcher subscribes to event bus and forwards to clients
-  const _dispatcher = new Dispatcher(connectionManager);
+  // Dispatcher subscribes to event bus, queues replayable events, and forwards to clients
+  const _dispatcher = new Dispatcher(connectionManager, eventQueue);
 
   const messageHandler = new MessageHandler(
     connectionManager,
     agentSdkAdapter,
     agentSessionManager,
     gitService,
+    eventQueue,
   );
 
   // Express app

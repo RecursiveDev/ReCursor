@@ -4,26 +4,35 @@ import { config } from "../config";
 import type { ConnectionManager } from "./connection_manager";
 import type { AgentSdkAdapter } from "../agents/agent_sdk_adapter";
 import type { GitService } from "../git/git_service";
+import { SUPPORTED_AGENTS } from "../types";
 import type {
-  BridgeMessage,
+  ActiveSessionPayload,
+  ApprovalResponsePayload,
   AuthPayload,
+  BridgeMessage,
   ConnectionAckPayload,
   ConnectionErrorPayload,
-  SessionStartPayload,
-  MessagePayload,
-  ApprovalResponsePayload,
-  SessionEndPayload,
-  GitDiffPayload,
-  GitCommitPayload,
-  FileListPayload,
-  FileReadPayload,
   ErrorPayload,
-  HeartbeatPongPayload,
+  FileListPayload,
   FileListResponsePayload,
+  FileReadPayload,
   FileReadResponsePayload,
+  GitCommitPayload,
+  GitDiffPayload,
+  GitDiffResponsePayload,
+  GitStatusPayload,
+  GitStatusRequestPayload,
+  HeartbeatPongPayload,
+  MessagePayload,
+  NotificationAckPayload,
+  SessionEndPayload,
+  SessionStartPayload,
 } from "../types";
 import type { AgentSessionManager } from "../agents/session_manager";
 import { FileService } from "../files/file_service";
+import type { EventQueue } from "../hooks/event_queue";
+
+const SERVER_VERSION = "0.1.0";
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [MessageHandler] ${msg}`);
@@ -37,12 +46,35 @@ function errorMsg(
   code: string,
   message: string,
   requestType?: string,
+  sessionId?: string,
 ): BridgeMessage<ErrorPayload> {
   return {
     type: "error",
     id: uuidv4(),
     timestamp: ts(),
-    payload: { code, message, request_type: requestType },
+    payload: {
+      code,
+      message,
+      request_type: requestType,
+      session_id: sessionId,
+      recoverable: code !== "AUTH_FAILED",
+    },
+  };
+}
+
+function mapActiveSession(session: {
+  id: string;
+  agent: "claude-code";
+  title: string;
+  working_directory: string;
+  status: "active" | "idle" | "closed";
+}): ActiveSessionPayload {
+  return {
+    session_id: session.id,
+    agent: session.agent,
+    title: session.title,
+    working_directory: session.working_directory,
+    status: session.status,
   };
 }
 
@@ -54,6 +86,7 @@ export class MessageHandler {
     private agentSdkAdapter: AgentSdkAdapter,
     private agentSessionManager: AgentSessionManager,
     private gitService: GitService,
+    private eventQueue: EventQueue,
   ) {
     this.fileService = new FileService(config.ALLOWED_PROJECT_ROOT);
   }
@@ -66,34 +99,31 @@ export class MessageHandler {
     } catch {
       this.connectionManager.sendToClient(
         clientId,
-        errorMsg("PARSE_ERROR", "Invalid JSON message"),
+        errorMsg("BRIDGE_ERROR", "Invalid JSON message"),
       );
       return;
     }
 
-    const { type, payload } = msg;
+    const { type, payload, id } = msg;
 
-    // Auth is allowed without authentication
     if (type === "auth") {
-      await this.handleAuth(clientId, payload as AuthPayload);
+      await this.handleAuth(clientId, payload as AuthPayload, id);
       return;
     }
 
-    // Heartbeat is allowed without authentication (but only if already authenticated in practice)
     if (type === "heartbeat_ping") {
-      this.handleHeartbeat(clientId);
+      this.handleHeartbeat(clientId, id);
       return;
     }
 
-    // All other messages require authentication
     const client = this.connectionManager.getClient(clientId);
     if (!client || !client.authenticated) {
       this.connectionManager.sendToClient(clientId, {
         type: "connection_error",
-        id: uuidv4(),
+        id: id ?? uuidv4(),
         timestamp: ts(),
         payload: {
-          code: "NOT_AUTHENTICATED",
+          code: "AUTH_FAILED",
           message: "Client must authenticate before sending messages",
         } as ConnectionErrorPayload,
       });
@@ -103,7 +133,11 @@ export class MessageHandler {
     try {
       switch (type) {
         case "session_start":
-          await this.agentSdkAdapter.handleSessionStart(payload as SessionStartPayload, clientId);
+          await this.agentSdkAdapter.handleSessionStart(
+            payload as SessionStartPayload,
+            clientId,
+            id,
+          );
           break;
 
         case "message":
@@ -122,51 +156,66 @@ export class MessageHandler {
           break;
 
         case "git_status_request":
-          await this.handleGitStatusRequest(clientId, msg.id);
+          await this.handleGitStatusRequest(
+            clientId,
+            (payload as GitStatusRequestPayload | undefined)?.session_id,
+            id,
+          );
           break;
 
         case "git_commit":
-          await this.handleGitCommit(clientId, payload as GitCommitPayload);
+          await this.handleGitCommit(clientId, payload as GitCommitPayload, id);
           break;
 
         case "git_diff":
-          await this.handleGitDiff(clientId, payload as GitDiffPayload, msg.id);
+          await this.handleGitDiff(clientId, payload as GitDiffPayload, id);
           break;
 
         case "file_list":
-          await this.handleFileList(clientId, payload as FileListPayload);
+          await this.handleFileList(clientId, payload as FileListPayload, id);
           break;
 
         case "file_read":
-          await this.handleFileRead(clientId, payload as FileReadPayload);
+          await this.handleFileRead(clientId, payload as FileReadPayload, id);
           break;
 
         case "notification_ack":
-          // no-op in this implementation
+          this.handleNotificationAck(payload as NotificationAckPayload);
           break;
 
         default:
           log(`Unknown message type: ${type} from client ${clientId}`);
           this.connectionManager.sendToClient(
             clientId,
-            errorMsg("UNKNOWN_TYPE", `Unknown message type: ${type}`, type),
+            errorMsg("BRIDGE_ERROR", `Unknown message type: ${type}`, type),
           );
       }
     } catch (err) {
+      const sessionId =
+        typeof payload === "object" && payload !== null && "session_id" in payload
+          ? String((payload as { session_id?: unknown }).session_id ?? "")
+          : undefined;
       log(`Error handling ${type} for client ${clientId}: ${String(err)}`);
-      this.connectionManager.sendToClient(clientId, errorMsg("HANDLER_ERROR", String(err), type));
+      this.connectionManager.sendToClient(
+        clientId,
+        errorMsg("BRIDGE_ERROR", String(err), type, sessionId),
+      );
     }
   }
 
-  private async handleAuth(clientId: string, payload: AuthPayload): Promise<void> {
+  private async handleAuth(
+    clientId: string,
+    payload: AuthPayload,
+    requestId?: string,
+  ): Promise<void> {
     if (!payload?.token || payload.token !== config.BRIDGE_TOKEN) {
       this.connectionManager.sendToClient(clientId, {
         type: "connection_error",
-        id: uuidv4(),
+        id: requestId ?? uuidv4(),
         timestamp: ts(),
         payload: {
-          code: "INVALID_TOKEN",
-          message: "Authentication failed: invalid token",
+          code: "AUTH_FAILED",
+          message: "Invalid or expired token",
         } as ConnectionErrorPayload,
       });
       log(`Auth failed for client ${clientId}`);
@@ -175,48 +224,81 @@ export class MessageHandler {
 
     this.connectionManager.authenticateClient(clientId);
 
-    const activeSessions = this.agentSessionManager.getActiveSessions();
+    const activeSessions = this.agentSessionManager.getActiveSessions().map(mapActiveSession);
 
     const ackMsg: BridgeMessage<ConnectionAckPayload> = {
       type: "connection_ack",
-      id: uuidv4(),
+      id: requestId ?? uuidv4(),
       timestamp: ts(),
       payload: {
-        client_id: clientId,
+        server_version: SERVER_VERSION,
+        supported_agents: [...SUPPORTED_AGENTS],
         active_sessions: activeSessions,
       },
     };
     this.connectionManager.sendToClient(clientId, ackMsg);
+
+    for (const queuedMessage of this.eventQueue.replay()) {
+      this.connectionManager.sendToClient(clientId, queuedMessage);
+    }
+
     log(`Auth succeeded for client ${clientId}`);
   }
 
-  private handleHeartbeat(clientId: string): void {
+  private handleHeartbeat(clientId: string, requestId?: string): void {
     const pong: BridgeMessage<HeartbeatPongPayload> = {
       type: "heartbeat_pong",
-      id: uuidv4(),
+      id: requestId ?? uuidv4(),
       timestamp: ts(),
       payload: {},
     };
     this.connectionManager.sendToClient(clientId, pong);
   }
 
-  private async handleGitStatusRequest(clientId: string, requestId?: string): Promise<void> {
+  private handleNotificationAck(payload: NotificationAckPayload): void {
+    if (!Array.isArray(payload.notification_ids)) {
+      return;
+    }
+
+    this.eventQueue.acknowledgeNotifications(
+      payload.notification_ids.filter((value): value is string => typeof value === "string"),
+    );
+  }
+
+  private async handleGitStatusRequest(
+    clientId: string,
+    sessionId: string | undefined,
+    requestId?: string,
+  ): Promise<void> {
     const status = await this.gitService.getStatus();
+    const responsePayload: GitStatusPayload = {
+      ...status,
+      session_id: sessionId,
+    };
+
     this.connectionManager.sendToClient(clientId, {
       type: "git_status_response",
-      id: uuidv4(),
+      id: requestId ?? uuidv4(),
       timestamp: ts(),
-      payload: { ...status, request_id: requestId },
+      payload: responsePayload,
     });
   }
 
-  private async handleGitCommit(clientId: string, payload: GitCommitPayload): Promise<void> {
+  private async handleGitCommit(
+    clientId: string,
+    payload: GitCommitPayload,
+    requestId?: string,
+  ): Promise<void> {
     await this.gitService.commit(payload.message, payload.files);
+
     this.connectionManager.sendToClient(clientId, {
       type: "git_status_response",
-      id: uuidv4(),
+      id: requestId ?? uuidv4(),
       timestamp: ts(),
-      payload: { ...(await this.gitService.getStatus()) },
+      payload: {
+        ...(await this.gitService.getStatus()),
+        session_id: payload.session_id,
+      } satisfies GitStatusPayload,
     });
   }
 
@@ -226,15 +308,24 @@ export class MessageHandler {
     requestId?: string,
   ): Promise<void> {
     const files = await this.gitService.getDiff(payload.files, payload.cached);
+    const responsePayload: GitDiffResponsePayload = {
+      session_id: payload.session_id,
+      files,
+    };
+
     this.connectionManager.sendToClient(clientId, {
       type: "git_diff_response",
-      id: uuidv4(),
+      id: requestId ?? uuidv4(),
       timestamp: ts(),
-      payload: { files, request_id: requestId },
+      payload: responsePayload,
     });
   }
 
-  private async handleFileList(clientId: string, payload: FileListPayload): Promise<void> {
+  private async handleFileList(
+    clientId: string,
+    payload: FileListPayload,
+    requestId?: string,
+  ): Promise<void> {
     const dirPath = path.resolve(payload.path);
     const result = await this.fileService.listDirectory(dirPath, {
       offset: payload.offset,
@@ -242,54 +333,60 @@ export class MessageHandler {
       includeHidden: payload.includeHidden,
     });
 
-    // Map FileService entries to the wire FileEntry shape (includes path)
-    const entries = result.entries.map((e) => ({
-      name: e.name,
-      path: path.join(dirPath, e.name),
-      type: e.type,
-      size: e.size,
-      modified: e.modifiedAt,
+    const entries = result.entries.map((entry) => ({
+      name: entry.name,
+      path: path.join(dirPath, entry.name),
+      type: entry.type,
+      size: entry.size,
+      modified: entry.modifiedAt,
     }));
 
-    const resp: BridgeMessage<FileListResponsePayload> = {
-      type: "file_list_response",
-      id: uuidv4(),
-      timestamp: ts(),
-      payload: {
-        path: dirPath,
-        entries,
-        total: result.total,
-        offset: result.offset,
-        limit: result.limit,
-        hasMore: result.hasMore,
-        request_id: payload.request_id,
-      },
+    const responsePayload: FileListResponsePayload = {
+      session_id: payload.session_id,
+      path: dirPath,
+      entries,
+      total: result.total,
+      offset: result.offset,
+      limit: result.limit,
+      hasMore: result.hasMore,
     };
-    this.connectionManager.sendToClient(clientId, resp);
+
+    this.connectionManager.sendToClient(clientId, {
+      type: "file_list_response",
+      id: requestId ?? uuidv4(),
+      timestamp: ts(),
+      payload: responsePayload,
+    });
   }
 
-  private async handleFileRead(clientId: string, payload: FileReadPayload): Promise<void> {
+  private async handleFileRead(
+    clientId: string,
+    payload: FileReadPayload,
+    requestId?: string,
+  ): Promise<void> {
     const filePath = path.resolve(payload.path);
     const result = await this.fileService.readFile(filePath, {
       offset: payload.offset,
       limit: payload.limit,
     });
 
-    const resp: BridgeMessage<FileReadResponsePayload> = {
-      type: "file_read_response",
-      id: uuidv4(),
-      timestamp: ts(),
-      payload: {
-        path: filePath,
-        content: result.content,
-        encoding: "utf8",
-        totalLines: result.totalLines,
-        offset: result.offset,
-        limit: result.limit,
-        hasMore: result.hasMore,
-        request_id: payload.request_id,
-      },
+    const responsePayload: FileReadResponsePayload = {
+      session_id: payload.session_id,
+      path: filePath,
+      content: result.content,
+      size: Buffer.byteLength(result.content, "utf8"),
+      lines: result.totalLines,
+      offset: result.offset,
+      limit: result.limit,
+      hasMore: result.hasMore,
+      encoding: "utf8",
     };
-    this.connectionManager.sendToClient(clientId, resp);
+
+    this.connectionManager.sendToClient(clientId, {
+      type: "file_read_response",
+      id: requestId ?? uuidv4(),
+      timestamp: ts(),
+      payload: responsePayload,
+    });
   }
 }
