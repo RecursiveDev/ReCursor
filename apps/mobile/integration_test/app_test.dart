@@ -1,36 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:recursor_mobile/main.dart' as app;
+import 'package:integration_test/integration_test.dart';
+import 'package:recursor_mobile/app.dart';
+import 'package:recursor_mobile/core/network/websocket_service.dart';
+import 'package:recursor_mobile/core/providers/theme_provider.dart';
+import 'package:recursor_mobile/core/providers/token_storage_provider.dart';
+import 'package:recursor_mobile/core/storage/preferences.dart';
+import 'package:recursor_mobile/core/storage/secure_token_storage.dart';
+import 'package:recursor_mobile/features/startup/domain/bridge_startup_controller.dart';
 
 void main() {
-  testWidgets('App launches and shows splash screen', (tester) async {
-    app.main();
-    await tester.pumpAndSettle();
-    // Should see splash screen
-    expect(find.byKey(const Key('splashScreen')), findsOneWidget);
-  });
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Login screen shows GitHub and PAT options', (tester) async {
-    app.main();
-    await tester.pumpAndSettle();
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-    // Navigate to login
-    expect(find.text('Sign in with GitHub'), findsOneWidget);
-    expect(find.text('Personal Access Token'), findsOneWidget);
-  });
+  testWidgets('launch routes to bridge setup without any login workflow', (
+    tester,
+  ) async {
+    final preferences = FakeAppPreferences();
+    final tokenStorage = FakeSecureTokenStorage();
+    final startupController = FakeBridgeStartupController(
+      const AppStartupResult.bridgeSetup(),
+    );
 
-  testWidgets('PAT field accepts input', (tester) async {
-    app.main();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appPreferencesProvider.overrideWithValue(preferences),
+          tokenStorageProvider.overrideWithValue(tokenStorage),
+          bridgeStartupControllerProvider.overrideWithValue(startupController),
+        ],
+        child: const ReCursorApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1300));
     await tester.pumpAndSettle();
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-    // Find PAT field and enter token
-    final patButton = find.text('Personal Access Token');
-    if (patButton.evaluate().isNotEmpty) {
-      await tester.tap(patButton);
-      await tester.pumpAndSettle();
-      await tester.enterText(
-          find.byKey(const Key('patTextField')), 'test-token-123');
-      expect(find.byKey(const Key('patTextField')), findsOneWidget);
-    }
+
+    expect(find.byKey(const Key('bridgeSetupScreen')), findsOneWidget);
+    expect(find.text('Bridge Setup'), findsOneWidget);
+    expect(find.textContaining('Sign in'), findsNothing);
+    expect(find.textContaining('GitHub'), findsNothing);
   });
 }
+
+class FakeBridgeStartupController extends BridgeStartupController {
+  FakeBridgeStartupController(this.result)
+      : super(
+          preferences: FakeAppPreferences(),
+          tokenStorage: FakeSecureTokenStorage(),
+          webSocketService: _NoopWebSocketService(),
+        );
+
+  final AppStartupResult result;
+
+  @override
+  Future<AppStartupResult> restore() async {
+    return result;
+  }
+}
+
+class FakeAppPreferences extends AppPreferences {
+  FakeAppPreferences({this.bridgeUrl});
+
+  String? bridgeUrl;
+
+  @override
+  String? getBridgeUrl() {
+    return bridgeUrl;
+  }
+
+  @override
+  Future<void> setBridgeUrl(String? url) async {
+    bridgeUrl = url;
+  }
+}
+
+class FakeSecureTokenStorage extends SecureTokenStorage {
+  FakeSecureTokenStorage({this.token}) : super(const FlutterSecureStorage());
+
+  String? token;
+
+  @override
+  Future<String?> getToken(String key) async {
+    return token;
+  }
+}
+
+class _NoopWebSocketService extends WebSocketService {}
