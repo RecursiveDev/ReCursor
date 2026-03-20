@@ -1,0 +1,16 @@
+---
+import EditLink from './EditLink.astro';
+
+const { entry } = Astro.locals.starlightRoute;
+const title = entry.data.title;
+const PAGE_TITLE_ID = '_top';
+---
+
+<div class="recursor-page-header">
+  <div class="recursor-page-header__title-group">
+    <h1 id={PAGE_TITLE_ID}>{title}</h1>
+  </div>
+  <div class="recursor-page-header__actions">
+    <EditLink />
+  </div>
+</div>

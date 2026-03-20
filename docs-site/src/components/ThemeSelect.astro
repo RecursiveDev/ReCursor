@@ -1,0 +1,157 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+---
+
+<starlight-theme-toggle>
+  <button type="button" class="theme-toggle" aria-label="Toggle color theme" title="Toggle color theme">
+    <span class="sr-only theme-toggle-label">Toggle color theme</span>
+    <span class="theme-toggle-icon theme-toggle-icon--light" aria-hidden="true">
+      <Icon name="sun" />
+    </span>
+    <span class="theme-toggle-icon theme-toggle-icon--dark" aria-hidden="true">
+      <Icon name="moon" />
+    </span>
+  </button>
+</starlight-theme-toggle>
+
+<script>
+  type Theme = 'light' | 'dark';
+
+  const storageKey = 'starlight-theme';
+  const lightQuery = '(prefers-color-scheme: light)';
+
+  function getStoredTheme(): string {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) ?? '' : '';
+  }
+
+  function getPreferredTheme(): Theme {
+    return window.matchMedia(lightQuery).matches ? 'light' : 'dark';
+  }
+
+  function getEffectiveTheme(): Theme {
+    const storedTheme = getStoredTheme();
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      return storedTheme;
+    }
+
+    const datasetTheme = document.documentElement.dataset.theme;
+    if (datasetTheme === 'light' || datasetTheme === 'dark') {
+      return datasetTheme;
+    }
+
+    return getPreferredTheme();
+  }
+
+  function applyTheme(theme: Theme): void {
+    document.documentElement.dataset.theme = theme;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(storageKey, theme);
+    }
+    syncThemeToggles(theme);
+  }
+
+  function syncThemeToggles(theme: Theme = getEffectiveTheme()): void {
+    for (const toggle of document.querySelectorAll('starlight-theme-toggle')) {
+      const button = toggle.querySelector('button');
+      const label = toggle.querySelector('.theme-toggle-label');
+      if (!(button instanceof HTMLButtonElement) || !(label instanceof HTMLElement)) {
+        continue;
+      }
+
+      const nextTheme = theme === 'light' ? 'dark' : 'light';
+      const labelText = `Switch to ${nextTheme} mode`;
+      button.dataset.theme = theme;
+      button.setAttribute('aria-label', labelText);
+      button.setAttribute('title', labelText);
+      label.textContent = labelText;
+    }
+  }
+
+  class StarlightThemeToggle extends HTMLElement {
+    private mediaQuery = window.matchMedia(lightQuery);
+
+    connectedCallback(): void {
+      const button = this.querySelector('button');
+      if (!(button instanceof HTMLButtonElement) || button.dataset.bound === 'true') {
+        syncThemeToggles();
+        return;
+      }
+
+      button.addEventListener('click', () => {
+        const currentTheme = getEffectiveTheme();
+        applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+      });
+
+      this.mediaQuery.addEventListener('change', () => {
+        if (!getStoredTheme()) {
+          const preferredTheme = getPreferredTheme();
+          document.documentElement.dataset.theme = preferredTheme;
+          syncThemeToggles(preferredTheme);
+        }
+      });
+
+      button.dataset.bound = 'true';
+      syncThemeToggles();
+    }
+  }
+
+  if (!customElements.get('starlight-theme-toggle')) {
+    customElements.define('starlight-theme-toggle', StarlightThemeToggle);
+  }
+</script>
+
+<style>
+  @layer starlight.core {
+    starlight-theme-toggle {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--recursor-ink-subtle, var(--sl-color-gray-3));
+      cursor: pointer;
+      border-radius: 999px;
+      transition:
+        color 150ms ease,
+        background-color 150ms ease;
+    }
+
+    .theme-toggle:hover {
+      color: var(--sl-color-text-accent);
+      background: color-mix(in srgb, var(--sl-color-accent) 8%, transparent);
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 2px solid var(--sl-color-accent);
+      outline-offset: 2px;
+    }
+
+    .theme-toggle-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .theme-toggle-icon--dark {
+      display: none;
+    }
+
+    :global(html[data-theme='dark']) .theme-toggle-icon--light {
+      display: none;
+    }
+
+    :global(html[data-theme='dark']) .theme-toggle-icon--dark {
+      display: inline-flex;
+    }
+  }
+</style>

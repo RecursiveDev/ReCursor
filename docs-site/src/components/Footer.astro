@@ -1,0 +1,21 @@
+---
+import LastUpdated from '@astrojs/starlight/components/LastUpdated.astro';
+import Pagination from '@astrojs/starlight/components/Pagination.astro';
+import config from 'virtual:starlight/user-config';
+import { Icon } from '@astrojs/starlight/components';
+---
+
+<footer class="recursor-footer sl-flex">
+  <div class="recursor-footer-meta sl-flex">
+    <LastUpdated />
+  </div>
+  <Pagination />
+
+  {
+    config.credits && (
+      <a class="recursor-footer-kudos sl-flex" href="https://starlight.astro.build">
+        <Icon name={'starlight'} /> {Astro.locals.t('builtWithStarlight.label')}
+      </a>
+    )
+  }
+</footer>
