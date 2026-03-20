@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../../core/network/bridge_connection_validator.dart';
 import '../../../../core/providers/bridge_provider.dart';
+import '../../../../core/providers/preferences_provider.dart';
+import '../../../../core/providers/token_storage_provider.dart';
+import '../../../../core/storage/secure_token_storage.dart';
+import '../../domain/bridge_startup_controller.dart';
 
 class BridgeSetupScreen extends ConsumerStatefulWidget {
   const BridgeSetupScreen({super.key});
@@ -14,9 +21,9 @@ class BridgeSetupScreen extends ConsumerStatefulWidget {
 
 class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final _urlController = TextEditingController();
-  final _tokenController = TextEditingController();
+  late final TabController _tabController;
+  final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _tokenController = TextEditingController();
   bool _connecting = false;
   String? _error;
   bool _scanned = false;
@@ -24,7 +31,34 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
+    unawaited(_loadSavedBridgeConfig());
+  }
+
+  Future<void> _loadSavedBridgeConfig() async {
+    final preferences = ref.read(appPreferencesProvider);
+    final storage = ref.read(tokenStorageProvider);
+    final savedUrl = preferences.getBridgeUrl();
+    final savedToken = await storage.getToken(kBridgeToken);
+    final startupError = ref.read(bridgeStartupErrorProvider);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        _urlController.text = savedUrl;
+      }
+      if (savedToken != null && savedToken.isNotEmpty) {
+        _tokenController.text = savedToken;
+      }
+      if (startupError != null && startupError.isNotEmpty) {
+        _error = startupError;
+      }
+    });
+
+    ref.read(bridgeStartupErrorProvider.notifier).state = null;
   }
 
   @override
@@ -36,53 +70,112 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
   }
 
   void _onQrDetect(BarcodeCapture capture) {
-    if (_scanned) return;
-    final raw = capture.barcodes.firstOrNull?.rawValue;
-    if (raw == null) return;
-    // Expected format: recursor://connect?url=wss://...&token=...
-    final uri = Uri.tryParse(raw);
-    if (uri != null) {
-      final url = uri.queryParameters['url'] ?? '';
-      final token = uri.queryParameters['token'] ?? '';
-      if (url.isNotEmpty) {
-        setState(() {
-          _scanned = true;
-          _urlController.text = url;
-          _tokenController.text = token;
-        });
-        _tabController.animateTo(1);
-      }
+    if (_scanned) {
+      return;
     }
+
+    final raw = capture.barcodes.firstOrNull?.rawValue;
+    if (raw == null) {
+      return;
+    }
+
+    final uri = Uri.tryParse(raw);
+    if (uri == null) {
+      _setError('QR code did not contain a valid bridge pairing URI.');
+      return;
+    }
+
+    final url = uri.queryParameters['url'] ?? '';
+    final token = uri.queryParameters['token'] ?? '';
+    final validation = BridgeConnectionValidator.validate(
+      url: url,
+      token: token,
+    );
+
+    if (!validation.isValid) {
+      _setError(validation.errorMessage!);
+      return;
+    }
+
+    setState(() {
+      _scanned = true;
+      _error = null;
+      _urlController.text = url;
+      _tokenController.text = token;
+    });
+    _tabController.animateTo(1);
+  }
+
+  void _setError(String message) {
+    setState(() {
+      _error = message;
+    });
   }
 
   Future<void> _connect() async {
     final url = _urlController.text.trim();
     final token = _tokenController.text.trim();
-    if (url.isEmpty) {
-      setState(() => _error = 'Bridge URL is required');
+    final validation = BridgeConnectionValidator.validate(
+      url: url,
+      token: token,
+    );
+
+    if (!validation.isValid) {
+      _setError(validation.errorMessage!);
       return;
     }
+
     setState(() {
       _connecting = true;
       _error = null;
     });
+
     try {
       await ref.read(bridgeProvider.notifier).connect(url, token);
-      if (mounted) context.go('/home/chat');
-    } catch (e) {
-      setState(() => _error = e.toString());
+      await ref.read(appPreferencesProvider).setBridgeUrl(url);
+      await ref.read(tokenStorageProvider).saveToken(kBridgeToken, token);
+      ref.read(bridgeStartupErrorProvider.notifier).state = null;
+      if (mounted) {
+        context.go('/home/chat');
+      }
+    } catch (error) {
+      _setError(error.toString());
     } finally {
-      if (mounted) setState(() => _connecting = false);
+      if (mounted) {
+        setState(() {
+          _connecting = false;
+        });
+      }
     }
+  }
+
+  Widget _buildTabBody() {
+    return AnimatedBuilder(
+      animation: _tabController.animation ?? _tabController,
+      builder: (context, _) {
+        final currentIndex = _tabController.index;
+        if (currentIndex == 0) {
+          return _QrTab(onDetect: _onQrDetect);
+        }
+        return _ManualTab(
+          urlController: _urlController,
+          tokenController: _tokenController,
+          connecting: _connecting,
+          error: _error,
+          onConnect: _connect,
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: const Key('bridgeSetupScreen'),
       backgroundColor: const Color(0xFF1E1E1E),
       appBar: AppBar(
         backgroundColor: const Color(0xFF252526),
-        title: const Text('Connect Bridge'),
+        title: const Text('Bridge Setup'),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: const Color(0xFF569CD6),
@@ -94,26 +187,15 @@ class _BridgeSetupScreenState extends ConsumerState<BridgeSetupScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _QrTab(onDetect: _onQrDetect),
-          _ManualTab(
-            urlController: _urlController,
-            tokenController: _tokenController,
-            connecting: _connecting,
-            error: _error,
-            onConnect: _connect,
-          ),
-        ],
-      ),
+      body: _buildTabBody(),
     );
   }
 }
 
 class _QrTab extends StatelessWidget {
-  final void Function(BarcodeCapture) onDetect;
   const _QrTab({required this.onDetect});
+
+  final void Function(BarcodeCapture) onDetect;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +210,8 @@ class _QrTab extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'Point the camera at the QR code shown in your bridge server',
+            'Scan a QR code that contains your private wss:// bridge URL and '
+            'bridge pairing token.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF9CDCFE)),
           ),
@@ -139,12 +222,6 @@ class _QrTab extends StatelessWidget {
 }
 
 class _ManualTab extends StatelessWidget {
-  final TextEditingController urlController;
-  final TextEditingController tokenController;
-  final bool connecting;
-  final String? error;
-  final VoidCallback onConnect;
-
   const _ManualTab({
     required this.urlController,
     required this.tokenController,
@@ -152,6 +229,12 @@ class _ManualTab extends StatelessWidget {
     required this.error,
     required this.onConnect,
   });
+
+  final TextEditingController urlController;
+  final TextEditingController tokenController;
+  final bool connecting;
+  final String? error;
+  final VoidCallback onConnect;
 
   @override
   Widget build(BuildContext context) {
@@ -170,12 +253,28 @@ class _ManualTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const Text(
+            'Start by pairing with your local bridge. No account sign-in is '
+            'required.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Use the bridge\'s private Tailscale/WireGuard address. Public '
+            'internet bridge endpoints are outside the docs contract.',
+            style: TextStyle(color: Color(0xFF9CDCFE)),
+          ),
+          const SizedBox(height: 16),
           TextField(
             controller: urlController,
             style: const TextStyle(color: Colors.white),
             decoration: inputDecoration.copyWith(
               labelText: 'Bridge URL (wss://...)',
-              hintText: 'wss://192.168.1.100:8080',
+              hintText: 'wss://your-bridge.tailnet.ts.net:3000',
               hintStyle: const TextStyle(color: Colors.grey),
             ),
           ),
@@ -184,8 +283,11 @@ class _ManualTab extends StatelessWidget {
             controller: tokenController,
             obscureText: true,
             style: const TextStyle(color: Colors.white),
-            decoration:
-                inputDecoration.copyWith(labelText: 'Auth Token (optional)'),
+            decoration: inputDecoration.copyWith(
+              labelText: 'Bridge Pairing Token',
+              helperText: 'Stored securely on-device after a successful pair.',
+              helperStyle: const TextStyle(color: Colors.grey),
+            ),
           ),
           const SizedBox(height: 24),
           if (error != null)
