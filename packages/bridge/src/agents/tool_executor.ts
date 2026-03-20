@@ -33,7 +33,7 @@ export class ToolExecutor {
   async execute(
     tool: string,
     params: Record<string, unknown>,
-    workingDir: string
+    workingDir: string,
   ): Promise<ToolResult> {
     const start = Date.now();
 
@@ -89,13 +89,18 @@ export class ToolExecutor {
   private async readFile(
     params: Record<string, unknown>,
     workingDir: string,
-    start: number
+    start: number,
   ): Promise<ToolResult> {
     const filePath = String(params["path"] ?? "");
     const resolved = resolveWithinRoot(filePath, workingDir);
 
     if (!isWithinAllowedRoot(resolved)) {
-      return { success: false, content: "", error: "Path outside allowed root", durationMs: Date.now() - start };
+      return {
+        success: false,
+        content: "",
+        error: "Path outside allowed root",
+        durationMs: Date.now() - start,
+      };
     }
 
     const content = await readFileAsync(resolved, "utf8");
@@ -105,7 +110,7 @@ export class ToolExecutor {
   private async editFile(
     params: Record<string, unknown>,
     workingDir: string,
-    start: number
+    start: number,
   ): Promise<ToolResult> {
     const filePath = String(params["path"] ?? "");
     const oldStr = String(params["old_string"] ?? "");
@@ -113,12 +118,22 @@ export class ToolExecutor {
     const resolved = resolveWithinRoot(filePath, workingDir);
 
     if (!isWithinAllowedRoot(resolved)) {
-      return { success: false, content: "", error: "Path outside allowed root", durationMs: Date.now() - start };
+      return {
+        success: false,
+        content: "",
+        error: "Path outside allowed root",
+        durationMs: Date.now() - start,
+      };
     }
 
     const original = await readFileAsync(resolved, "utf8");
     if (!original.includes(oldStr)) {
-      return { success: false, content: "", error: "old_string not found in file", durationMs: Date.now() - start };
+      return {
+        success: false,
+        content: "",
+        error: "old_string not found in file",
+        durationMs: Date.now() - start,
+      };
     }
 
     const updated = original.replace(oldStr, newStr);
@@ -129,7 +144,7 @@ export class ToolExecutor {
   private bashCommand(
     params: Record<string, unknown>,
     workingDir: string,
-    start: number
+    start: number,
   ): Promise<ToolResult> {
     return new Promise((resolve) => {
       const command = String(params["command"] ?? "");
@@ -155,8 +170,12 @@ export class ToolExecutor {
       let stdout = "";
       let stderr = "";
 
-      child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-      child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+      child.stdout.on("data", (d: Buffer) => {
+        stdout += d.toString();
+      });
+      child.stderr.on("data", (d: Buffer) => {
+        stderr += d.toString();
+      });
 
       child.on("close", (code) => {
         const success = code === 0;
@@ -182,16 +201,18 @@ export class ToolExecutor {
   private async glob(
     params: Record<string, unknown>,
     workingDir: string,
-    start: number
+    start: number,
   ): Promise<ToolResult> {
     const pattern = String(params["pattern"] ?? "**/*");
-    const baseDir = resolveWithinRoot(
-      String(params["base_dir"] ?? "."),
-      workingDir
-    );
+    const baseDir = resolveWithinRoot(String(params["base_dir"] ?? "."), workingDir);
 
     if (!isWithinAllowedRoot(baseDir)) {
-      return { success: false, content: "", error: "Path outside allowed root", durationMs: Date.now() - start };
+      return {
+        success: false,
+        content: "",
+        error: "Path outside allowed root",
+        durationMs: Date.now() - start,
+      };
     }
 
     // Use native fs walk for glob
@@ -204,7 +225,7 @@ export class ToolExecutor {
     base: string,
     current: string,
     pattern: string,
-    results: string[]
+    results: string[],
   ): Promise<void> {
     let entries: string[];
     try {
@@ -248,16 +269,18 @@ export class ToolExecutor {
   private async grep(
     params: Record<string, unknown>,
     workingDir: string,
-    start: number
+    start: number,
   ): Promise<ToolResult> {
     const searchPattern = String(params["pattern"] ?? "");
-    const searchPath = resolveWithinRoot(
-      String(params["path"] ?? "."),
-      workingDir
-    );
+    const searchPath = resolveWithinRoot(String(params["path"] ?? "."), workingDir);
 
     if (!isWithinAllowedRoot(searchPath)) {
-      return { success: false, content: "", error: "Path outside allowed root", durationMs: Date.now() - start };
+      return {
+        success: false,
+        content: "",
+        error: "Path outside allowed root",
+        durationMs: Date.now() - start,
+      };
     }
 
     const results: string[] = [];
@@ -268,7 +291,7 @@ export class ToolExecutor {
   private async grepDirectory(
     searchPath: string,
     pattern: string,
-    results: string[]
+    results: string[],
   ): Promise<void> {
     let stat;
     try {
@@ -295,11 +318,7 @@ export class ToolExecutor {
     }
   }
 
-  private async grepFile(
-    filePath: string,
-    pattern: string,
-    results: string[]
-  ): Promise<void> {
+  private async grepFile(filePath: string, pattern: string, results: string[]): Promise<void> {
     let content: string;
     try {
       content = await readFileAsync(filePath, "utf8");
@@ -320,15 +339,17 @@ export class ToolExecutor {
   private async listFiles(
     params: Record<string, unknown>,
     workingDir: string,
-    start: number
+    start: number,
   ): Promise<ToolResult> {
-    const dirPath = resolveWithinRoot(
-      String(params["path"] ?? "."),
-      workingDir
-    );
+    const dirPath = resolveWithinRoot(String(params["path"] ?? "."), workingDir);
 
     if (!isWithinAllowedRoot(dirPath)) {
-      return { success: false, content: "", error: "Path outside allowed root", durationMs: Date.now() - start };
+      return {
+        success: false,
+        content: "",
+        error: "Path outside allowed root",
+        durationMs: Date.now() - start,
+      };
     }
 
     const entries = await readdirAsync(dirPath);

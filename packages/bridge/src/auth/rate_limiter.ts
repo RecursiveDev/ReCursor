@@ -18,11 +18,7 @@ function getClientIp(req: Request): string {
   return req.socket.remoteAddress ?? "unknown";
 }
 
-export function rateLimiter(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function rateLimiter(req: Request, res: Response, next: NextFunction): void {
   const ip = getClientIp(req);
   const now = Date.now();
 

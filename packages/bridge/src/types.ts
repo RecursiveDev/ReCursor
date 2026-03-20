@@ -137,14 +137,7 @@ export interface ClaudeEventPayload {
 
 export interface GitFileChange {
   path: string;
-  status:
-    | "added"
-    | "modified"
-    | "deleted"
-    | "renamed"
-    | "copied"
-    | "untracked"
-    | "unknown";
+  status: "added" | "modified" | "deleted" | "renamed" | "copied" | "untracked" | "unknown";
   staged: boolean;
 }
 

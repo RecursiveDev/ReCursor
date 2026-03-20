@@ -80,11 +80,7 @@ export class AgentSessionManager {
     });
   }
 
-  async sendMessage(
-    sessionId: string,
-    content: string,
-    clientId: string
-  ): Promise<void> {
+  async sendMessage(sessionId: string, content: string, clientId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session not found: ${sessionId}`);
 
@@ -97,7 +93,11 @@ export class AgentSessionManager {
       session_id: sessionId,
       message_id: messageId,
     };
-    eventBus.emitTyped("session-event", { type: "stream_start", ...startPayload, client_id: clientId });
+    eventBus.emitTyped("session-event", {
+      type: "stream_start",
+      ...startPayload,
+      client_id: clientId,
+    });
 
     try {
       const streamParams: Anthropic.MessageStreamParams = {
@@ -147,7 +147,11 @@ export class AgentSessionManager {
               tool_input: block.input as Record<string, unknown>,
               message: `Tool call requested: ${block.name}`,
             };
-            eventBus.emitTyped("tool-event", { type: "approval_required", ...approvalPayload, client_id: clientId });
+            eventBus.emitTyped("tool-event", {
+              type: "approval_required",
+              ...approvalPayload,
+              client_id: clientId,
+            });
           }
         } else if (event.type === "message_delta") {
           if (event.delta.stop_reason) {
@@ -166,7 +170,11 @@ export class AgentSessionManager {
         message_id: messageId,
         stop_reason: stopReason,
       };
-      eventBus.emitTyped("session-event", { type: "stream_end", ...endPayload, client_id: clientId });
+      eventBus.emitTyped("session-event", {
+        type: "stream_end",
+        ...endPayload,
+        client_id: clientId,
+      });
     } catch (err) {
       session.meta.status = "idle";
       log(`Stream error in session ${sessionId}: ${String(err)}`);
@@ -174,11 +182,7 @@ export class AgentSessionManager {
     }
   }
 
-  async executeToolCall(
-    sessionId: string,
-    toolCallId: string,
-    decision: string
-  ): Promise<void> {
+  async executeToolCall(sessionId: string, toolCallId: string, decision: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session not found: ${sessionId}`);
 

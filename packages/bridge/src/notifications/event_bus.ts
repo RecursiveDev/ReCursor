@@ -8,23 +8,20 @@ export type EventBusEvents = {
 };
 
 class TypedEventBus extends EventEmitter {
-  emitTyped<K extends keyof EventBusEvents>(
-    event: K,
-    ...args: EventBusEvents[K]
-  ): boolean {
+  emitTyped<K extends keyof EventBusEvents>(event: K, ...args: EventBusEvents[K]): boolean {
     return this.emit(event, ...args);
   }
 
   onTyped<K extends keyof EventBusEvents>(
     event: K,
-    listener: (...args: EventBusEvents[K]) => void
+    listener: (...args: EventBusEvents[K]) => void,
   ): this {
     return this.on(event, listener as (...args: unknown[]) => void);
   }
 
   offTyped<K extends keyof EventBusEvents>(
     event: K,
-    listener: (...args: EventBusEvents[K]) => void
+    listener: (...args: EventBusEvents[K]) => void,
   ): this {
     return this.off(event, listener as (...args: unknown[]) => void);
   }

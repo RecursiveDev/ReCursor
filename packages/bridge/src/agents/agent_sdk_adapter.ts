@@ -23,18 +23,12 @@ export class AgentSdkAdapter {
   private sessionManager: AgentSessionManager;
   private connectionManager: ConnectionManager;
 
-  constructor(
-    sessionManager: AgentSessionManager,
-    connectionManager: ConnectionManager
-  ) {
+  constructor(sessionManager: AgentSessionManager, connectionManager: ConnectionManager) {
     this.sessionManager = sessionManager;
     this.connectionManager = connectionManager;
   }
 
-  async handleSessionStart(
-    payload: SessionStartPayload,
-    clientId: string
-  ): Promise<void> {
+  async handleSessionStart(payload: SessionStartPayload, clientId: string): Promise<void> {
     try {
       const sessionId = await this.sessionManager.createSession({
         sessionId: payload.session_id,
@@ -75,16 +69,9 @@ export class AgentSdkAdapter {
     }
   }
 
-  async handleMessage(
-    payload: MessagePayload,
-    clientId: string
-  ): Promise<void> {
+  async handleMessage(payload: MessagePayload, clientId: string): Promise<void> {
     try {
-      await this.sessionManager.sendMessage(
-        payload.session_id,
-        payload.content,
-        clientId
-      );
+      await this.sessionManager.sendMessage(payload.session_id, payload.content, clientId);
     } catch (err) {
       log(`Failed to send message: ${String(err)}`);
       const errorMsg: BridgeMessage<ErrorPayload> = {
@@ -101,15 +88,12 @@ export class AgentSdkAdapter {
     }
   }
 
-  async handleApprovalResponse(
-    payload: ApprovalResponsePayload,
-    clientId: string
-  ): Promise<void> {
+  async handleApprovalResponse(payload: ApprovalResponsePayload, clientId: string): Promise<void> {
     try {
       await this.sessionManager.executeToolCall(
         payload.session_id,
         payload.tool_call_id,
-        payload.decision
+        payload.decision,
       );
     } catch (err) {
       log(`Failed to handle approval response: ${String(err)}`);

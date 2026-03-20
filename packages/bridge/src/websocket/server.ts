@@ -17,7 +17,7 @@ export class WebSocketServer {
   constructor(
     httpServer: Server,
     private connectionManager: ConnectionManager,
-    private messageHandler: MessageHandler
+    private messageHandler: MessageHandler,
   ) {
     this.wss = new WsServer({
       server: httpServer,

@@ -36,7 +36,7 @@ function ts(): string {
 function errorMsg(
   code: string,
   message: string,
-  requestType?: string
+  requestType?: string,
 ): BridgeMessage<ErrorPayload> {
   return {
     type: "error",
@@ -53,7 +53,7 @@ export class MessageHandler {
     private connectionManager: ConnectionManager,
     private agentSdkAdapter: AgentSdkAdapter,
     private agentSessionManager: AgentSessionManager,
-    private gitService: GitService
+    private gitService: GitService,
   ) {
     this.fileService = new FileService(config.ALLOWED_PROJECT_ROOT);
   }
@@ -66,7 +66,7 @@ export class MessageHandler {
     } catch {
       this.connectionManager.sendToClient(
         clientId,
-        errorMsg("PARSE_ERROR", "Invalid JSON message")
+        errorMsg("PARSE_ERROR", "Invalid JSON message"),
       );
       return;
     }
@@ -88,18 +88,15 @@ export class MessageHandler {
     // All other messages require authentication
     const client = this.connectionManager.getClient(clientId);
     if (!client || !client.authenticated) {
-      this.connectionManager.sendToClient(
-        clientId,
-        {
-          type: "connection_error",
-          id: uuidv4(),
-          timestamp: ts(),
-          payload: {
-            code: "NOT_AUTHENTICATED",
-            message: "Client must authenticate before sending messages",
-          } as ConnectionErrorPayload,
-        }
-      );
+      this.connectionManager.sendToClient(clientId, {
+        type: "connection_error",
+        id: uuidv4(),
+        timestamp: ts(),
+        payload: {
+          code: "NOT_AUTHENTICATED",
+          message: "Client must authenticate before sending messages",
+        } as ConnectionErrorPayload,
+      });
       return;
     }
 
@@ -114,7 +111,10 @@ export class MessageHandler {
           break;
 
         case "approval_response":
-          await this.agentSdkAdapter.handleApprovalResponse(payload as ApprovalResponsePayload, clientId);
+          await this.agentSdkAdapter.handleApprovalResponse(
+            payload as ApprovalResponsePayload,
+            clientId,
+          );
           break;
 
         case "session_end":
@@ -149,15 +149,12 @@ export class MessageHandler {
           log(`Unknown message type: ${type} from client ${clientId}`);
           this.connectionManager.sendToClient(
             clientId,
-            errorMsg("UNKNOWN_TYPE", `Unknown message type: ${type}`, type)
+            errorMsg("UNKNOWN_TYPE", `Unknown message type: ${type}`, type),
           );
       }
     } catch (err) {
       log(`Error handling ${type} for client ${clientId}: ${String(err)}`);
-      this.connectionManager.sendToClient(
-        clientId,
-        errorMsg("HANDLER_ERROR", String(err), type)
-      );
+      this.connectionManager.sendToClient(clientId, errorMsg("HANDLER_ERROR", String(err), type));
     }
   }
 
@@ -226,7 +223,7 @@ export class MessageHandler {
   private async handleGitDiff(
     clientId: string,
     payload: GitDiffPayload,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     const files = await this.gitService.getDiff(payload.files, payload.cached);
     this.connectionManager.sendToClient(clientId, {

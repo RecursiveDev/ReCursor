@@ -41,7 +41,7 @@ export class FileService {
       offset?: number;
       limit?: number;
       includeHidden?: boolean;
-    } = {}
+    } = {},
   ): Promise<FileListResult> {
     const resolved = path.resolve(dirPath);
     this.validatePath(resolved);
@@ -94,7 +94,7 @@ export class FileService {
     options: {
       offset?: number;
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<FileReadResult> {
     const resolved = path.resolve(filePath);
     this.validatePath(resolved);
@@ -119,9 +119,7 @@ export class FileService {
   private validatePath(p: string): void {
     const resolvedRoot = path.resolve(this.allowedRoot);
     if (!p.startsWith(resolvedRoot + path.sep) && p !== resolvedRoot) {
-      throw new Error(
-        `Access denied: path "${p}" is outside the allowed root "${resolvedRoot}"`
-      );
+      throw new Error(`Access denied: path "${p}" is outside the allowed root "${resolvedRoot}"`);
     }
   }
 }

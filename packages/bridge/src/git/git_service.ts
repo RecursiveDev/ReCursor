@@ -1,11 +1,6 @@
 import simpleGit, { type SimpleGit, type StatusResult } from "simple-git";
 import { parseDiff } from "./diff_parser";
-import type {
-  GitStatusPayload,
-  GitFileChange,
-  DiffFile,
-  GitBranch,
-} from "../types";
+import type { GitStatusPayload, GitFileChange, DiffFile, GitBranch } from "../types";
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [GitService] ${msg}`);

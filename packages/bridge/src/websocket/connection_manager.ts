@@ -36,10 +36,7 @@ export class ConnectionManager {
     return this.clients.get(id);
   }
 
-  broadcast(
-    message: BridgeMessage<unknown>,
-    filter?: (client: MobileClient) => boolean
-  ): void {
+  broadcast(message: BridgeMessage<unknown>, filter?: (client: MobileClient) => boolean): void {
     const json = JSON.stringify(message);
     for (const client of this.clients.values()) {
       if (!client.authenticated) continue;

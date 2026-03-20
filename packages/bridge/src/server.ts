@@ -32,7 +32,7 @@ export async function startServer(): Promise<void> {
     connectionManager,
     agentSdkAdapter,
     agentSessionManager,
-    gitService
+    gitService,
   );
 
   // Express app

@@ -9,11 +9,7 @@ function extractBearerToken(req: Request): string | null {
   return auth.slice(7);
 }
 
-export function validateBridgeToken(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function validateBridgeToken(req: Request, res: Response, next: NextFunction): void {
   const token = extractBearerToken(req);
   if (!token || token !== config.BRIDGE_TOKEN) {
     res.status(401).json({ error: "Unauthorized", message: "Invalid or missing bridge token" });
@@ -22,11 +18,7 @@ export function validateBridgeToken(
   next();
 }
 
-export function validateHookToken(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function validateHookToken(req: Request, res: Response, next: NextFunction): void {
   const token = extractBearerToken(req);
   if (!token || token !== config.HOOK_TOKEN) {
     res.status(401).json({ error: "Unauthorized", message: "Invalid or missing hook token" });

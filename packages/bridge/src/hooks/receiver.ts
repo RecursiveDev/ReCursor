@@ -13,7 +13,7 @@ function log(msg: string): void {
 
 export function createHooksRouter(
   eventQueue: EventQueue,
-  connectionManager: ConnectionManager
+  connectionManager: ConnectionManager,
 ): Router {
   const router = Router();
 

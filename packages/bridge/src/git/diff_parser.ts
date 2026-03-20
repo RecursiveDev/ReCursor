@@ -95,10 +95,7 @@ export function parseDiff(rawDiff: string): DiffFile[] {
       while (i < lines.length) {
         const dl = lines[i];
 
-        if (
-          FILE_HEADER_RE.test(dl) ||
-          HUNK_HEADER_RE.test(dl)
-        ) {
+        if (FILE_HEADER_RE.test(dl) || HUNK_HEADER_RE.test(dl)) {
           break;
         }
 
