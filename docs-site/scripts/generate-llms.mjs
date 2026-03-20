@@ -1,3 +1,15 @@
+/**
+ * Generate LLMS AI artifact files with base-path aware URLs.
+ * 
+ * This script generates llms.txt and llms-full.txt files that contain
+ * documentation navigation and full content for AI workflows.
+ * 
+ * Base path handling:
+ * - Uses DOCS_BASE environment variable (e.g., '/ReCursor/')
+ * - Falls back to '/'' if not set
+ * - Generated URLs are properly prefixed for GitHub Pages project sites
+ */
+
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +20,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const sourceRoot = path.resolve(projectRoot, '..', 'docs');
 const publicRoot = path.resolve(projectRoot, 'public');
+
+// Get base path from environment or default to '/' 
+// Note: For production builds, set DOCS_BASE=/ReCursor/
+const BASE_PATH = (() => {
+  const envBase = process.env.DOCS_BASE ?? '/';
+  // Handle Windows paths that might get garbled
+  if (envBase.includes(':')) return '/';
+  if (!envBase.startsWith('/')) return '/' + envBase;
+  return envBase;
+})();
 
 async function main() {
   const docs = [];
@@ -22,7 +44,7 @@ async function main() {
       ...entry,
       title,
       description,
-      route: toRoute(entry.output),
+      route: toRoute(entry.output, BASE_PATH),
       content: stripLeadingHeading(raw).trim(),
     });
   }
@@ -32,6 +54,7 @@ async function main() {
   await writeFile(path.resolve(publicRoot, 'llms-full.txt'), buildLlmsFull(docs), 'utf8');
 
   console.log(`Generated AI artifacts for ${docs.length} documentation pages.`);
+  console.log(`Base path: ${BASE_PATH}`);
 }
 
 function buildLlmsIndex(docs) {
@@ -42,8 +65,8 @@ function buildLlmsIndex(docs) {
     'Canonical source documents live in `/docs` in the repository. This published site is generated from that source-of-truth corpus.',
     '',
     '## AI Artifacts',
-    '- [/llms.txt](/llms.txt): Compact machine-readable navigation for the published documentation.',
-    '- [/llms-full.txt](/llms-full.txt): Concatenated long-form documentation context for AI workflows.',
+    '- [llms.txt](./llms.txt): Compact machine-readable navigation for the published documentation.',
+    '- [llms-full.txt](./llms-full.txt): Concatenated long-form documentation context for AI workflows.',
     '',
   ];
 

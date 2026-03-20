@@ -32,6 +32,10 @@ export default defineConfig({
       components: {
         Head: './src/components/Head.astro',
         EditLink: './src/components/EditLink.astro',
+        Footer: './src/components/Footer.astro',
+        PageTitle: './src/components/PageTitle.astro',
+        SiteTitle: './src/components/SiteTitle.astro',
+        ThemeSelect: './src/components/ThemeSelect.astro',
       },
       sidebar: [
         { label: 'Home', link: '/' },

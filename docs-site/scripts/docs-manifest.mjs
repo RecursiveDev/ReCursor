@@ -326,11 +326,12 @@ export const DOCS_MANIFEST = [
   },
 ];
 
-export function toRoute(outputPath) {
+export function toRoute(outputPath, base = '') {
   const normalized = outputPath.replace(/\\/g, '/');
   const withoutExtension = normalized.replace(/\.(md|mdx)$/i, '');
-  if (withoutExtension.endsWith('/index')) {
-    return `/${withoutExtension.slice(0, -6)}/`.replace(/\/+/g, '/');
-  }
-  return `/${withoutExtension}/`.replace(/\/+/g, '/');
+  const normalizedBase = base === '/' ? '' : base;
+  const route = withoutExtension.endsWith('/index')
+    ? `${normalizedBase}/${withoutExtension.slice(0, -6)}/`
+    : `${normalizedBase}/${withoutExtension}/`;
+  return route.replace(/\/+/g, '/');
 }

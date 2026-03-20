@@ -4,8 +4,8 @@
 Canonical source documents live in `/docs` in the repository. This published site is generated from that source-of-truth corpus.
 
 ## AI Artifacts
-- [/llms.txt](/llms.txt): Compact machine-readable navigation for the published documentation.
-- [/llms-full.txt](/llms-full.txt): Concatenated long-form documentation context for AI workflows.
+- [llms.txt](./llms.txt): Compact machine-readable navigation for the published documentation.
+- [llms-full.txt](./llms-full.txt): Concatenated long-form documentation context for AI workflows.
 
 ## Getting started
 Project overview, vision, and implementation plan.

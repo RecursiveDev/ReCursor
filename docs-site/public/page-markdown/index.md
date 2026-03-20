@@ -1,6 +1,12 @@
 # ReCursor documentation
 
 <section class="hero-section">
+  <span class="recursor-kicker">Documentation</span>
+  <h1 class="recursor-hero-title">Mobile companion for AI coding workflows</h1>
+  <p class="recursor-hero-subtitle">
+    ReCursor is a Flutter app with OpenCode-like UI for Claude Code and other AI assistants. 
+    Bridge-first, no-login—connects to your user-controlled desktop bridge via secure tunnel.
+  </p>
   <div class="hero-note">
     **Source of truth:** The canonical documentation lives in `/docs` in this repository. This site is generated from that corpus and preserves the project constraint that Claude Code Remote Control is first-party only.
   </div>
@@ -19,12 +25,7 @@
 
 ## AI-friendly artifacts
 
-<div class="site-link-list">
-
-- [Compact AI index](/llms.txt)
-- [Full concatenated AI context](/llms-full.txt)
-
-</div>
+<LlmsLinks />
 
 ## Project constraints
 

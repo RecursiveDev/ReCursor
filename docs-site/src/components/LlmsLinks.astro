@@ -1,0 +1,89 @@
+---
+/**
+ * LlmsLinks - Base-path aware links to LLMS AI artifact files.
+ * 
+ * GitHub Pages project sites serve under a subpath (/ReCursor/).
+ * Root-domain URLs like /llms.txt will 404. This component uses
+ * Astro's base path handling to ensure correct links.
+ * 
+ * Note: Root-domain https://recursivedev.github.io/llms.txt is NOT
+ * served by this project repository and cannot be controlled here.
+ */
+
+interface Props {
+  class?: string;
+}
+
+const { class: className = 'site-link-list' } = Astro.props;
+// Normalize base URL: strip trailing slashes to prevent double-slash when concatenating
+const baseUrl = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/+$/, '');
+---
+
+<div class={className}>
+  <a href={`${baseUrl}/llms.txt`}>
+    <span>→</span> Compact AI index
+  </a>
+  <a href={`${baseUrl}/llms-full.txt`}>
+    <span>→</span> Full concatenated AI context
+  </a>
+</div>
+
+<style>
+  .site-link-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--recursor-space-3, 0.75rem);
+    margin: var(--recursor-space-6, 1.5rem) 0;
+  }
+
+  .site-link-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--recursor-space-2, 0.5rem);
+    min-height: 2.75rem;
+    padding: var(--recursor-space-3, 0.75rem) var(--recursor-space-4, 1rem);
+    background: var(--recursor-card-bg, var(--sl-color-bg-nav));
+    border: 1px solid var(--recursor-card-border, var(--sl-color-gray-5));
+    border-radius: var(--recursor-radius-lg, 0.5rem);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    color: var(--sl-color-text-accent) !important;
+    text-decoration: none !important;
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .site-link-list a span:first-child {
+    opacity: 0.65;
+  }
+
+  .site-link-list a:hover {
+    background: color-mix(in srgb, var(--sl-color-accent) 6%, var(--recursor-card-bg, var(--sl-color-bg-nav)));
+    border-color: color-mix(in srgb, var(--sl-color-accent) 38%, var(--recursor-card-border, var(--sl-color-gray-5)));
+  }
+
+  .site-link-list a:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (pointer: coarse) {
+    .site-link-list a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .site-link-list {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .site-link-list a {
+      justify-content: center;
+    }
+  }
+</style>
