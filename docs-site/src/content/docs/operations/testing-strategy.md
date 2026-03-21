@@ -1,7 +1,7 @@
 ---
 title: "Testing Strategy"
 description: "Comprehensive testing approach for ReCursor, a Flutter app with WebSocket connections and Claude Code integrations."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/testing-strategy.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/testing-strategy.md"
 sidebar:
   order: 50
   label: "Testing strategy"

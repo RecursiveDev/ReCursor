@@ -1,7 +1,7 @@
 ---
 title: "Error Handling & Recovery Specification"
 description: "Error taxonomy, session recovery patterns, and reconnection strategies for the ReCursor bridge protocol. Grounded in benchmark research from remote-claude, BAREclaw, and code-server patterns."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/error-handling.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/error-handling.md"
 sidebar:
   order: 20
   label: "Error handling"

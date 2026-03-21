@@ -34,26 +34,24 @@ Supported Claude Code integration mechanisms documented in this repo:
 
 When updating docs or implementing features, verify claims using these sources.
 
-> Note: Some references below include example local paths from one development machine. If you do not have these repos checked out locally, use the upstream GitHub repositories and adjust paths accordingly.
-
 - **ReCursor docs (the contract):**
-  - `C:/Repository/ReCursor/docs/README.md`
-  - `C:/Repository/ReCursor/docs/architecture/overview.md`
-  - `C:/Repository/ReCursor/docs/integration/`
+  - `docs-site/src/content/docs/` (canonical documentation source)
+  - `docs-site/src/content/docs/architecture/system-overview.md`
+  - `docs-site/src/content/docs/integrations/`
 
 - **OpenCode UI patterns (desktop parity reference):**
-  - Upstream repo: https://github.com/anomalyco/opencode
-  - Local repo (optional): `C:/Repository/opencode/`
-  - Especially: `C:/Repository/opencode/packages/ui/src/components/`
+  - Upstream repo: https://github.com/opencode-ai/opencode
+  - Key path: `packages/ui/src/components/`
 
 - **Claude Code supported extension points:**
   - Upstream repo: https://github.com/anthropics/claude-code
-  - Local repo (optional): `C:/Repository/claude-code/`
-  - Especially: `C:/Repository/claude-code/plugins/plugin-dev/skills/hook-development/`
+  - Key paths:
+    - `plugins/plugin-dev/skills/hook-development/SKILL.md`
+    - `plugins/hookify/hooks/hooks.json`
 
 - **Official docs:**
-  - Claude Code docs: https://code.claude.com/docs/
-  - Agent SDK docs: https://docs.claude.com/en/api/agent-sdk/overview
+  - Claude Code docs: https://docs.anthropic.com/en/docs/claude-code
+  - Agent SDK docs: https://docs.anthropic.com/en/api/agent-sdk
 
 If something is not in the above sources, treat it as **unknown** and document it as an **open question**.
 
@@ -62,12 +60,14 @@ If something is not in the above sources, treat it as **unknown** and document i
 ## 3) Repo layout (scaffold)
 
 ```text
-C:/Repository/ReCursor/
-├── apps/mobile/            # Flutter app scaffold (no implementation yet)
-├── packages/bridge/        # Node/TypeScript bridge scaffold (no implementation yet)
-├── docs/                   # Project documentation (source-of-truth)
-├── .github/                # CI scaffolding
-└── fastlane/               # Release scaffolding
+ReCursor/
+├── apps/mobile/              # Flutter app scaffold
+├── packages/bridge/          # Node/TypeScript bridge scaffold
+├── packages/claude-plugin/   # Claude Code plugin scaffold
+├── docs-site/                # Astro Starlight documentation site
+│   └── src/content/docs/     # Canonical documentation source
+├── .github/                  # CI scaffolding
+└── fastlane/                 # Release scaffolding
 ```
 
 ---
@@ -81,7 +81,7 @@ C:/Repository/ReCursor/
 - Keep edits strictly within the requested scope.
 - Prefer small, reviewable commits/changesets.
 - When changing docs, keep them **internally consistent** (cross-links, terminology).
-- When making factual claims about OpenCode/Claude Code behavior, include a citation (path + short excerpt) in your PR description.
+- When making factual claims about OpenCode/Claude Code behavior, include a citation (URL + short excerpt) in your PR description.
 
 **Don't:**
 - Do not introduce claims like "ReCursor mirrors Claude Code Remote Control sessions" unless official docs explicitly support third‑party clients.
@@ -93,9 +93,9 @@ C:/Repository/ReCursor/
 Before marking docs work complete:
 - Ensure internal links resolve.
 - Search for outdated branding/terms that should not exist.
-- For Claude Code hooks docs, ensure you are aligned with:
-  - `C:/Repository/claude-code/plugins/plugin-dev/skills/hook-development/SKILL.md`
-  - `C:/Repository/claude-code/plugins/hookify/hooks/hooks.json`
+- For Claude Code hooks docs, ensure you are aligned with the upstream repo:
+  - `plugins/plugin-dev/skills/hook-development/SKILL.md`
+  - `plugins/hookify/hooks/hooks.json`
 
 ### 4.3 Commit message guidelines
 
@@ -133,19 +133,22 @@ Future agent integrations will follow the adapter pattern established by the Cla
 ## 5) Preferred workflow for future implementation
 
 When implementation is requested:
+
 1. **Confirm scope**: which subproject(s) are being built (Flutter app, bridge, both).
-2. **Follow docs**: treat `docs/` as the contract; if docs are wrong, fix docs first.
-3. **Implement minimal vertical slices**: scaffold → connect → render a small set of UI components.
+2. **Follow docs**: treat `docs-site/src/content/docs/` as the contract; if docs are wrong, fix docs first.
+3. **Work efficiently in parallel**:
+   - Identify independent tasks that can be executed concurrently (file reads, searches, analysis)
+   - Batch related operations to minimize context switches
+   - Use parallel tool invocations where dependencies allow
+   - Prefer complete, working solutions over piecemeal slices
 4. **Verify** with build/lint/test commands appropriate to the stack.
 
 ---
 
 ## 6) Quick links for agents
 
-- Docs index: `C:/Repository/ReCursor/docs/README.md`
-- Plan: `C:/Repository/ReCursor/docs/PLAN.md`
-- OpenCode UI mapping: `C:/Repository/ReCursor/docs/integration/opencode-ui-patterns.md`
-- Claude Code hooks: `C:/Repository/ReCursor/docs/integration/claude-code-hooks.md`
-- Agent SDK: `C:/Repository/ReCursor/docs/integration/agent-sdk.md`
-- OpenCode upstream: https://github.com/anomalyco/opencode
-- Claude Code upstream: https://github.com/anthropics/claude-code
+- **Docs index:** `docs-site/src/content/docs/index.mdx`
+- **Architecture:** `docs-site/src/content/docs/architecture/system-overview.md`
+- **Integrations:** `docs-site/src/content/docs/integrations/`
+- **OpenCode upstream:** https://github.com/opencode-ai/opencode
+- **Claude Code upstream:** https://github.com/anthropics/claude-code

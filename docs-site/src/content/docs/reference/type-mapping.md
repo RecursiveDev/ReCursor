@@ -1,7 +1,7 @@
 ---
 title: "Dart ↔ TypeScript Type Mapping Specification"
 description: "Cross-language contract defining type-safe serialization between Flutter (Dart) and Bridge (TypeScript). TypeScript protocol is source-of-truth."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/type-mapping.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/type-mapping.md"
 sidebar:
   order: 30
   label: "Type mapping"

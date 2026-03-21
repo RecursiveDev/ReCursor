@@ -1,7 +1,7 @@
 ---
 title: "Claude Code Hooks Integration"
 description: "Configure Claude Code Hooks to POST events to the ReCursor bridge server for mobile consumption. This is a supported integration path for one-way event observation — not a Remote Control protocol."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/integration/claude-code-hooks.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/integration/claude-code-hooks.md"
 sidebar:
   order: 10
   label: "Claude Code Hooks"

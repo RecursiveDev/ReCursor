@@ -1,14 +1,14 @@
 ---
 title: "ReCursor Documentation"
 description: "**ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/README.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/getting-started/documentation-index.md"
 sidebar:
   order: 10
   label: "Documentation index"
 ---
 > **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
 
-> **Publishing note:** `C:/Repository/ReCursor/docs/` is the canonical source. The Astro Starlight site in `C:/Repository/ReCursor/docs-site/` is generated from this directory.
+> **Publishing note:** `docs-site/src/content/docs/` is the canonical source for ReCursor documentation.
 
 ---
 

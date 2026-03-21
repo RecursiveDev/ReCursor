@@ -1,7 +1,7 @@
 ---
 title: "Privacy Policy"
 description: "**Last updated: 2026-03-17**"
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/legal/privacy-policy.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/legal/privacy-policy.md"
 sidebar:
   order: 10
   label: "Privacy policy"

@@ -1,7 +1,7 @@
 ---
 title: "Bridge Protocol Specification"
 description: "WebSocket message protocol between the ReCursor Flutter mobile app and the user-controlled TypeScript bridge server. Bridge-first, no-login: device pairing via QR code, no user accounts."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/bridge-protocol.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/bridge-protocol.md"
 sidebar:
   order: 50
   label: "Bridge protocol"

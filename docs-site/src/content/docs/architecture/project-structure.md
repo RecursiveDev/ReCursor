@@ -1,7 +1,7 @@
 ---
 title: "Project Structure"
 description: "Flutter directory layout and module organization for ReCursor."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/project-structure.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/project-structure.md"
 sidebar:
   order: 30
   label: "Project structure"
@@ -43,7 +43,8 @@ recursor/
 │       ├── package.json
 │       └── tsconfig.json
 │
-├── docs/                          # Documentation (this folder)
+├── docs-site/                     # Documentation (Astro Starlight site)
+│   └── src/content/docs/          # Canonical documentation source
 ├── .github/
 │   └── workflows/                 # CI/CD pipelines
 │       ├── test.yml               # PR test pipeline

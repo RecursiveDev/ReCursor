@@ -1,7 +1,7 @@
 ---
 title: "Bridge HTTP API Specification"
 description: "REST endpoint specification for the ReCursor bridge server. Complements the WebSocket protocol with HTTP endpoints for hook ingestion, health checks, and control operations."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/bridge-http-api.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/bridge-http-api.md"
 sidebar:
   order: 10
   label: "Bridge HTTP API"

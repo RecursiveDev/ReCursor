@@ -1,7 +1,7 @@
 ---
 title: "Data Flow Architecture"
 description: "Message flow between ReCursor mobile app, bridge server, and Claude Code via Hooks."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/architecture/data-flow.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/architecture/data-flow.md"
 sidebar:
   order: 20
   label: "Data flow"

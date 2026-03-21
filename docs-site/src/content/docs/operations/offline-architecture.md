@@ -1,7 +1,7 @@
 ---
 title: "Offline-First Architecture"
 description: "How the ReCursor app works without connectivity and syncs when reconnected."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/offline-architecture.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/offline-architecture.md"
 sidebar:
   order: 20
   label: "Offline architecture"

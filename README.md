@@ -33,7 +33,7 @@
   <a href="#project-status">
     <img src="https://img.shields.io/badge/Status-WIP-orange?style=flat-square" alt="Status: WIP">
   </a>
-  <a href="docs/README.md">
+  <a href="docs-site/src/content/docs/index.mdx">
     <img src="https://img.shields.io/badge/Docs-Start%20Here-blue?style=flat-square" alt="Docs">
   </a>
   <a href="https://github.com/RecursiveDev/ReCursor/issues">
@@ -62,7 +62,7 @@ This repository is **work in progress**, but the current Claude-first MVP is no 
 - ✅ Git status, diff viewing, and repository browsing are implemented for the current mobile/bridge stack.
 - ⏳ Remaining work is focused on polish: approval UX refinement, notification center UI, and future multi-agent expansion.
 
-If you're new here, start with: **`docs/README.md`**, `docs/architecture/overview.md`, and `docs/architecture/REMAINING_PHASES.md`.
+If you're new here, start with: **`docs-site/src/content/docs/`** (browse the docs-site content or run `npm run dev` in `docs-site/` to view locally).
 
 ---
 
@@ -115,15 +115,16 @@ C:/Repository/ReCursor/
 
 ## Documentation
 
-- **Canonical docs index:** `docs/README.md`
-- **Published docs site source:** `docs-site/`
-- **Run the docs site locally:** `cd docs-site && npm install && npm run dev`
-- **Architecture overview:** `docs/architecture/overview.md`
-- **Data flow diagrams:** `docs/architecture/data-flow.md`
+- **Published docs site:** `docs-site/` — run `npm install && npm run dev` to view locally
+- **Docs landing page:** [docs-site/src/content/docs/index.mdx](docs-site/src/content/docs/index.mdx)
+- **Architecture:**
+  - System overview: [docs-site/src/content/docs/architecture/system-overview.md](docs-site/src/content/docs/architecture/system-overview.md)
+  - Data flow: [docs-site/src/content/docs/architecture/data-flow.md](docs-site/src/content/docs/architecture/data-flow.md)
+  - Bridge protocol: [docs-site/src/content/docs/architecture/bridge-protocol.md](docs-site/src/content/docs/architecture/bridge-protocol.md)
 - **Integrations:**
-  - OpenCode UI patterns: `docs/integration/opencode-ui-patterns.md`
-  - Claude Code Hooks: `docs/integration/claude-code-hooks.md`
-  - Agent SDK: `docs/integration/agent-sdk.md`
+  - OpenCode UI patterns: [docs-site/src/content/docs/integrations/opencode-ui-patterns.md](docs-site/src/content/docs/integrations/opencode-ui-patterns.md)
+  - Claude Code Hooks: [docs-site/src/content/docs/integrations/claude-code-hooks.md](docs-site/src/content/docs/integrations/claude-code-hooks.md)
+  - Agent SDK: [docs-site/src/content/docs/integrations/agent-sdk.md](docs-site/src/content/docs/integrations/agent-sdk.md)
 
 ---
 

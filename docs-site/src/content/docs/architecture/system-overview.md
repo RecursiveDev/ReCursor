@@ -1,7 +1,7 @@
 ---
 title: "Architecture Overview"
 description: "System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/architecture/overview.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/architecture/overview.md"
 sidebar:
   order: 10
   label: "System overview"

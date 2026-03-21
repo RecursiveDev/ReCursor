@@ -1,7 +1,7 @@
 ---
 title: "CI/CD Pipeline"
 description: "GitHub Actions + Fastlane for building, testing, and distributing ReCursor to iOS and Android."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/ci-cd.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/ci-cd.md"
 sidebar:
   order: 40
   label: "CI/CD"

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Monorepo Infrastructure
-- Monorepo scaffolding with `apps/`, `packages/`, `docs/`, `.github/`, `fastlane/` structure
+- Monorepo scaffolding with `apps/`, `packages/`, `docs-site/`, `.github/`, `fastlane/` structure
 - Development helper scripts in `tool/` for bridge and mobile workflows
 - Pre-commit hooks for format and check enforcement
 - Repository governance documents: `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Serif typography (Crimson Pro) for headings, Inter for body/UI
 - Warm off-white palette with refined ink tones and dark mode support
 
-#### Documentation (`docs/`)
+#### Documentation (`docs-site/`)
 - Architecture: `overview.md`, `data-flow.md`
 - Integration guides: `claude-code-hooks.md`, `agent-sdk.md`, `opencode-ui-patterns.md`
 - Protocol specs: `bridge-protocol.md`, `bridge-http-api.md`, `error-handling.md`, `type-mapping.md`

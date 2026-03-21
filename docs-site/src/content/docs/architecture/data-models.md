@@ -1,7 +1,7 @@
 ---
 title: "Data Models"
 description: "Drift schemas, Hive models, and domain entities for ReCursor."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/data-models.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/data-models.md"
 sidebar:
   order: 40
   label: "Data models"

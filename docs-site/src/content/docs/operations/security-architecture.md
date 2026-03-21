@@ -1,7 +1,7 @@
 ---
 title: "Security Architecture"
 description: "Best practices for securing the WebSocket bridge between the ReCursor mobile app and the coding agent."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/security-architecture.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/security-architecture.md"
 sidebar:
   order: 10
   label: "Security architecture"

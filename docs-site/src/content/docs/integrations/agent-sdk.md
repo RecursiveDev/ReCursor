@@ -1,7 +1,7 @@
 ---
 title: "Agent SDK Integration"
 description: "Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/integration/agent-sdk.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/integration/agent-sdk.md"
 sidebar:
   order: 20
   label: "Agent SDK"

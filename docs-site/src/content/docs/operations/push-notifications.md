@@ -1,7 +1,7 @@
 ---
 title: "In-App Notification Architecture"
 description: "How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/push-notifications.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/push-notifications.md"
 sidebar:
   order: 30
   label: "Push notifications"

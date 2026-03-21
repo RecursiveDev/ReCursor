@@ -1,7 +1,7 @@
 ---
 title: "OpenCode UI Patterns for ReCursor"
 description: "Mapping OpenCode's terminal-native UI components to Flutter mobile widgets."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/integration/opencode-ui-patterns.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/integration/opencode-ui-patterns.md"
 sidebar:
   order: 30
   label: "OpenCode UI patterns"

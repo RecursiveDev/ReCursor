@@ -1,7 +1,7 @@
 ---
 title: "Terms of Service"
 description: "**Last updated: 2026-03-17**"
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs/legal/terms-of-service.md"
+editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/legal/terms-of-service.md"
 sidebar:
   order: 20
   label: "Terms of service"

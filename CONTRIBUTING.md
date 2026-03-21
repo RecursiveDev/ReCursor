@@ -10,9 +10,8 @@ By participating, you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Quick links
 
-- Docs index (source of truth): `docs/README.md`
-- Architecture overview: `docs/architecture/overview.md`
-- Plan / roadmap: `docs/PLAN.md`
+- Docs index (source of truth): `docs-site/src/content/docs/index.mdx`
+- Architecture overview: `docs-site/src/content/docs/architecture/system-overview.md`
 - Agentic AI guidance: `AGENTS.md`
 
 ## What you can contribute right now
@@ -29,7 +28,9 @@ Because implementation is not yet complete, these contribution types are most he
 C:/Repository/ReCursor/
 ├── apps/mobile/            # Flutter app scaffold
 ├── packages/bridge/        # Node/TypeScript bridge scaffold
-└── docs/                   # Documentation (architecture + integration guides)
+├── docs-site/              # Documentation site (Astro Starlight)
+│   └── src/content/docs/   # Canonical documentation source
+└── packages/claude-plugin/ # Claude Code plugin scaffold
 ```
 
 ## Development prerequisites (for future work)
