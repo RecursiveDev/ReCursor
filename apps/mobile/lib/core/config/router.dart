@@ -78,7 +78,11 @@ GoRouter _buildRouter() {
             routes: [
               GoRoute(
                 path: '/home/git',
-                builder: (_, __) => const GitScreen(sessionId: ''),
+                builder: (_, state) {
+                  final sessionId =
+                      state.uri.queryParameters['sessionId'] ?? '';
+                  return GitScreen(sessionId: sessionId);
+                },
               ),
             ],
           ),

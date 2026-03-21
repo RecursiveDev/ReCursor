@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_card.dart';
 import '../../../../shared/widgets/loading_indicator.dart';
+import '../../../chat/domain/providers/session_provider.dart';
 import '../../domain/providers/repo_provider.dart';
 import '../widgets/syntax_highlighted_file.dart';
 
@@ -23,34 +25,51 @@ class FileViewerScreen extends ConsumerWidget {
     return normalised.split('/').last;
   }
 
-  int? _fileSizeFromState(WidgetRef ref) {
-    final state = ref.read(repoProvider(sessionId)).value;
-    if (state == null) return null;
+  int? _fileSizeFromState(WidgetRef ref, String resolvedSessionId) {
+    final state = ref.read(repoProvider(resolvedSessionId)).value;
+    if (state == null) {
+      return null;
+    }
+
     try {
-      return state.nodes
-          .firstWhere((n) => n.path == path)
-          .size;
+      return state.nodes.firstWhere((node) => node.path == path).size;
     } catch (_) {
       return null;
     }
   }
 
   String _formatSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
     if (bytes < 1024 * 1024) {
       final kb = bytes / 1024;
       return '${kb.toStringAsFixed(kb < 10 ? 1 : 0)} KB';
     }
+
     final mb = bytes / (1024 * 1024);
     return '${mb.toStringAsFixed(mb < 10 ? 1 : 0)} MB';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final resolvedSessionId = ref.watch(resolvedSessionIdProvider(sessionId));
+    if (resolvedSessionId == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(_filename)),
+        body: const EmptyState(
+          icon: Icons.insert_drive_file_outlined,
+          title: 'Select a session first',
+          subtitle:
+              'Open a Claude session in Chat before viewing repository files.',
+        ),
+      );
+    }
+
     final contentAsync = ref.watch(
-      fileContentProvider((sessionId: sessionId, path: path)),
+      fileContentProvider((sessionId: resolvedSessionId, path: path)),
     );
-    final knownSize = _fileSizeFromState(ref);
+    final knownSize = _fileSizeFromState(ref, resolvedSessionId);
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
@@ -122,7 +141,7 @@ class FileViewerScreen extends ConsumerWidget {
             child: ErrorCard(
               message: err.toString(),
               onRetry: () => ref.invalidate(
-                fileContentProvider((sessionId: sessionId, path: path)),
+                fileContentProvider((sessionId: resolvedSessionId, path: path)),
               ),
             ),
           ),
@@ -159,8 +178,8 @@ class FileViewerScreen extends ConsumerWidget {
                 ),
               Expanded(
                 child: SyntaxHighlightedFile(
-                  content: content,
                   filePath: path,
+                  content: content,
                 ),
               ),
             ],

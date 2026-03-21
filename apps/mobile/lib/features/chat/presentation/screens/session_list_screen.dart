@@ -14,7 +14,6 @@ class SessionListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(chatNotifierProvider);
     final sessionsAsync = ref.watch(activeSessionsProvider);
 
     return Scaffold(

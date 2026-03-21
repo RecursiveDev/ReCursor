@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/file_models.dart';
 import '../../../../core/network/websocket_messages.dart';
 import '../../../../core/providers/websocket_provider.dart';
+import '../../../../shared/utils/bridge_payload_normalizer.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -100,18 +101,24 @@ class RepoNotifier extends FamilyAsyncNotifier<RepoState, String> {
 
   Future<BridgeMessage> _sendAndAwait(BridgeMessage outgoing) {
     final completer = Completer<BridgeMessage>();
+    Timer? timeoutTimer;
+
     if (outgoing.id != null) {
       _pending[outgoing.id!] = completer;
     }
+
     final service = ref.read(webSocketServiceProvider);
     service.send(outgoing);
 
-    // 30-second timeout to avoid leaking completers.
-    Future.delayed(const Duration(seconds: 30), () {
+    timeoutTimer = Timer(const Duration(seconds: 30), () {
       if (!completer.isCompleted) {
         _pending.remove(outgoing.id);
         completer.completeError(TimeoutException('Bridge response timed out'));
       }
+    });
+
+    completer.future.whenComplete(() {
+      timeoutTimer?.cancel();
     });
 
     return completer.future;
@@ -149,7 +156,8 @@ class RepoNotifier extends FamilyAsyncNotifier<RepoState, String> {
         return;
       }
 
-      final rawNodes = response.payload['nodes'] as List<dynamic>? ?? [];
+      final normalizedPayload = normalizeFileListPayload(response.payload);
+      final rawNodes = normalizedPayload['nodes'] as List<dynamic>? ?? [];
       final nodes = rawNodes
           .whereType<Map<String, dynamic>>()
           .map(FileTreeNode.fromJson)
@@ -163,9 +171,10 @@ class RepoNotifier extends FamilyAsyncNotifier<RepoState, String> {
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
 
+      final resolvedPath = normalizedPayload['path'] as String?;
       state = AsyncData(
         current.copyWith(
-          currentPath: path,
+          currentPath: resolvedPath ?? path,
           nodes: nodes,
           isLoading: false,
           clearError: true,

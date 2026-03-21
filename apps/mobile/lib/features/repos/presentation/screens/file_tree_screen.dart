@@ -6,11 +6,15 @@ import '../../../../core/models/file_models.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_card.dart';
 import '../../../../shared/widgets/loading_indicator.dart';
+import '../../../chat/domain/providers/session_provider.dart';
 import '../../domain/providers/repo_provider.dart';
 import '../widgets/breadcrumb_nav.dart';
 import '../widgets/file_tree_node_widget.dart';
 
 /// Full-screen file tree browser for a given [sessionId].
+///
+/// When [sessionId] is empty, the screen falls back to the currently selected
+/// chat session.
 class FileTreeScreen extends ConsumerWidget {
   final String sessionId;
 
@@ -18,22 +22,33 @@ class FileTreeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repoAsync = ref.watch(repoProvider(sessionId));
-    final notifier = ref.read(repoProvider(sessionId).notifier);
+    final resolvedSessionId = ref.watch(resolvedSessionIdProvider(sessionId));
+    if (resolvedSessionId == null) {
+      return Scaffold(
+        appBar: _buildIdleAppBar('Files'),
+        body: const EmptyState(
+          icon: Icons.folder_off_outlined,
+          title: 'Select a session first',
+          subtitle:
+              'Open a Claude session in Chat to browse files for that workspace.',
+        ),
+      );
+    }
+
+    final repoAsync = ref.watch(repoProvider(resolvedSessionId));
+    final notifier = ref.read(repoProvider(resolvedSessionId).notifier);
 
     return repoAsync.when(
       loading: () => Scaffold(
-        appBar: _buildAppBar(context, ref, '…', notifier),
+        appBar: _buildIdleAppBar('Files'),
         body: const LoadingIndicator(message: 'Loading directory…'),
       ),
       error: (err, _) => Scaffold(
-        appBar: _buildAppBar(context, ref, 'Error', notifier),
+        appBar: _buildIdleAppBar('Files'),
         body: Center(
           child: ErrorCard(
             message: err.toString(),
-            onRetry: () => notifier.fetchDirectory(
-              repoAsync.value?.currentPath ?? '.',
-            ),
+            onRetry: () => notifier.fetchDirectory('.'),
           ),
         ),
       ),
@@ -42,9 +57,11 @@ class FileTreeScreen extends ConsumerWidget {
 
         return Scaffold(
           backgroundColor: const Color(0xFF121212),
-          appBar: _buildAppBar(context, ref, state.currentPath, notifier),
+          appBar:
+              _buildSessionAppBar(state.currentPath, state.isAtRoot, notifier),
           floatingActionButton: FloatingActionButton.small(
-            tooltip: state.showHidden ? 'Hide hidden files' : 'Show hidden files',
+            tooltip:
+                state.showHidden ? 'Hide hidden files' : 'Show hidden files',
             onPressed: notifier.toggleHidden,
             child: Icon(
               state.showHidden
@@ -54,7 +71,6 @@ class FileTreeScreen extends ConsumerWidget {
           ),
           body: Column(
             children: [
-              // Breadcrumb
               Container(
                 color: const Color(0xFF1E1E1E),
                 child: BreadcrumbNav(
@@ -63,10 +79,7 @@ class FileTreeScreen extends ConsumerWidget {
                 ),
               ),
               const Divider(height: 1, color: Color(0xFF3E3E3E)),
-              // Loading overlay when fetching a sub-directory
-              if (state.isLoading)
-                const LinearProgressIndicator(minHeight: 2),
-              // Error banner
+              if (state.isLoading) const LinearProgressIndicator(minHeight: 2),
               if (state.error != null)
                 Padding(
                   padding: const EdgeInsets.all(8),
@@ -75,7 +88,6 @@ class FileTreeScreen extends ConsumerWidget {
                     onRetry: () => notifier.fetchDirectory(state.currentPath),
                   ),
                 ),
-              // File list
               Expanded(
                 child: nodes.isEmpty && !state.isLoading
                     ? EmptyState(
@@ -94,7 +106,11 @@ class FileTreeScreen extends ConsumerWidget {
                             final node = nodes[index];
                             return FileTreeNodeWidget(
                               node: node,
-                              onTap: () => _onNodeTap(context, node),
+                              onTap: () => _onNodeTap(
+                                context,
+                                sessionId: resolvedSessionId,
+                                node: node,
+                              ),
                             );
                           },
                         ),
@@ -107,18 +123,21 @@ class FileTreeScreen extends ConsumerWidget {
     );
   }
 
-  AppBar _buildAppBar(
-    BuildContext context,
-    WidgetRef ref,
-    String currentPath,
-    RepoNotifier notifier,
-  ) {
-    final state = ref.read(repoProvider(sessionId)).value;
-    final atRoot = state?.isAtRoot ?? true;
-
+  AppBar _buildIdleAppBar(String title) {
     return AppBar(
       backgroundColor: const Color(0xFF1E1E1E),
-      leading: atRoot
+      title: Text(title),
+    );
+  }
+
+  AppBar _buildSessionAppBar(
+    String currentPath,
+    bool isAtRoot,
+    RepoNotifier notifier,
+  ) {
+    return AppBar(
+      backgroundColor: const Color(0xFF1E1E1E),
+      leading: isAtRoot
           ? null
           : IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -136,17 +155,23 @@ class FileTreeScreen extends ConsumerWidget {
     );
   }
 
-  void _onNodeTap(BuildContext context, FileTreeNode node) {
-    final notifier =
-        // ignore: invalid_use_of_protected_member
-        ProviderScope.containerOf(context).read(repoProvider(sessionId).notifier);
+  void _onNodeTap(
+    BuildContext context, {
+    required String sessionId,
+    required FileTreeNode node,
+  }) {
+    final notifier = ProviderScope.containerOf(context).read(
+      repoProvider(sessionId).notifier,
+    );
+
     if (node.type == FileNodeType.directory) {
       notifier.navigateTo(node.path);
-    } else {
-      context.push(
-        '/home/repos/view',
-        extra: {'path': node.path, 'sessionId': sessionId},
-      );
+      return;
     }
+
+    context.push(
+      '/home/repos/view',
+      extra: {'path': node.path, 'sessionId': sessionId},
+    );
   }
 }

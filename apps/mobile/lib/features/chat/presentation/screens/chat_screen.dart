@@ -21,9 +21,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    _syncCurrentSession();
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessionId != widget.sessionId) {
+      _syncCurrentSession();
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _syncCurrentSession() {
+    final notifier = ref.read(currentSessionProvider.notifier);
+    if (notifier.state != widget.sessionId) {
+      notifier.state = widget.sessionId;
+    }
   }
 
   void _scrollToBottom() {

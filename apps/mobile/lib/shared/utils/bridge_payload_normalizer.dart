@@ -17,6 +17,26 @@ Map<String, dynamic> normalizeGitFileChange(Map<String, dynamic> change) {
   };
 }
 
+Map<String, dynamic> normalizeFileListPayload(Map<String, dynamic> payload) {
+  final rawEntries = payload['entries'] ?? payload['nodes'];
+
+  return {
+    ...payload,
+    'path': payload['path'] ?? payload['currentPath'] ?? '.',
+    'nodes': (rawEntries as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map<String, dynamic>>()
+        .map(normalizeFileEntry)
+        .toList(),
+  };
+}
+
+Map<String, dynamic> normalizeFileEntry(Map<String, dynamic> entry) {
+  return {
+    ...entry,
+    'modifiedAt': entry['modifiedAt'] ?? entry['modified'],
+  };
+}
+
 Map<String, dynamic> normalizeDiffFile(Map<String, dynamic> file) {
   return {
     ...file,
