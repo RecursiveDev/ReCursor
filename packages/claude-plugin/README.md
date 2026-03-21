@@ -4,11 +4,14 @@ Forwards Claude Code events to the ReCursor bridge server for mobile consumption
 
 ## Installation
 
-Copy this plugin to your Claude Code plugins directory:
+Copy this plugin into the standard Claude plugin directory structure:
 
 ```bash
-mkdir -p ~/.claude-code/plugins/recursor-bridge
-cp hooks.json ~/.claude-code/plugins/recursor-bridge/hooks.json
+mkdir -p ~/.claude/plugins/recursor-bridge/.claude-plugin
+mkdir -p ~/.claude/plugins/recursor-bridge/hooks
+cp .claude-plugin/plugin.json ~/.claude/plugins/recursor-bridge/.claude-plugin/plugin.json
+cp hooks/hooks.json ~/.claude/plugins/recursor-bridge/hooks/hooks.json
+cp README.md ~/.claude/plugins/recursor-bridge/README.md
 ```
 
 ## Configuration
