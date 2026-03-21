@@ -381,7 +381,7 @@ Agent wants to use a tool. Sent when Agent SDK initiates tool use.
 ```
 
 #### `claude_event` (server -> client)
-Event from Claude Code Hooks. See [Claude Code Hooks Integration](../integrations/claude-code-hooks/).
+Event from Claude Code Hooks. See [Claude Code Hooks Integration](../../integrations/claude-code-hooks/).
 
 ```json
 {
@@ -713,10 +713,10 @@ When the mobile app reconnects after disconnection:
 
 ## Related Documentation
 
-- [Architecture Overview](./system-overview/) — System architecture
-- [Data Flow](./data-flow/) — Message sequence diagrams
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook event format
-- [Agent SDK Integration](../integrations/agent-sdk/) — Agent SDK message flow
+- [Architecture Overview](../system-overview/) — System architecture
+- [Data Flow](../data-flow/) — Message sequence diagrams
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Hook event format
+- [Agent SDK Integration](../../integrations/agent-sdk/) — Agent SDK message flow
 
 ---
 
@@ -881,7 +881,7 @@ flowchart TB
 | `Stop` | Session status | Show completion status |
 | `SubagentStop` | Subagent status | Update subagent state |
 
-> **Note**: Only confirmed hook events from Claude Code source truth are listed above. See [Claude Code Hooks Integration](../integrations/claude-code-hooks/) for the complete verified event list.
+> **Note**: Only confirmed hook events from Claude Code source truth are listed above. See [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) for the complete verified event list.
 
 ---
 
@@ -961,17 +961,17 @@ flowchart TD
 
 ## Message Format: WebSocket Protocol
 
-See [Bridge Protocol](./bridge-protocol/) for complete WebSocket message specification.
+See [Bridge Protocol](../bridge-protocol/) for complete WebSocket message specification.
 
 ---
 
 ## Related Documentation
 
-- [Architecture Overview](./system-overview/) — High-level system architecture
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook configuration details
-- [Agent SDK Integration](../integrations/agent-sdk/) — Parallel session flow
-- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
-- [Offline Architecture](../operations/offline-architecture/) — Sync queue implementation
+- [Architecture Overview](../system-overview/) — High-level system architecture
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Hook configuration details
+- [Agent SDK Integration](../../integrations/agent-sdk/) — Parallel session flow
+- [Bridge Protocol](../bridge-protocol/) — WebSocket message specification
+- [Offline Architecture](../../operations/offline-architecture/) — Sync queue implementation
 
 ---
 
@@ -1545,11 +1545,11 @@ class PreToolUseEvent with _$PreToolUseEvent {
 
 ## Related Documentation
 
-- [Project Structure](./project-structure/) — Flutter directory layout
-- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
-- [Offline Architecture](../operations/offline-architecture/) — Sync and storage patterns
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Event models
-- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component data
+- [Project Structure](../project-structure/) — Flutter directory layout
+- [Bridge Protocol](../bridge-protocol/) — WebSocket message specification
+- [Offline Architecture](../../operations/offline-architecture/) — Sync and storage patterns
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Event models
+- [OpenCode UI Patterns](../../integrations/opencode-ui-patterns/) — UI component data
 
 ---
 
@@ -1895,9 +1895,9 @@ bridge/
 
 ## Related Documentation
 
-- [Data Models](./data-models/) — Drift schemas and domain entities
-- [Architecture Overview](./system-overview/) — System architecture
-- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component mapping
+- [Data Models](../data-models/) — Drift schemas and domain entities
+- [Architecture Overview](../system-overview/) — System architecture
+- [OpenCode UI Patterns](../../integrations/opencode-ui-patterns/) — UI component mapping
 
 ---
 
@@ -2084,12 +2084,12 @@ After establishing the WebSocket connection, the bridge analyzes the connection 
 
 ## Related Documentation
 
-- [Data Flow Details](./data-flow/) — Message-level sequence diagrams
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook configuration
-- [Agent SDK Integration](../integrations/agent-sdk/) — Parallel session setup
-- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component mapping
-- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
-- [Security Architecture](../operations/security-architecture/) — Security implementation details
+- [Data Flow Details](../data-flow/) — Message-level sequence diagrams
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Hook configuration
+- [Agent SDK Integration](../../integrations/agent-sdk/) — Parallel session setup
+- [OpenCode UI Patterns](../../integrations/opencode-ui-patterns/) — UI component mapping
+- [Bridge Protocol](../bridge-protocol/) — WebSocket message specification
+- [Security Architecture](../../operations/security-architecture/) — Security implementation details
 
 ---
 
@@ -2489,10 +2489,10 @@ function validateWorkingDirectory(dir: string): void {
 
 ## Related Documentation
 
-- [Claude Code Hooks Integration](./claude-code-hooks/) — Event observation
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
+- [Claude Code Hooks Integration](../claude-code-hooks/) — Event observation
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Data Flow](../../architecture/data-flow/) — Message sequence diagrams
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 
@@ -2512,7 +2512,7 @@ Description: Configure Claude Code Hooks to POST events to the ReCursor bridge s
 
 Claude Code provides a **Hooks system** that allows plugins to observe and react to events. ReCursor uses this system to receive real-time events from Claude Code, enabling the mobile app to display agent activity with OpenCode-style UI components.
 
-> **Important**: Hooks are **one-way observation only**. They cannot inject messages or control the Claude Code session. For bidirectional communication, use the [Agent SDK](./agent-sdk/) for parallel sessions.
+> **Important**: Hooks are **one-way observation only**. They cannot inject messages or control the Claude Code session. For bidirectional communication, use the [Agent SDK](../agent-sdk/) for parallel sessions.
 
 ---
 
@@ -3332,8 +3332,8 @@ When validation fails, the bridge server responds with:
 
 - [Claude Code Hook Development Guide](file:///C:/Repository/claude-code/plugins/plugin-dev/skills/hook-development/SKILL.md)
 - [Hookify Plugin Example](file:///C:/Repository/claude-code/plugins/hookify/hooks/hooks.json)
-- [Agent SDK Integration](./agent-sdk/) — For bidirectional communication
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
+- [Agent SDK Integration](../agent-sdk/) — For bidirectional communication
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 
@@ -3886,10 +3886,10 @@ class _ToolCardState extends State<ToolCard>
 
 ## Related Documentation
 
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
-- [Claude Code Hooks Integration](./claude-code-hooks/) — Event source
-- [Agent SDK Integration](./agent-sdk/) — Session control
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Data Flow](../../architecture/data-flow/) — Message sequence diagrams
+- [Claude Code Hooks Integration](../claude-code-hooks/) — Event source
+- [Agent SDK Integration](../agent-sdk/) — Session control
 
 ---
 
@@ -4119,8 +4119,8 @@ end
 
 ## Related Documentation
 
-- [Testing Strategy](./testing-strategy/) — Testing approach
-- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Testing Strategy](../testing-strategy/) — Testing approach
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
 
 ---
 
@@ -4431,9 +4431,9 @@ If sync complexity grows, consider:
 
 ## Related Documentation
 
-- [Data Models](../architecture/data-models/) — Drift schemas
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket specification
+- [Data Models](../../architecture/data-models/) — Drift schemas
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket specification
 
 ---
 
@@ -4612,9 +4612,9 @@ Future<void> showLocalNotification(AppNotification notification) async {
 
 ## Related Documentation
 
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket message specification
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Data Flow](../../architecture/data-flow/) — Message sequence diagrams
 
 ---
 
@@ -5441,12 +5441,12 @@ class TOFUTrustManager {
 
 ## Related Documentation
 
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket specification
-- [Bridge HTTP API](../reference/bridge-http-api/) — HTTP endpoints specification
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook security
-- [Agent SDK Integration](../integrations/agent-sdk/) — Agent SDK security
-- [Error Handling](../reference/error-handling/) — Error codes and recovery
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket specification
+- [Bridge HTTP API](../../reference/bridge-http-api/) — HTTP endpoints specification
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Hook security
+- [Agent SDK Integration](../../integrations/agent-sdk/) — Agent SDK security
+- [Error Handling](../../reference/error-handling/) — Error codes and recovery
 
 ---
 
@@ -5802,9 +5802,9 @@ testWidgets('displays Claude Code event from bridge', (tester) async {
 
 ## Related Documentation
 
-- [CI/CD Pipeline](./ci-cd/) — CI/CD configuration
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
+- [CI/CD Pipeline](../ci-cd/) — CI/CD configuration
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 
@@ -6331,7 +6331,7 @@ Access-Control-Max-Age: 86400
 
 ## TLS Requirements
 
-All HTTP endpoints require TLS. See [security-architecture.md](../operations/security-architecture/) for:
+All HTTP endpoints require TLS. See [security-architecture.md](../../operations/security-architecture/) for:
 - Self-signed certificate generation
 - Certificate pinning
 - Mobile platform TLS caveats

@@ -349,9 +349,9 @@ testWidgets('displays Claude Code event from bridge', (tester) async {
 
 ## Related Documentation
 
-- [CI/CD Pipeline](./ci-cd/) — CI/CD configuration
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
+- [CI/CD Pipeline](../ci-cd/) — CI/CD configuration
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 

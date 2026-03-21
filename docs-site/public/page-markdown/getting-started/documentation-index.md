@@ -12,50 +12,50 @@
 
 | Document | Description |
 |----------|-------------|
-| [architecture/overview.md](../architecture/system-overview/) | System architecture and component diagram |
-| [architecture/data-flow.md](../architecture/data-flow/) | Message flow between mobile app, bridge, and agent |
-| [project-structure.md](../architecture/project-structure/) | Flutter directory layout and module organization |
-| [data-models.md](../architecture/data-models/) | Drift schemas, Hive models, and domain entities |
+| [architecture/overview.md](../../architecture/system-overview/) | System architecture and component diagram |
+| [architecture/data-flow.md](../../architecture/data-flow/) | Message flow between mobile app, bridge, and agent |
+| [project-structure.md](../../architecture/project-structure/) | Flutter directory layout and module organization |
+| [data-models.md](../../architecture/data-models/) | Drift schemas, Hive models, and domain entities |
 
 ### Integration
 
 | Document | Description |
 |----------|-------------|
-| [integration/claude-code-hooks.md](../integrations/claude-code-hooks/) | Claude Code Hooks integration (event observation) |
-| [integration/agent-sdk.md](../integrations/agent-sdk/) | Agent SDK for parallel agent sessions |
-| [integration/opencode-ui-patterns.md](../integrations/opencode-ui-patterns/) | OpenCode UI component patterns for Flutter |
-| [bridge-protocol.md](../architecture/bridge-protocol/) | WebSocket message protocol between app and bridge |
+| [integration/claude-code-hooks.md](../../integrations/claude-code-hooks/) | Claude Code Hooks integration (event observation) |
+| [integration/agent-sdk.md](../../integrations/agent-sdk/) | Agent SDK for parallel agent sessions |
+| [integration/opencode-ui-patterns.md](../../integrations/opencode-ui-patterns/) | OpenCode UI component patterns for Flutter |
+| [bridge-protocol.md](../../architecture/bridge-protocol/) | WebSocket message protocol between app and bridge |
 
 ### Security & Operations
 
 | Document | Description |
 |----------|-------------|
-| [security-architecture.md](../operations/security-architecture/) | Network security, auth, cert pinning, bridge authorization, TLS implementation |
-| [offline-architecture.md](../operations/offline-architecture/) | Drift/Hive storage, sync queue, conflict resolution |
-| [push-notifications.md](../operations/push-notifications/) | WebSocket-based notifications and local alerts |
+| [security-architecture.md](../../operations/security-architecture/) | Network security, auth, cert pinning, bridge authorization, TLS implementation |
+| [offline-architecture.md](../../operations/offline-architecture/) | Drift/Hive storage, sync queue, conflict resolution |
+| [push-notifications.md](../../operations/push-notifications/) | WebSocket-based notifications and local alerts |
 
 ### Protocol & API Specifications
 
 | Document | Description |
 |----------|-------------|
-| [bridge-protocol.md](../architecture/bridge-protocol/) | WebSocket message protocol between app and bridge |
-| [bridge-http-api.md](../reference/bridge-http-api/) | REST endpoints for hooks, health, and control |
-| [error-handling.md](../reference/error-handling/) | Error taxonomy, recovery patterns, reconnection strategies |
-| [type-mapping.md](../reference/type-mapping/) | Dart↔TypeScript cross-language type contracts |
+| [bridge-protocol.md](../../architecture/bridge-protocol/) | WebSocket message protocol between app and bridge |
+| [bridge-http-api.md](../../reference/bridge-http-api/) | REST endpoints for hooks, health, and control |
+| [error-handling.md](../../reference/error-handling/) | Error taxonomy, recovery patterns, reconnection strategies |
+| [type-mapping.md](../../reference/type-mapping/) | Dart↔TypeScript cross-language type contracts |
 
 ### Development
 
 | Document | Description |
 |----------|-------------|
-| [ci-cd.md](../operations/ci-cd/) | GitHub Actions + Fastlane pipeline |
-| [testing-strategy.md](../operations/testing-strategy/) | Testing pyramid and CI integration |
+| [ci-cd.md](../../operations/ci-cd/) | GitHub Actions + Fastlane pipeline |
+| [testing-strategy.md](../../operations/testing-strategy/) | Testing pyramid and CI integration |
 
 ### Legal
 
 | Document | Description |
 |----------|-------------|
-| [legal/privacy-policy.md](../legal/privacy-policy/) | Privacy policy draft for release readiness |
-| [legal/terms-of-service.md](../legal/terms-of-service/) | Terms of service draft for release readiness |
+| [legal/privacy-policy.md](../../legal/privacy-policy/) | Privacy policy draft for release readiness |
+| [legal/terms-of-service.md](../../legal/terms-of-service/) | Terms of service draft for release readiness |
 
 ---
 

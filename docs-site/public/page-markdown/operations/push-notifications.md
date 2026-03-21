@@ -167,9 +167,9 @@ Future<void> showLocalNotification(AppNotification notification) async {
 
 ## Related Documentation
 
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket message specification
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Data Flow](../../architecture/data-flow/) — Message sequence diagrams
 
 ---
 

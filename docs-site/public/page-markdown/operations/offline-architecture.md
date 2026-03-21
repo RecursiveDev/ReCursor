@@ -246,9 +246,9 @@ If sync complexity grows, consider:
 
 ## Related Documentation
 
-- [Data Models](../architecture/data-models/) — Drift schemas
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket specification
+- [Data Models](../../architecture/data-models/) — Drift schemas
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket specification
 
 ---
 

@@ -820,12 +820,12 @@ class TOFUTrustManager {
 
 ## Related Documentation
 
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket specification
-- [Bridge HTTP API](../reference/bridge-http-api/) — HTTP endpoints specification
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook security
-- [Agent SDK Integration](../integrations/agent-sdk/) — Agent SDK security
-- [Error Handling](../reference/error-handling/) — Error codes and recovery
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../../architecture/bridge-protocol/) — WebSocket specification
+- [Bridge HTTP API](../../reference/bridge-http-api/) — HTTP endpoints specification
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Hook security
+- [Agent SDK Integration](../../integrations/agent-sdk/) — Agent SDK security
+- [Error Handling](../../reference/error-handling/) — Error codes and recovery
 
 ---
 

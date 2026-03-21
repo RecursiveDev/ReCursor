@@ -339,9 +339,9 @@ bridge/
 
 ## Related Documentation
 
-- [Data Models](./data-models/) — Drift schemas and domain entities
-- [Architecture Overview](./system-overview/) — System architecture
-- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component mapping
+- [Data Models](../data-models/) — Drift schemas and domain entities
+- [Architecture Overview](../system-overview/) — System architecture
+- [OpenCode UI Patterns](../../integrations/opencode-ui-patterns/) — UI component mapping
 
 ---
 

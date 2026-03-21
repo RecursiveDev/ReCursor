@@ -546,10 +546,10 @@ class _ToolCardState extends State<ToolCard>
 
 ## Related Documentation
 
-- [Architecture Overview](../architecture/system-overview/) — System architecture
-- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
-- [Claude Code Hooks Integration](./claude-code-hooks/) — Event source
-- [Agent SDK Integration](./agent-sdk/) — Session control
+- [Architecture Overview](../../architecture/system-overview/) — System architecture
+- [Data Flow](../../architecture/data-flow/) — Message sequence diagrams
+- [Claude Code Hooks Integration](../claude-code-hooks/) — Event source
+- [Agent SDK Integration](../agent-sdk/) — Session control
 
 ---
 

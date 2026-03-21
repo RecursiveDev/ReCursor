@@ -180,12 +180,12 @@ After establishing the WebSocket connection, the bridge analyzes the connection 
 
 ## Related Documentation
 
-- [Data Flow Details](./data-flow/) — Message-level sequence diagrams
-- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook configuration
-- [Agent SDK Integration](../integrations/agent-sdk/) — Parallel session setup
-- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component mapping
-- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
-- [Security Architecture](../operations/security-architecture/) — Security implementation details
+- [Data Flow Details](../data-flow/) — Message-level sequence diagrams
+- [Claude Code Hooks Integration](../../integrations/claude-code-hooks/) — Hook configuration
+- [Agent SDK Integration](../../integrations/agent-sdk/) — Parallel session setup
+- [OpenCode UI Patterns](../../integrations/opencode-ui-patterns/) — UI component mapping
+- [Bridge Protocol](../bridge-protocol/) — WebSocket message specification
+- [Security Architecture](../../operations/security-architecture/) — Security implementation details
 
 ---
 

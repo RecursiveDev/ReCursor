@@ -520,7 +520,7 @@ Access-Control-Max-Age: 86400
 
 ## TLS Requirements
 
-All HTTP endpoints require TLS. See [security-architecture.md](../operations/security-architecture/) for:
+All HTTP endpoints require TLS. See [security-architecture.md](../../operations/security-architecture/) for:
 - Self-signed certificate generation
 - Certificate pinning
 - Mobile platform TLS caveats
