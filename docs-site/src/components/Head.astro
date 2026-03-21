@@ -1,5 +1,7 @@
 ---
 import Default from '@astrojs/starlight/components/Head.astro';
+import favicon from '../assets/recursor-favicon.svg?url';
+
 interface Props {
   title?: string;
   description?: string;
@@ -16,8 +18,10 @@ interface Props {
   rel="stylesheet" 
 />
 
-<!-- Favicon and theme color -->
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<!-- Favicon and theme color - uses Astro's base path handling -->
+<link rel="icon" type="image/svg+xml" href={favicon} />
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#FDFCF8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
 <meta name="theme-color" content="#FDFCF8" media="(prefers-color-scheme: light)" />
 
