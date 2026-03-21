@@ -6,7 +6,7 @@ part of 'session_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$activeSessionsHash() => r'83c85f93dece06f6d4a19b8d7a9cbf1ca8d27bdc';
+String _$activeSessionsHash() => r'2a09c0c9f456bc31004a871e0d41ab9398323eae';
 
 /// See also [ActiveSessions].
 @ProviderFor(ActiveSessions)
