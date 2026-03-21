@@ -5,14 +5,12 @@ on:
     branches: [main, dev]
     paths:
       - "docs-site/**"
-      - "docs/**"
       - "README.md"
       - ".github/workflows/docs.yml"
   push:
     branches: [main, dev]
     paths:
       - "docs-site/**"
-      - "docs/**"
       - "README.md"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
