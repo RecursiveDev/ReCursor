@@ -1,5 +1,5 @@
 import type WebSocket from "ws";
-import type { BridgeMessage, MobileClient } from "../types";
+import type { BridgeMessage, ConnectionPurpose, MobileClient } from "../types";
 import type { ConnectionMode } from "./connection_mode";
 
 function log(msg: string): void {
@@ -11,6 +11,7 @@ export interface ClientConnectionMetadata {
   connectionMode?: ConnectionMode;
   connectionModeDescription?: string;
   bridgeUrl?: string;
+  purpose?: ConnectionPurpose;
 }
 
 export interface ConnectionStateSnapshot {
@@ -28,6 +29,7 @@ export class ConnectionManager {
       ws,
       sessionIds: [],
       authenticated: false,
+      purpose: metadata?.purpose,
       remoteAddress: metadata?.remoteAddress,
       connectionMode: metadata?.connectionMode,
       connectionModeDescription: metadata?.connectionModeDescription,
@@ -46,6 +48,15 @@ export class ConnectionManager {
       client.authenticated = true;
       this.emitChange();
       log(`Client authenticated: ${id}`);
+    }
+  }
+
+  setClientPurpose(id: string, purpose: ConnectionPurpose): void {
+    const client = this.clients.get(id);
+    if (client) {
+      client.purpose = purpose;
+      this.emitChange();
+      log(`Client purpose updated: ${id} (${purpose})`);
     }
   }
 
@@ -121,6 +132,14 @@ export class ConnectionManager {
     return result;
   }
 
+  getPrimaryClients(): MobileClient[] {
+    return this.getClientsByPurpose("primary");
+  }
+
+  getProbeClients(): MobileClient[] {
+    return this.getClientsByPurpose("probe");
+  }
+
   private emitChange(): void {
     const snapshot = this.snapshot();
     for (const listener of this.listeners) {
@@ -133,6 +152,16 @@ export class ConnectionManager {
       totalClients: this.getTotalClientCount(),
       authenticatedClients: this.getAuthenticatedClientCount(),
     };
+  }
+
+  private getClientsByPurpose(purpose: ConnectionPurpose): MobileClient[] {
+    const result: MobileClient[] = [];
+    for (const client of this.clients.values()) {
+      if (client.purpose === purpose) {
+        result.push(client);
+      }
+    }
+    return result;
   }
 
   private sendRaw(client: MobileClient, json: string): void {

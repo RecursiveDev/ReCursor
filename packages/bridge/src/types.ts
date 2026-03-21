@@ -7,6 +7,7 @@ export type SupportedAgent = (typeof SUPPORTED_AGENTS)[number];
 export type AgentSessionStatus = "active" | "idle" | "closed";
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 export type ApprovalDecision = "approved" | "rejected" | "modified";
+export type ConnectionPurpose = "primary" | "probe";
 
 export interface BridgeMessage<T = unknown> {
   type: string;
@@ -19,6 +20,7 @@ export interface AuthPayload {
   token: string;
   client_version?: string;
   platform?: string;
+  purpose?: ConnectionPurpose;
 }
 
 export interface ActiveSessionPayload {
@@ -37,6 +39,7 @@ export interface ConnectionAckPayload {
   bridge_url: string;
   requires_health_verification: boolean;
   active_sessions: ActiveSessionPayload[];
+  purpose: ConnectionPurpose;
 }
 
 export interface ConnectionErrorPayload {
@@ -320,6 +323,7 @@ export interface MobileClient {
   ws: WebSocket;
   sessionIds: string[];
   authenticated: boolean;
+  purpose?: ConnectionPurpose;
   remoteAddress?: string;
   connectionMode?: ConnectionMode;
   connectionModeDescription?: string;

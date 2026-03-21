@@ -14,6 +14,7 @@ import type {
   BridgeMessage,
   ConnectionAckPayload,
   ConnectionErrorPayload,
+  ConnectionPurpose,
   ErrorPayload,
   FileListPayload,
   FileListResponsePayload,
@@ -99,6 +100,10 @@ function clampLatency(value: number): number {
   return value < 0 ? 0 : value;
 }
 
+function normalizeConnectionPurpose(value?: string): ConnectionPurpose {
+  return value === "probe" ? "probe" : "primary";
+}
+
 export class MessageHandler {
   private fileService: FileService;
 
@@ -162,6 +167,18 @@ export class MessageHandler {
           break;
 
         case "session_start":
+          if (client.purpose === "probe") {
+            this.connectionManager.sendToClient(
+              clientId,
+              errorMsg(
+                "PROTO_SEQUENCE_ERROR",
+                "Probe connections cannot start sessions",
+                "session_start",
+              ),
+            );
+            break;
+          }
+
           await this.agentSdkAdapter.handleSessionStart(
             payload as SessionStartPayload,
             clientId,
@@ -269,6 +286,8 @@ export class MessageHandler {
       return;
     }
 
+    const purpose = normalizeConnectionPurpose(payload?.purpose);
+    (this.connectionManager as Partial<ConnectionManager>).setClientPurpose?.(clientId, purpose);
     this.connectionManager.authenticateClient(clientId);
 
     const activeSessions = this.agentSessionManager.getActiveSessions().map(mapActiveSession);
@@ -289,6 +308,7 @@ export class MessageHandler {
         bridge_url: bridgeUrl,
         requires_health_verification: true,
         active_sessions: activeSessions,
+        purpose,
       },
     };
     this.connectionManager.sendToClient(clientId, ackMsg);
@@ -297,7 +317,7 @@ export class MessageHandler {
       this.connectionManager.sendToClient(clientId, queuedMessage);
     }
 
-    log(`Auth succeeded for client ${clientId}`);
+    log(`Auth succeeded for client ${clientId} (purpose=${purpose})`);
   }
 
   private handleHeartbeat(clientId: string, requestId?: string): void {

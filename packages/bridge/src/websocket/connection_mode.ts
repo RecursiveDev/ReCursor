@@ -78,11 +78,26 @@ function isPrivateAddress(value?: string): boolean {
   return isPrivateIpv4(normalized);
 }
 
+function normalizeHost(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/:(\d+)$/, "");
+}
+
 function isSecureTunnelAddress(value?: string, host?: string): boolean {
   const normalizedAddress = normalizeAddress(value);
-  const normalizedHost = host?.trim().toLowerCase();
+  const normalizedHost = normalizeHost(host);
 
-  if (normalizedHost?.endsWith(".tailnet.ts.net") || normalizedHost?.endsWith(".ts.net")) {
+  if (
+    normalizedHost?.endsWith(".tailnet.ts.net") ||
+    normalizedHost?.endsWith(".ts.net") ||
+    normalizedHost?.endsWith(".trycloudflare.com")
+  ) {
     return true;
   }
 
