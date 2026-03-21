@@ -37,7 +37,8 @@ recursor/
 │       ├── package.json
 │       └── tsconfig.json
 │
-├── docs/                          # Documentation (this folder)
+├── docs-site/                     # Documentation (Astro Starlight site)
+│   └── src/content/docs/          # Canonical documentation source
 ├── .github/
 │   └── workflows/                 # CI/CD pipelines
 │       ├── test.yml               # PR test pipeline

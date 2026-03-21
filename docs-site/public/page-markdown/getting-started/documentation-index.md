@@ -2,7 +2,7 @@
 
 > **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
 
-> **Publishing note:** `C:/Repository/ReCursor/docs/` is the canonical source. The Astro Starlight site in `C:/Repository/ReCursor/docs-site/` is generated from this directory.
+> **Publishing note:** `docs-site/src/content/docs/` is the canonical source for ReCursor documentation.
 
 ---
 

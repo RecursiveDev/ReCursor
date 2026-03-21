@@ -1,1509 +1,12 @@
 # ReCursor Docs — Full AI Context
 > Mobile-first companion UI for AI coding workflows, documented as a bridge-first Astro Starlight site.
 
-Canonical source documents live in `/docs` in the repository. This artifact concatenates the published documentation corpus for AI-assisted workflows.
-
----
-Route: /getting-started/documentation-index/
-Source: /docs/README.md
-Title: ReCursor Documentation
-Description: **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
-
-> **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
-
-> **Publishing note:** `C:/Repository/ReCursor/docs/` is the canonical source. The Astro Starlight site in `C:/Repository/ReCursor/docs-site/` is generated from this directory.
-
----
-
-## Quick Navigation
-
-### Architecture
-
-| Document | Description |
-|----------|-------------|
-| [architecture/overview.md](/architecture/system-overview/) | System architecture and component diagram |
-| [architecture/data-flow.md](/architecture/data-flow/) | Message flow between mobile app, bridge, and agent |
-| [project-structure.md](/architecture/project-structure/) | Flutter directory layout and module organization |
-| [data-models.md](/architecture/data-models/) | Drift schemas, Hive models, and domain entities |
-
-### Integration
-
-| Document | Description |
-|----------|-------------|
-| [integration/claude-code-hooks.md](/integrations/claude-code-hooks/) | Claude Code Hooks integration (event observation) |
-| [integration/agent-sdk.md](/integrations/agent-sdk/) | Agent SDK for parallel agent sessions |
-| [integration/opencode-ui-patterns.md](/integrations/opencode-ui-patterns/) | OpenCode UI component patterns for Flutter |
-| [bridge-protocol.md](/architecture/bridge-protocol/) | WebSocket message protocol between app and bridge |
-
-### Security & Operations
-
-| Document | Description |
-|----------|-------------|
-| [security-architecture.md](/operations/security-architecture/) | Network security, auth, cert pinning, bridge authorization, TLS implementation |
-| [offline-architecture.md](/operations/offline-architecture/) | Drift/Hive storage, sync queue, conflict resolution |
-| [push-notifications.md](/operations/push-notifications/) | WebSocket-based notifications and local alerts |
-
-### Protocol & API Specifications
-
-| Document | Description |
-|----------|-------------|
-| [bridge-protocol.md](/architecture/bridge-protocol/) | WebSocket message protocol between app and bridge |
-| [bridge-http-api.md](/reference/bridge-http-api/) | REST endpoints for hooks, health, and control |
-| [error-handling.md](/reference/error-handling/) | Error taxonomy, recovery patterns, reconnection strategies |
-| [type-mapping.md](/reference/type-mapping/) | Dart↔TypeScript cross-language type contracts |
-
-### Development
-
-| Document | Description |
-|----------|-------------|
-| [ci-cd.md](/operations/ci-cd/) | GitHub Actions + Fastlane pipeline |
-| [testing-strategy.md](/operations/testing-strategy/) | Testing pyramid and CI integration |
-
-### Legal
-
-| Document | Description |
-|----------|-------------|
-| [legal/privacy-policy.md](/legal/privacy-policy/) | Privacy policy draft for release readiness |
-| [legal/terms-of-service.md](/legal/terms-of-service/) | Terms of service draft for release readiness |
-
----
-
-## Architecture at a Glance
-
-```mermaid
-flowchart TB
-    subgraph Mobile["📱 ReCursor Flutter App"]
-        UI["OpenCode-like UI\n(Tool Cards, Diff Viewer, Timeline)"]
-        State["Riverpod State Management"]
-        WSClient["WebSocket Client"]
-    end
-
-    subgraph Desktop["💻 Development Machine"]
-        Bridge["ReCursor Bridge Server\n(TypeScript)"]
-        Hooks["Claude Code Hooks\n(HTTP Event Observer)"]
-        AgentSDK["Agent SDK Session\n(Parallel, Optional)"]
-        CC["Claude Code CLI"]
-    end
-
-    subgraph Anthropic["☁️ Anthropic API"]
-        API["Claude API"]
-    end
-
-    UI <--> State
-    State <--> WSClient
-    WSClient <-->|wss:// (Tailscale/WireGuard)| Bridge
-    Bridge <-->|HTTP POST| Hooks
-    Hooks -->|Observes| CC
-    Bridge <-->|Optional| AgentSDK
-    AgentSDK <-->|API Calls| API
-    CC <-->|Internal| API
-```
-
-**Key Constraint:** Claude Code Remote Control is **first-party only** (claude.ai/code, official mobile apps). Third-party clients must use **Hooks** for event observation and **Agent SDK** for parallel sessions.
-
----
-
-## Important Notes
-
-> ⚠️ **Claude Code Remote Control Protocol**: The Remote Control feature is designed exclusively for first-party Anthropic clients. There is no public API for third-party clients to join or mirror existing Claude Code sessions.
->
-> **Supported Integration Paths:**
-> - **Claude Code Hooks** — HTTP-based event observation (one-way)
-> - **Agent SDK** — Parallel agent sessions (not mirroring)
-> - **MCP (Model Context Protocol)** — Tool interoperability
->
-> **Bridge-First Workflow:** ReCursor uses a bridge-first, no-login model. The mobile app connects directly to a user-controlled desktop bridge. No hosted accounts, no sign-in required — just secure device pairing via QR code and optional tunneling for remote access.
-
----
-
-## Contributing
-
-This documentation is a living document. When making changes:
-
-1. Update the relevant `.md` file in the appropriate section
-2. Ensure cross-references use relative paths
-3. Add Mermaid diagrams for complex flows
-4. Update this README index if adding new documents
-
----
-
-*Last updated: 2026-03-17*
-
----
-Route: /architecture/system-overview/
-Source: /docs/architecture/overview.md
-Title: Architecture Overview
-Description: System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
-
-> System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
-
----
-
-## System Context
-
-```mermaid
-flowchart TB
-    subgraph Mobile["📱 ReCursor Flutter App"]
-        UI["OpenCode-like UI Layer"]
-        State["Riverpod State Management"]
-        WSClient["WebSocket Client"]
-    end
-
-    subgraph Desktop["💻 Development Machine"]
-        Bridge["ReCursor Bridge Server\n(TypeScript/Node.js)"]
-        
-        subgraph Integration["Claude Code Integration"]
-            Hooks["Hooks System\n(HTTP Event Observer)"]
-            AgentSDK["Agent SDK\n(Parallel Session)"]
-            CC["Claude Code CLI"]
-        end
-    end
-
-    subgraph Anthropic["☁️ Anthropic Services"]
-        API["Claude API"]
-    end
-
-    UI <--> State
-    State <--> WSClient
-    WSClient <-->|wss:// (Tailscale/WireGuard)| Bridge
-    Bridge <-->|HTTP POST| Hooks
-    Hooks -->|Observes| CC
-    Bridge <-->|Optional| AgentSDK
-    AgentSDK <-->|API Calls| API
-    CC <-->|Internal| API
-```
-
----
-
-## Key Architectural Decisions
-
-### 1. Claude Code Integration Strategy
-
-| Approach | Status | Notes |
-|----------|--------|-------|
-| Direct Remote Control Protocol | ❌ Not Available | First-party only (claude.ai/code, official apps). No public API for third-party clients. |
-| **Claude Code Hooks** | ✅ Supported | HTTP-based event observation (one-way) |
-| **Agent SDK** | ✅ Supported | Parallel agent sessions (not mirroring) |
-| MCP (Model Context Protocol) | ✅ Supported | Tool interoperability |
-
-**Selected Architecture:** Hybrid approach using Hooks for event observation + Agent SDK for parallel sessions. ReCursor does not claim to mirror or control existing Claude Code sessions.
-
-### 2. UI/UX Pattern
-
-ReCursor adopts **OpenCode's UI patterns** for the mobile interface:
-
-- **Tool Cards**: Rich, interactive cards for tool use and results
-- **Diff Viewer**: Syntax-highlighted unified/side-by-side diffs
-- **Session Timeline**: Visual timeline of agent actions and decisions
-- **Chat Interface**: Streaming text with markdown rendering
-
-### 3. Communication Pattern
-
-```
-Mobile App <--WebSocket--> Bridge Server <--HTTP--> Claude Code Hooks
-     ↑                                              |
-     |                                              ↓
-     └────────────────────────────────────── Observes Events
-```
-
-- **WebSocket**: Bidirectional, real-time communication between mobile and bridge
-- **HTTP Hooks**: One-way event streaming from Claude Code to bridge
-- **No Direct Mobile-to-Claude-Code**: All communication flows through the bridge
-
----
-
-## Component Responsibilities
-
-### ReCursor Flutter App
-
-| Component | Responsibility |
-|-----------|--------------|
-| UI Layer | Render OpenCode-style tool cards, diff viewer, timeline |
-| State Management | Riverpod providers for sessions, messages, connection |
-| WebSocket Client | Connect to bridge, handle reconnections, heartbeat |
-| Local Storage | Drift for persistence, Hive for caching |
-
-### Bridge Server
-
-| Component | Responsibility |
-|-----------|--------------|
-| WebSocket Server | Accept mobile connections, manage sessions |
-| Event Queue | Buffer events from Hooks, replay on reconnect |
-| HTTP Endpoint | Receive events from Claude Code Hooks |
-| Agent SDK Adapter | Optional parallel session management |
-
-### Claude Code Integration
-
-| Component | Responsibility |
-|-----------|--------------|
-| Hooks | POST events to bridge (tool use, messages, session state) |
-| Agent SDK | Parallel agent session (if user wants independent agent) |
-| Claude Code CLI | Source of truth for actual coding session |
-
----
-
-## Security Model
-
-```mermaid
-flowchart LR
-    subgraph Network["Network Layers"]
-        WireGuard["WireGuard/Tailscale\n(Network Layer)"]
-        TLS["TLS 1.3\n(Transport Layer)"]
-        Auth["Device Pairing Token\n(Application Layer)"]
-    end
-
-    Phone["📱 Mobile"] --> WireGuard
-    WireGuard --> TLS
-    TLS --> Auth
-    Auth --> Bridge["Bridge Server"]
-```
-
-1. **Network Layer**: Tailscale/WireGuard mesh VPN (or your preferred secure tunnel)
-2. **Transport Layer**: WSS (WebSocket Secure) with TLS 1.3
-3. **Application Layer**: Device pairing token on WebSocket handshake (no user accounts, no login)
-
-### Connection Mode Detection
-
-After establishing the WebSocket connection, the bridge analyzes the connection to determine the **connection mode**. This informs the user of the security posture and triggers appropriate warnings:
-
-| Mode | Detection Criteria | Security Level | User Experience |
-|------|-------------------|----------------|-----------------|
-| **Local-only** | Loopback address (`127.0.0.1`, `::1`) | ✅ Secure | House icon indicator |
-| **Private network** | RFC1918 private IP (10.x, 172.16-31.x, 192.168.x) | ✅ Secure | WiFi icon indicator |
-| **Secure remote** | Tailscale/WireGuard IP (100.x.x.x) or validated tunnel domain | ✅ Secure | Shield icon indicator |
-| **Direct public remote** | Public IP or domain without tunnel validation | ⚠️ Warning | Warning triangle, requires acknowledgment |
-| **Misconfigured** | `ws://` instead of `wss://`, or other insecure setup | ❌ Blocked | Error screen, connection refused |
-
-**Health Verification**: After `connection_ack`, the client sends a `health_check` message. The bridge responds with `health_status` including the detected connection mode. The app displays the mode indicator and, for "direct public remote," requires explicit user acknowledgment before proceeding to the main shell.
-
----
-
-## Data Flow Summary
-
-### Outbound (Mobile → Agent)
-
-1. User sends message from mobile app
-2. Message queued locally (if offline)
-3. WebSocket transmits to bridge
-4. Bridge forwards to Agent SDK session (if active)
-5. Agent SDK calls Claude API
-
-### Inbound (Agent → Mobile)
-
-1. Claude Code executes tool/action
-2. Hooks POST event to bridge
-3. Bridge queues event (if mobile disconnected)
-4. WebSocket transmits to mobile
-5. UI renders OpenCode-style component
-
----
-
-## Limitations & Constraints
-
-| Constraint | Impact | Mitigation |
-|------------|--------|------------|
-| Hooks are one-way | Cannot inject messages into Claude Code | Use Agent SDK for parallel session |
-| No session mirroring | Mobile sees events but not full context | Hooks include rich event metadata |
-| Requires local Claude Code | Cannot work without desktop agent | Clear user messaging, offline queue |
-
----
-
-## Related Documentation
-
-- [Data Flow Details](/architecture/data-flow/) — Message-level sequence diagrams
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook configuration
-- [Agent SDK Integration](/integrations/agent-sdk/) — Parallel session setup
-- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component mapping
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Security Architecture](/operations/security-architecture/) — Security implementation details
-
----
-
-*Last updated: 2026-03-17*
-
----
-Route: /architecture/data-flow/
-Source: /docs/architecture/data-flow.md
-Title: Data Flow Architecture
-Description: Message flow between ReCursor mobile app, bridge server, and Claude Code via Hooks.
-
-> Message flow between ReCursor mobile app, bridge server, and Claude Code via Hooks.
-
----
-
-## Connection Lifecycle
-
-```mermaid
-sequenceDiagram
-    participant Mobile as ReCursor App
-    participant Bridge as Bridge Server
-    participant Hooks as Claude Code Hooks
-    participant CC as Claude Code
-
-    Note over Mobile,CC: Initial Connection
-    Mobile->>Bridge: wss:// connect + auth token
-    Bridge-->>Mobile: connection_ack { version, sessions }
-    
-    Mobile->>Bridge: heartbeat_ping
-    Bridge-->>Mobile: heartbeat_pong
-
-    Note over Mobile,CC: Claude Code Hook Registration
-    CC->>Hooks: SessionStart event
-    Hooks->>Bridge: HTTP POST /hooks/event
-    Bridge-->>Hooks: 200 OK
-    
-    Bridge->>Mobile: session_started { session_id }
-```
-
----
-
-## Message Flow: User Sends Message
-
-```mermaid
-sequenceDiagram
-    participant Mobile as ReCursor App
-    participant Bridge as Bridge Server
-    participant Agent as Agent SDK
-    participant API as Claude API
-
-    Note over Mobile,API: User sends message via mobile
-    Mobile->>Mobile: Queue in SyncQueue (if offline)
-    Mobile->>Bridge: message { text, session_id }
-    Bridge->>Bridge: Validate session
-    Bridge->>Agent: Forward message
-    Agent->>API: Claude API request
-    API-->>Agent: Stream response
-
-    loop Streaming Response
-        Agent->>Bridge: stream_chunk { content }
-        Bridge->>Mobile: stream_chunk { content }
-        Mobile->>Mobile: Update UI (streaming text)
-    end
-
-    Agent-->>Bridge: stream_end
-    Bridge-->>Mobile: stream_end
-```
-
----
-
-## Message Flow: Tool Use (via Hooks)
-
-```mermaid
-sequenceDiagram
-    participant Mobile as ReCursor App
-    participant Bridge as Bridge Server
-    participant Hooks as Claude Code Hooks
-    participant CC as Claude Code
-    participant API as Claude API
-
-    Note over Mobile,API: Claude Code executes tool
-    CC->>CC: ToolUse (e.g., edit_file)
-    CC->>Hooks: PostToolUse event
-    Hooks->>Bridge: HTTP POST /hooks/event
-    Note right of Hooks: { tool, params, result, session_id }
-    
-    Bridge->>Bridge: Queue event (if mobile offline)
-    Bridge->>Mobile: tool_result { tool, result }
-    
-    Mobile->>Mobile: Render OpenCode-style Tool Card
-    Mobile->>Mobile: Update Session Timeline
-
-    Note over Mobile,API: Tool requires approval
-    CC->>CC: ToolUse with approval_required
-    CC->>Hooks: PreToolUse event
-    Hooks->>Bridge: HTTP POST /hooks/event
-    Bridge->>Mobile: approval_required { tool, description }
-    
-    Mobile->>Mobile: Show approval UI with rich context
-    Mobile->>Bridge: approval_response { decision, modifications }
-    
-    Note right of Mobile: Cannot inject into Claude Code directly
-    Bridge->>Bridge: Queue for Agent SDK session
-    
-    alt Agent SDK Session Active
-        Bridge->>Agent: Forward approval
-        Agent->>API: Continue with approval context
-    else No Agent SDK Session
-        Bridge->>Bridge: Log for manual handling
-    end
-```
-
----
-
-## Event Types from Hooks
-
-```mermaid
-flowchart TB
-    subgraph Events["Hook Event Types"]
-        Session["Session Events"]
-        Tool["Tool Events"]
-        User["User Events"]
-        System["System Events"]
-    end
-
-    subgraph SessionEvents[" " ]
-        SS[SessionStart]
-        SE[SessionEnd]
-    end
-
-    subgraph ToolEvents[" " ]
-        PTU[PreToolUse]
-        PTU2[PostToolUse]
-    end
-
-    subgraph UserEvents[" " ]
-        UPS[UserPromptSubmit]
-    end
-
-    subgraph SystemEvents[" " ]
-        ST[Stop]
-        SS2[SubagentStop]
-        PC[PreCompact]
-        N[Notification]
-    end
-
-    Session --- SessionEvents
-    Tool --- ToolEvents
-    User --- UserEvents
-    System --- SystemEvents
-```
-
-### Event Mapping to UI
-
-| Hook Event | OpenCode UI Component | Mobile Action |
-|------------|----------------------|---------------|
-| `SessionStart` | Session timeline | Add session to list |
-| `SessionEnd` | Session timeline | Mark session ended |
-| `PostToolUse` | Tool card | Render tool result card |
-| `PreToolUse` | Approval dialog | Show approval UI |
-| `UserPromptSubmit` | Chat message | Show user message |
-| `Stop` | Session status | Show completion status |
-| `SubagentStop` | Subagent status | Update subagent state |
-
-> **Note**: Only confirmed hook events from Claude Code source truth are listed above. See [Claude Code Hooks Integration](/integrations/claude-code-hooks/) for the complete verified event list.
-
----
-
-## Reconnection Flow
-
-```mermaid
-sequenceDiagram
-    participant Mobile as ReCursor App
-    participant Bridge as Bridge Server
-
-    Note over Mobile,Bridge: Mobile temporarily disconnects
-    Bridge->>Bridge: Queue events from Hooks
-    Mobile->>Mobile: Detect disconnect
-    Mobile->>Mobile: Show "Reconnecting..." UI
-
-    loop Reconnect Attempts
-        Mobile->>Bridge: wss:// connect
-        alt Bridge Available
-            Bridge-->>Mobile: connection_ack
-            Bridge->>Mobile: Replay queued events
-            Mobile->>Mobile: Process backlog
-        else Bridge Unavailable
-            Mobile->>Mobile: Wait (exponential backoff)
-        end
-    end
-```
-
----
-
-## Offline Queue Flow
-
-```mermaid
-flowchart TD
-    A[User Action] --> B{Online?}
-    B -->|Yes| C[Execute Immediately]
-    B -->|No| D[Queue in SyncQueue]
-    D --> E[Show Pending State]
-    
-    F[Connectivity Restored] --> G{Bridge Reachable?}
-    G -->|Yes| H[Flush Queue]
-    H --> I[Mark Synced]
-    G -->|No| J[Keep Queued]
-    
-    C --> K[Update UI]
-    I --> K
-```
-
----
-
-## Message Format: Hook Events
-
-```json
-{
-  "event_type": "PostToolUse",
-  "session_id": "sess-abc123",
-  "timestamp": "2026-03-17T10:32:00Z",
-  "payload": {
-    "tool": "edit_file",
-    "params": {
-      "file_path": "/home/user/project/lib/main.dart",
-      "old_string": "void main() {",
-      "new_string": "void main() async {"
-    },
-    "result": {
-      "success": true,
-      "diff": "... unified diff ..."
-    },
-    "metadata": {
-      "token_count": 150,
-      "duration_ms": 250
-    }
-  }
-}
-```
-
----
-
-## Message Format: WebSocket Protocol
-
-See [Bridge Protocol](/architecture/bridge-protocol/) for complete WebSocket message specification.
-
----
-
-## Related Documentation
-
-- [Architecture Overview](/architecture/system-overview/) — High-level system architecture
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook configuration details
-- [Agent SDK Integration](/integrations/agent-sdk/) — Parallel session flow
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Offline Architecture](/operations/offline-architecture/) — Sync queue implementation
-
----
-
-*Last updated: 2026-03-17*
-
----
-Route: /architecture/project-structure/
-Source: /docs/project-structure.md
-Title: Project Structure
-Description: Flutter directory layout and module organization for ReCursor.
-
-> Flutter directory layout and module organization for ReCursor.
-
----
-
-## Top-Level Layout
-
-```
-recursor/
-├── apps/
-│   └── mobile/                    # Flutter mobile app (iOS + Android)
-│       ├── android/
-│       ├── ios/
-│       ├── lib/
-│       │   ├── main.dart          # App entry point
-│       │   ├── app.dart           # MaterialApp, router, theme
-│       │   ├── core/              # App-wide infrastructure
-│       │   ├── features/          # Feature modules
-│       │   └── shared/            # Shared UI components
-│       ├── test/                  # Unit + widget tests
-│       ├── integration_test/      # Integration tests
-│       ├── assets/                # Fonts, images, certificates
-│       ├── pubspec.yaml
-│       └── analysis_options.yaml
-│
-├── packages/
-│   └── bridge/                    # TypeScript WebSocket bridge server
-│       ├── src/
-│       │   ├── server.ts          # WebSocket server entry
-│       │   ├── agents/            # Agent adapters (Claude Code, OpenCode, etc.)
-│       │   ├── hooks/             # Claude Code Hooks receiver
-│       │   ├── git/               # Git operation handlers
-│       │   ├── terminal/          # Terminal session manager
-│       │   ├── auth/              # Device token validation, rate limiting
-│       │   └── notifications/     # Event queue + WebSocket dispatch
-│       ├── package.json
-│       └── tsconfig.json
-│
-├── docs/                          # Documentation (this folder)
-├── .github/
-│   └── workflows/                 # CI/CD pipelines
-│       ├── test.yml               # PR test pipeline
-│       └── deploy.yml             # Build + deploy pipeline
-├── fastlane/                      # Fastlane config (iOS + Android)
-└── README.md
-```
-
----
-
-## Flutter App Structure (`apps/mobile/lib/`)
-
-### `core/` — App-Wide Infrastructure
-
-```
-core/
-├── config/
-│   ├── app_config.dart            # Environment config (dev, staging, prod)
-│   ├── router.dart                # GoRouter route definitions
-│   └── theme.dart                 # Material theme, colors, typography
-│
-├── network/
-│   ├── websocket_service.dart     # WebSocket client (connect, reconnect, heartbeat)
-│   ├── websocket_messages.dart    # Message type definitions (from bridge-protocol.md)
-│   └── connection_state.dart      # Connection state enum + notifier
-│
-├── providers/
-│   ├── token_storage_provider.dart # Secure bridge token storage provider
-│   └── websocket_provider.dart     # Shared WebSocket service providers
-│
-├── storage/
-│   ├── secure_token_storage.dart   # flutter_secure_storage wrapper for bridge pairing
-│   ├── database.dart              # Drift database definition
-│   ├── tables/                    # Drift table definitions
-│   │   ├── sessions.dart
-│   │   ├── messages.dart
-│   │   ├── agents.dart
-│   │   ├── approvals.dart
-│   │   └── sync_queue.dart
-│   ├── daos/                      # Data access objects
-│   │   ├── session_dao.dart
-│   │   ├── message_dao.dart
-│   │   └── sync_dao.dart
-│   └── preferences.dart           # Hive key-value store wrapper
-│
-├── notifications/
-│   ├── notification_service.dart  # Local notification setup (flutter_local_notifications)
-│   ├── notification_handler.dart  # WebSocket event -> in-app banner / local notification routing
-│   └── notification_center.dart   # In-app notification list, unread count, persistence
-│
-└── sync/
-    ├── sync_service.dart          # Offline queue flush + pull logic
-    ├── sync_queue.dart            # Queue operations (enqueue, dequeue, retry)
-    └── conflict_resolver.dart     # Last-write-wins + user prompt
-```
-
-### `features/` — Feature Modules
-
-Each feature follows a consistent internal structure:
-
-```
-features/<feature>/
-├── data/
-│   ├── models/                    # Data transfer objects, JSON serialization
-│   └── repositories/              # Repository implementations
-├── domain/
-│   ├── entities/                  # Domain models (immutable, no JSON)
-│   └── providers/                 # Riverpod providers (state + logic)
-└── presentation/
-    ├── screens/                   # Full-page widgets
-    ├── widgets/                   # Feature-specific reusable widgets
-    └── controllers/               # UI logic (if needed beyond providers)
-```
-
-Feature modules:
-
-```
-features/
-├── chat/                          # Agent chat interface
-│   ├── data/
-│   │   ├── models/
-│   │   │   ├── chat_message.dart
-│   │   │   └── chat_session.dart
-│   │   └── repositories/
-│   │       └── chat_repository.dart
-│   ├── domain/
-│   │   ├── entities/
-│   │   │   └── message.dart
-│   │   └── providers/
-│   │       ├── chat_provider.dart
-│   │       └── session_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   ├── chat_screen.dart
-│       │   └── session_list_screen.dart
-│       └── widgets/
-│           ├── message_bubble.dart
-│           ├── streaming_text.dart
-│           ├── chat_input_bar.dart
-│           ├── tool_card.dart          # OpenCode-style tool card
-│           ├── message_part.dart       # OpenCode-style message parts
-│           └── voice_input_sheet.dart
-│
-├── diff/                          # Code diff viewer
-│   ├── data/
-│   │   └── repositories/
-│   │       └── diff_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── diff_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   └── diff_viewer_screen.dart
-│       └── widgets/
-│           ├── diff_viewer.dart       # OpenCode-style diff viewer
-│           ├── diff_file_card.dart
-│           ├── diff_hunk_view.dart
-│           └── syntax_highlighted_text.dart
-│
-├── session/                       # Session management
-│   ├── data/
-│   │   └── repositories/
-│   │       └── session_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── session_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   └── session_detail_screen.dart
-│       └── widgets/
-│           ├── session_timeline.dart   # OpenCode-style timeline
-│           ├── session_card.dart
-│           └── event_badge.dart
-│
-├── git/                           # Git operations
-│   ├── data/
-│   │   └── repositories/
-│   │       └── git_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── git_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   ├── commit_screen.dart
-│       │   └── branch_screen.dart
-│       └── widgets/
-│           ├── git_status_card.dart
-│           └── file_change_tile.dart
-│
-├── approvals/                     # Tool call approvals
-│   ├── data/
-│   │   └── repositories/
-│   │       └── approval_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── approval_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   └── approval_detail_screen.dart
-│       └── widgets/
-│           ├── approval_card.dart
-│           ├── risk_indicator.dart
-│           └── modification_editor.dart
-│
-├── terminal/                      # Terminal session
-│   ├── data/
-│   │   └── repositories/
-│   │       └── terminal_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── terminal_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   └── terminal_screen.dart
-│       └── widgets/
-│           ├── terminal_output.dart
-│           └── ansi_renderer.dart
-│
-├── agents/                        # Agent management
-│   ├── data/
-│   │   └── repositories/
-│   │       └── agent_repository.dart
-│   ├── domain/
-│   │   └── providers/
-│   │       └── agent_provider.dart
-│   └── presentation/
-│       ├── screens/
-│       │   ├── agent_list_screen.dart
-│       │   └── agent_config_screen.dart
-│       └── widgets/
-│           └── agent_card.dart
-│
-├── startup/                       # Bridge-first launch and pairing restore
-│   ├── domain/
-│   │   └── bridge_startup_controller.dart
-│   └── presentation/
-│       └── screens/
-│           ├── splash_screen.dart
-│           └── bridge_setup_screen.dart
-│
-└── settings/                      # App settings
-    └── presentation/
-        ├── screens/
-        │   └── settings_screen.dart
-        └── widgets/
-            └── setting_tile.dart
-```
-
-### `shared/` — Shared UI Components
-
-```
-shared/
-├── widgets/
-│   ├── loading_indicator.dart     # Consistent loading states
-│   ├── error_card.dart            # Error display
-│   ├── empty_state.dart           # Empty list placeholder
-│   ├── connection_status_bar.dart # Online/offline indicator
-│   ├── code_block.dart            # Syntax-highlighted code
-│   ├── expandable_card.dart       # Reusable expandable pattern
-│   └── markdown_view.dart         # Markdown rendering
-│
-├── constants/
-│   ├── colors.dart                # App color palette
-│   ├── typography.dart            # Text styles
-│   └── dimens.dart                # Spacing, sizing constants
-│
-└── utils/
-    ├── date_formatter.dart        # Date/time formatting
-    ├── diff_parser.dart           # Unified diff parsing
-    └── ansi_parser.dart           # ANSI color code parsing
-```
-
----
-
-## Bridge Server Structure (`packages/bridge/src/`)
-
-```
-bridge/
-├── server.ts                      # Express + WebSocket server entry
-├── config.ts                      # Environment configuration
-├── types.ts                       # TypeScript type definitions
-│
-├── websocket/
-│   ├── server.ts                  # WebSocket server setup
-│   ├── connection_manager.ts      # Client connection tracking
-│   └── message_handler.ts         # Message routing
-│
-├── hooks/
-│   ├── receiver.ts                # Claude Code Hooks HTTP endpoint
-│   ├── validator.ts               # Event validation
-│   └── event_queue.ts             # Event queuing for offline replay
-│
-├── agents/
-│   ├── agent_sdk_adapter.ts       # Agent SDK integration
-│   ├── session_manager.ts         # Session lifecycle management
-│   └── tool_executor.ts           # Tool execution wrapper
-│
-├── git/
-│   ├── git_service.ts             # Git operations
-│   └── diff_parser.ts             # Diff generation
-│
-├── terminal/
-│   ├── terminal_manager.ts        # Terminal session management
-│   └── output_stream.ts           # Terminal output streaming
-│
-├── auth/
-│   ├── token_validator.ts         # Device pairing token validation
-│   └── rate_limiter.ts            # Rate limiting
-│
-└── notifications/
-    ├── event_bus.ts               # Internal event bus
-    └── dispatcher.ts              # WebSocket dispatch
-```
-
----
-
-## Key Principles
-
-1. **Feature-Based Organization**: Each feature is self-contained with its own data, domain, and presentation layers.
-
-2. **Clean Architecture**: Dependencies flow inward:
-   - Presentation depends on Domain
-   - Domain depends on Data
-   - Data depends on Core
-
-3. **Riverpod for State**: All state management uses Riverpod providers, defined in `domain/providers/`.
-
-4. **Repository Pattern**: All data access goes through repositories, which abstract local (Drift/Hive) vs. remote (WebSocket) sources.
-
-5. **OpenCode UI Patterns**: UI components follow OpenCode patterns (tool cards, diff viewer, session timeline).
-
----
-
-## Related Documentation
-
-- [Data Models](/architecture/data-models/) — Drift schemas and domain entities
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component mapping
-
----
-
-*Last updated: 2026-03-17*
-
----
-Route: /architecture/data-models/
-Source: /docs/data-models.md
-Title: Data Models
-Description: Drift schemas, Hive models, and domain entities for ReCursor.
-
-> Drift schemas, Hive models, and domain entities for ReCursor.
-
----
-
-## Drift Database Tables (SQLite)
-
-### Sessions
-
-Stores agent chat sessions.
-
-```dart
-class Sessions extends Table {
-  TextColumn get id => text()();                          // "sess-abc123"
-  TextColumn get agentType => text()();                   // "claude-code", "opencode", etc.
-  TextColumn get agentId => text().nullable()();          // FK to agents table
-  TextColumn get title => text().withDefault(const Constant(''))();
-  TextColumn get workingDirectory => text()();
-  TextColumn get branch => text().nullable()();
-  TextColumn get status => text()();                      // "active", "paused", "closed"
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get lastMessageAt => dateTime().nullable()();
-  DateTimeColumn get updatedAt => dateTime()();
-  BoolColumn get synced => boolean().withDefault(const Constant(true))();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-```
-
-### Messages
-
-Stores chat messages within sessions.
-
-```dart
-class Messages extends Table {
-  TextColumn get id => text()();                          // "msg-001"
-  TextColumn get sessionId => text().references(Sessions, #id)();
-  TextColumn get role => text()();                        // "user", "agent", "system"
-  TextColumn get content => text()();                     // Full text (markdown)
-  TextColumn get messageType => text()
-      .withDefault(const Constant('text'))();             // "text", "tool_call", "tool_result"
-  TextColumn get metadata => text().nullable()();         // JSON: token count, tool info, etc.
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-  BoolColumn get synced => boolean().withDefault(const Constant(true))();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-```
-
-### Agents
-
-Stores configured agent connections.
-
-```dart
-class Agents extends Table {
-  TextColumn get id => text()();                          // UUID
-  TextColumn get displayName => text()();                 // "Claude Code"
-  TextColumn get agentType => text()();                   // "claude-code", "opencode", "aider", "goose", "custom"
-  TextColumn get bridgeUrl => text()();                   // "wss://100.78.42.15:3000"
-  TextColumn get authToken => text()();                   // Encrypted bridge pairing token (device-bridge auth, not user account)
-  TextColumn get workingDirectory => text().nullable()();
-  TextColumn get status => text()
-      .withDefault(const Constant('disconnected'))();     // "connected", "disconnected", "inactive"
-  DateTimeColumn get lastConnectedAt => dateTime().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-```
-
-### Approvals
-
-Stores tool call approval history.
-
-```dart
-class Approvals extends Table {
-  TextColumn get id => text()();                          // "tool-001"
-  TextColumn get sessionId => text().references(Sessions, #id)();
-  TextColumn get tool => text()();                        // "edit_file", "run_command", etc.
-  TextColumn get description => text()();                 // Human-readable description
-  TextColumn get params => text()();                      // JSON: tool parameters
-  TextColumn get reasoning => text().nullable()();        // Agent's explanation
-  TextColumn get riskLevel => text()();                   // "low", "medium", "high", "critical"
-  TextColumn get decision => text()();                    // "approved", "rejected", "modified", "pending"
-  TextColumn get modifications => text().nullable()();    // User's modification instructions
-  TextColumn get result => text().nullable()();           // JSON: tool execution result
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get decidedAt => dateTime().nullable()();
-  BoolColumn get synced => boolean().withDefault(const Constant(true))();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-```
-
-### SyncQueue
-
-Offline mutation queue.
-
-```dart
-class SyncQueue extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get operation => text()();                   // "send_message", "approve_tool", "git_command"
-  TextColumn get payload => text()();                     // JSON: full operation payload
-  TextColumn get sessionId => text().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  BoolColumn get synced => boolean().withDefault(const Constant(false))();
-  IntColumn get retryCount => integer().withDefault(const Constant(0))();
-  TextColumn get lastError => text().nullable()();
-}
-```
-
-### TerminalSessions
-
-Stores terminal session metadata.
-
-```dart
-class TerminalSessions extends Table {
-  TextColumn get id => text()();                          // "term-sess-001"
-  TextColumn get name => text()();                        // "main", "feature-branch"
-  TextColumn get workingDirectory => text()();
-  TextColumn get status => text()();                      // "active", "closed"
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get lastActivityAt => dateTime().nullable()();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-```
-
----
-
-## Hive Boxes (Key-Value)
-
-### Connection Box
-
-```dart
-@HiveType(typeId: 1)
-class BridgeConnectionState {
-  @HiveField(0)
-  final String deviceToken;
-  
-  @HiveField(1)
-  final String bridgeUrl;
-  
-  @HiveField(2)
-  final DateTime pairedAt;
-  
-  @HiveField(3)
-  final String tokenType; // "device_pairing"
-}
-```
-
-### Connection Box
-
-```dart
-@HiveType(typeId: 2)
-class ConnectionState {
-  @HiveField(0)
-  final String status; // "connected", "disconnected", "reconnecting"
-  
-  @HiveField(1)
-  final String? bridgeUrl;
-  
-  @HiveField(2)
-  final DateTime? lastConnectedAt;
-  
-  @HiveField(3)
-  final int reconnectAttempts;
-}
-```
-
-### Preferences Box
-
-```dart
-@HiveType(typeId: 3)
-class UserPreferences {
-  @HiveField(0)
-  final ThemeMode themeMode;
-  
-  @HiveField(1)
-  final String? defaultAgentId;
-  
-  @HiveField(2)
-  final bool notificationsEnabled;
-  
-  @HiveField(3)
-  final bool offlineModeEnabled;
-}
-```
-
----
-
-## Domain Entities (Freezed)
-
-### Message
-
-```dart
-@freezed
-class Message with _$Message {
-  const factory Message({
-    required String id,
-    required String sessionId,
-    required MessageRole role,
-    required String content,
-    required MessageType type,
-    required List<MessagePart> parts,
-    Map<String, dynamic>? metadata,
-    required DateTime createdAt,
-    DateTime? updatedAt,
-    @Default(true) bool synced,
-  }) = _Message;
-
-  factory Message.fromJson(Map<String, dynamic> json) =>
-      _$MessageFromJson(json);
-}
-
-enum MessageRole { user, agent, system }
-enum MessageType { text, toolCall, toolResult, system }
-```
-
-### MessagePart (OpenCode-style)
-
-```dart
-@freezed
-class MessagePart with _$MessagePart {
-  const factory MessagePart.text({
-    required String content,
-  }) = TextPart;
-
-  const factory MessagePart.toolUse({
-    required String tool,
-    required Map<String, dynamic> params,
-    String? id,
-  }) = ToolUsePart;
-
-  const factory MessagePart.toolResult({
-    required String toolCallId,
-    required ToolResult result,
-  }) = ToolResultPart;
-
-  const factory MessagePart.thinking({
-    required String content,
-  }) = ThinkingPart;
-
-  factory MessagePart.fromJson(Map<String, dynamic> json) =>
-      _$MessagePartFromJson(json);
-}
-```
-
-### ChatSession
-
-```dart
-@freezed
-class ChatSession with _$ChatSession {
-  const factory ChatSession({
-    required String id,
-    required String agentType,
-    String? agentId,
-    @Default('') String title,
-    required String workingDirectory,
-    String? branch,
-    @Default(SessionStatus.active) SessionStatus status,
-    required DateTime createdAt,
-    DateTime? lastMessageAt,
-    DateTime? updatedAt,
-    @Default(true) bool synced,
-  }) = _ChatSession;
-
-  factory ChatSession.fromJson(Map<String, dynamic> json) =>
-      _$ChatSessionFromJson(json);
-}
-
-enum SessionStatus { active, paused, closed }
-```
-
-### AgentConfig
-
-```dart
-@freezed
-class AgentConfig with _$AgentConfig {
-  const factory AgentConfig({
-    required String id,
-    required String displayName,
-    required AgentType type,
-    required String bridgeUrl,
-    required String authToken,
-    String? workingDirectory,
-    @Default(AgentConnectionStatus.disconnected) AgentConnectionStatus status,
-    DateTime? lastConnectedAt,
-    required DateTime createdAt,
-    required DateTime updatedAt,
-  }) = _AgentConfig;
-
-  factory AgentConfig.fromJson(Map<String, dynamic> json) =>
-      _$AgentConfigFromJson(json);
-}
-
-enum AgentType { claudeCode, openCode, aider, goose, custom }
-enum AgentConnectionStatus { connected, disconnected, inactive }
-```
-
-### ToolCall
-
-```dart
-@freezed
-class ToolCall with _$ToolCall {
-  const factory ToolCall({
-    required String id,
-    required String sessionId,
-    required String tool,
-    required Map<String, dynamic> params,
-    String? description,
-    String? reasoning,
-    @Default(RiskLevel.low) RiskLevel riskLevel,
-    @Default(ApprovalDecision.pending) ApprovalDecision decision,
-    String? modifications,
-    Map<String, dynamic>? result,
-    required DateTime createdAt,
-    DateTime? decidedAt,
-  }) = _ToolCall;
-
-  factory ToolCall.fromJson(Map<String, dynamic> json) =>
-      _$ToolCallFromJson(json);
-}
-
-enum RiskLevel { low, medium, high, critical }
-enum ApprovalDecision { pending, approved, rejected, modified }
-```
-
-### ToolResult
-
-```dart
-@freezed
-class ToolResult with _$ToolResult {
-  const factory ToolResult({
-    required bool success,
-    required String content,
-    Map<String, dynamic>? metadata,
-    String? error,
-    int? durationMs,
-  }) = _ToolResult;
-
-  factory ToolResult.fromJson(Map<String, dynamic> json) =>
-      _$ToolResultFromJson(json);
-}
-```
-
----
-
-## Git Models
-
-### GitStatus
-
-```dart
-@freezed
-class GitStatus with _$GitStatus {
-  const factory GitStatus({
-    required String branch,
-    required List<GitFileChange> changes,
-    required int ahead,
-    required int behind,
-    required bool isClean,
-  }) = _GitStatus;
-
-  factory GitStatus.fromJson(Map<String, dynamic> json) =>
-      _$GitStatusFromJson(json);
-}
-```
-
-### GitFileChange
-
-```dart
-@freezed
-class GitFileChange with _$GitFileChange {
-  const factory GitFileChange({
-    required String path,
-    required FileChangeStatus status,
-    int? additions,
-    int? deletions,
-    String? diff,
-  }) = _GitFileChange;
-
-  factory GitFileChange.fromJson(Map<String, dynamic> json) =>
-      _$GitFileChangeFromJson(json);
-}
-
-enum FileChangeStatus { modified, added, deleted, untracked, renamed }
-```
-
-### GitBranch
-
-```dart
-@freezed
-class GitBranch with _$GitBranch {
-  const factory GitBranch({
-    required String name,
-    required bool isCurrent,
-    String? upstream,
-    int? ahead,
-    int? behind,
-  }) = _GitBranch;
-
-  factory GitBranch.fromJson(Map<String, dynamic> json) =>
-      _$GitBranchFromJson(json);
-}
-```
-
----
-
-## Diff Models
-
-### DiffFile
-
-```dart
-@freezed
-class DiffFile with _$DiffFile {
-  const factory DiffFile({
-    required String path,
-    required String oldPath,
-    required String newPath,
-    required FileChangeStatus status,
-    required int additions,
-    required int deletions,
-    required List<DiffHunk> hunks,
-    String? oldMode,
-    String? newMode,
-  }) = _DiffFile;
-
-  factory DiffFile.fromJson(Map<String, dynamic> json) =>
-      _$DiffFileFromJson(json);
-}
-```
-
-### DiffHunk
-
-```dart
-@freezed
-class DiffHunk with _$DiffHunk {
-  const factory DiffHunk({
-    required String header,
-    required int oldStart,
-    required int oldLines,
-    required int newStart,
-    required int newLines,
-    required List<DiffLine> lines,
-  }) = _DiffHunk;
-
-  factory DiffHunk.fromJson(Map<String, dynamic> json) =>
-      _$DiffHunkFromJson(json);
-}
-```
-
-### DiffLine
-
-```dart
-@freezed
-class DiffLine with _$DiffLine {
-  const factory DiffLine({
-    required DiffLineType type,
-    required String content,
-    int? oldLineNumber,
-    int? newLineNumber,
-  }) = _DiffLine;
-
-  factory DiffLine.fromJson(Map<String, dynamic> json) =>
-      _$DiffLineFromJson(json);
-}
-
-enum DiffLineType { context, added, removed }
-```
-
----
-
-## File Tree Models
-
-### FileTreeNode
-
-```dart
-@freezed
-class FileTreeNode with _$FileTreeNode {
-  const factory FileTreeNode({
-    required String name,
-    required String path,
-    required FileNodeType type,
-    List<FileTreeNode>? children,
-    int? size,
-    DateTime? modifiedAt,
-    String? content,
-  }) = _FileTreeNode;
-
-  factory FileTreeNode.fromJson(Map<String, dynamic> json) =>
-      _$FileTreeNodeFromJson(json);
-}
-
-enum FileNodeType { file, directory }
-```
-
----
-
-## Hook Event Models
-
-### HookEvent
-
-```dart
-@freezed
-class HookEvent with _$HookEvent {
-  const factory HookEvent({
-    required String eventType,
-    required String sessionId,
-    required DateTime timestamp,
-    required Map<String, dynamic> payload,
-  }) = _HookEvent;
-
-  factory HookEvent.fromJson(Map<String, dynamic> json) =>
-      _$HookEventFromJson(json);
-}
-```
-
-### PostToolUseEvent
-
-```dart
-@freezed
-class PostToolUseEvent with _$PostToolUseEvent {
-  const factory PostToolUseEvent({
-    required String tool,
-    required Map<String, dynamic> toolInput,
-    required ToolResult result,
-    Map<String, dynamic>? metadata,
-  }) = _PostToolUseEvent;
-
-  factory PostToolUseEvent.fromJson(Map<String, dynamic> json) =>
-      _$PostToolUseEventFromJson(json);
-}
-```
-
-### PreToolUseEvent
-
-```dart
-@freezed
-class PreToolUseEvent with _$PreToolUseEvent {
-  const factory PreToolUseEvent({
-    required String tool,
-    required Map<String, dynamic> toolInput,
-    required String riskLevel,
-    required String description,
-    required bool requiresApproval,
-  }) = _PreToolUseEvent;
-
-  factory PreToolUseEvent.fromJson(Map<String, dynamic> json) =>
-      _$PreToolUseEventFromJson(json);
-}
-```
-
----
-
-## Related Documentation
-
-- [Project Structure](/architecture/project-structure/) — Flutter directory layout
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Offline Architecture](/operations/offline-architecture/) — Sync and storage patterns
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event models
-- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component data
-
----
-
-*Last updated: 2026-03-17*
+Canonical source documents live in `docs-site/src/content/docs/` in the repository.
+This artifact concatenates the published documentation corpus for AI-assisted workflows.
 
 ---
 Route: /architecture/bridge-protocol/
-Source: /docs/bridge-protocol.md
+Source: docs-site/src/content/docs/architecture\bridge-protocol.md
 Title: Bridge Protocol Specification
 Description: WebSocket message protocol between the ReCursor Flutter mobile app and the user-controlled TypeScript bridge server. Bridge-first, no-login: device pairing via QR code, no user accounts.
 
@@ -2220,8 +723,1784 @@ When the mobile app reconnects after disconnection:
 *Last updated: 2026-03-17*
 
 ---
+Route: /architecture/data-flow/
+Source: docs-site/src/content/docs/architecture\data-flow.md
+Title: Data Flow Architecture
+Description: Message flow between ReCursor mobile app, bridge server, and Claude Code via Hooks.
+
+> Message flow between ReCursor mobile app, bridge server, and Claude Code via Hooks.
+
+---
+
+## Connection Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+    participant Hooks as Claude Code Hooks
+    participant CC as Claude Code
+
+    Note over Mobile,CC: Initial Connection
+    Mobile->>Bridge: wss:// connect + auth token
+    Bridge-->>Mobile: connection_ack { version, sessions }
+    
+    Mobile->>Bridge: heartbeat_ping
+    Bridge-->>Mobile: heartbeat_pong
+
+    Note over Mobile,CC: Claude Code Hook Registration
+    CC->>Hooks: SessionStart event
+    Hooks->>Bridge: HTTP POST /hooks/event
+    Bridge-->>Hooks: 200 OK
+    
+    Bridge->>Mobile: session_started { session_id }
+```
+
+---
+
+## Message Flow: User Sends Message
+
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+    participant Agent as Agent SDK
+    participant API as Claude API
+
+    Note over Mobile,API: User sends message via mobile
+    Mobile->>Mobile: Queue in SyncQueue (if offline)
+    Mobile->>Bridge: message { text, session_id }
+    Bridge->>Bridge: Validate session
+    Bridge->>Agent: Forward message
+    Agent->>API: Claude API request
+    API-->>Agent: Stream response
+
+    loop Streaming Response
+        Agent->>Bridge: stream_chunk { content }
+        Bridge->>Mobile: stream_chunk { content }
+        Mobile->>Mobile: Update UI (streaming text)
+    end
+
+    Agent-->>Bridge: stream_end
+    Bridge-->>Mobile: stream_end
+```
+
+---
+
+## Message Flow: Tool Use (via Hooks)
+
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+    participant Hooks as Claude Code Hooks
+    participant CC as Claude Code
+    participant API as Claude API
+
+    Note over Mobile,API: Claude Code executes tool
+    CC->>CC: ToolUse (e.g., edit_file)
+    CC->>Hooks: PostToolUse event
+    Hooks->>Bridge: HTTP POST /hooks/event
+    Note right of Hooks: { tool, params, result, session_id }
+    
+    Bridge->>Bridge: Queue event (if mobile offline)
+    Bridge->>Mobile: tool_result { tool, result }
+    
+    Mobile->>Mobile: Render OpenCode-style Tool Card
+    Mobile->>Mobile: Update Session Timeline
+
+    Note over Mobile,API: Tool requires approval
+    CC->>CC: ToolUse with approval_required
+    CC->>Hooks: PreToolUse event
+    Hooks->>Bridge: HTTP POST /hooks/event
+    Bridge->>Mobile: approval_required { tool, description }
+    
+    Mobile->>Mobile: Show approval UI with rich context
+    Mobile->>Bridge: approval_response { decision, modifications }
+    
+    Note right of Mobile: Cannot inject into Claude Code directly
+    Bridge->>Bridge: Queue for Agent SDK session
+    
+    alt Agent SDK Session Active
+        Bridge->>Agent: Forward approval
+        Agent->>API: Continue with approval context
+    else No Agent SDK Session
+        Bridge->>Bridge: Log for manual handling
+    end
+```
+
+---
+
+## Event Types from Hooks
+
+```mermaid
+flowchart TB
+    subgraph Events["Hook Event Types"]
+        Session["Session Events"]
+        Tool["Tool Events"]
+        User["User Events"]
+        System["System Events"]
+    end
+
+    subgraph SessionEvents[" " ]
+        SS[SessionStart]
+        SE[SessionEnd]
+    end
+
+    subgraph ToolEvents[" " ]
+        PTU[PreToolUse]
+        PTU2[PostToolUse]
+    end
+
+    subgraph UserEvents[" " ]
+        UPS[UserPromptSubmit]
+    end
+
+    subgraph SystemEvents[" " ]
+        ST[Stop]
+        SS2[SubagentStop]
+        PC[PreCompact]
+        N[Notification]
+    end
+
+    Session --- SessionEvents
+    Tool --- ToolEvents
+    User --- UserEvents
+    System --- SystemEvents
+```
+
+### Event Mapping to UI
+
+| Hook Event | OpenCode UI Component | Mobile Action |
+|------------|----------------------|---------------|
+| `SessionStart` | Session timeline | Add session to list |
+| `SessionEnd` | Session timeline | Mark session ended |
+| `PostToolUse` | Tool card | Render tool result card |
+| `PreToolUse` | Approval dialog | Show approval UI |
+| `UserPromptSubmit` | Chat message | Show user message |
+| `Stop` | Session status | Show completion status |
+| `SubagentStop` | Subagent status | Update subagent state |
+
+> **Note**: Only confirmed hook events from Claude Code source truth are listed above. See [Claude Code Hooks Integration](/integrations/claude-code-hooks/) for the complete verified event list.
+
+---
+
+## Reconnection Flow
+
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+
+    Note over Mobile,Bridge: Mobile temporarily disconnects
+    Bridge->>Bridge: Queue events from Hooks
+    Mobile->>Mobile: Detect disconnect
+    Mobile->>Mobile: Show "Reconnecting..." UI
+
+    loop Reconnect Attempts
+        Mobile->>Bridge: wss:// connect
+        alt Bridge Available
+            Bridge-->>Mobile: connection_ack
+            Bridge->>Mobile: Replay queued events
+            Mobile->>Mobile: Process backlog
+        else Bridge Unavailable
+            Mobile->>Mobile: Wait (exponential backoff)
+        end
+    end
+```
+
+---
+
+## Offline Queue Flow
+
+```mermaid
+flowchart TD
+    A[User Action] --> B{Online?}
+    B -->|Yes| C[Execute Immediately]
+    B -->|No| D[Queue in SyncQueue]
+    D --> E[Show Pending State]
+    
+    F[Connectivity Restored] --> G{Bridge Reachable?}
+    G -->|Yes| H[Flush Queue]
+    H --> I[Mark Synced]
+    G -->|No| J[Keep Queued]
+    
+    C --> K[Update UI]
+    I --> K
+```
+
+---
+
+## Message Format: Hook Events
+
+```json
+{
+  "event_type": "PostToolUse",
+  "session_id": "sess-abc123",
+  "timestamp": "2026-03-17T10:32:00Z",
+  "payload": {
+    "tool": "edit_file",
+    "params": {
+      "file_path": "/home/user/project/lib/main.dart",
+      "old_string": "void main() {",
+      "new_string": "void main() async {"
+    },
+    "result": {
+      "success": true,
+      "diff": "... unified diff ..."
+    },
+    "metadata": {
+      "token_count": 150,
+      "duration_ms": 250
+    }
+  }
+}
+```
+
+---
+
+## Message Format: WebSocket Protocol
+
+See [Bridge Protocol](/architecture/bridge-protocol/) for complete WebSocket message specification.
+
+---
+
+## Related Documentation
+
+- [Architecture Overview](/architecture/system-overview/) — High-level system architecture
+- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook configuration details
+- [Agent SDK Integration](/integrations/agent-sdk/) — Parallel session flow
+- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [Offline Architecture](/operations/offline-architecture/) — Sync queue implementation
+
+---
+
+*Last updated: 2026-03-17*
+
+---
+Route: /architecture/data-models/
+Source: docs-site/src/content/docs/architecture\data-models.md
+Title: Data Models
+Description: Drift schemas, Hive models, and domain entities for ReCursor.
+
+> Drift schemas, Hive models, and domain entities for ReCursor.
+
+---
+
+## Drift Database Tables (SQLite)
+
+### Sessions
+
+Stores agent chat sessions.
+
+```dart
+class Sessions extends Table {
+  TextColumn get id => text()();                          // "sess-abc123"
+  TextColumn get agentType => text()();                   // "claude-code", "opencode", etc.
+  TextColumn get agentId => text().nullable()();          // FK to agents table
+  TextColumn get title => text().withDefault(const Constant(''))();
+  TextColumn get workingDirectory => text()();
+  TextColumn get branch => text().nullable()();
+  TextColumn get status => text()();                      // "active", "paused", "closed"
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get lastMessageAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime()();
+  BoolColumn get synced => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+```
+
+### Messages
+
+Stores chat messages within sessions.
+
+```dart
+class Messages extends Table {
+  TextColumn get id => text()();                          // "msg-001"
+  TextColumn get sessionId => text().references(Sessions, #id)();
+  TextColumn get role => text()();                        // "user", "agent", "system"
+  TextColumn get content => text()();                     // Full text (markdown)
+  TextColumn get messageType => text()
+      .withDefault(const Constant('text'))();             // "text", "tool_call", "tool_result"
+  TextColumn get metadata => text().nullable()();         // JSON: token count, tool info, etc.
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  BoolColumn get synced => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+```
+
+### Agents
+
+Stores configured agent connections.
+
+```dart
+class Agents extends Table {
+  TextColumn get id => text()();                          // UUID
+  TextColumn get displayName => text()();                 // "Claude Code"
+  TextColumn get agentType => text()();                   // "claude-code", "opencode", "aider", "goose", "custom"
+  TextColumn get bridgeUrl => text()();                   // "wss://100.78.42.15:3000"
+  TextColumn get authToken => text()();                   // Encrypted bridge pairing token (device-bridge auth, not user account)
+  TextColumn get workingDirectory => text().nullable()();
+  TextColumn get status => text()
+      .withDefault(const Constant('disconnected'))();     // "connected", "disconnected", "inactive"
+  DateTimeColumn get lastConnectedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+```
+
+### Approvals
+
+Stores tool call approval history.
+
+```dart
+class Approvals extends Table {
+  TextColumn get id => text()();                          // "tool-001"
+  TextColumn get sessionId => text().references(Sessions, #id)();
+  TextColumn get tool => text()();                        // "edit_file", "run_command", etc.
+  TextColumn get description => text()();                 // Human-readable description
+  TextColumn get params => text()();                      // JSON: tool parameters
+  TextColumn get reasoning => text().nullable()();        // Agent's explanation
+  TextColumn get riskLevel => text()();                   // "low", "medium", "high", "critical"
+  TextColumn get decision => text()();                    // "approved", "rejected", "modified", "pending"
+  TextColumn get modifications => text().nullable()();    // User's modification instructions
+  TextColumn get result => text().nullable()();           // JSON: tool execution result
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get decidedAt => dateTime().nullable()();
+  BoolColumn get synced => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+```
+
+### SyncQueue
+
+Offline mutation queue.
+
+```dart
+class SyncQueue extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get operation => text()();                   // "send_message", "approve_tool", "git_command"
+  TextColumn get payload => text()();                     // JSON: full operation payload
+  TextColumn get sessionId => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get synced => boolean().withDefault(const Constant(false))();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  TextColumn get lastError => text().nullable()();
+}
+```
+
+### TerminalSessions
+
+Stores terminal session metadata.
+
+```dart
+class TerminalSessions extends Table {
+  TextColumn get id => text()();                          // "term-sess-001"
+  TextColumn get name => text()();                        // "main", "feature-branch"
+  TextColumn get workingDirectory => text()();
+  TextColumn get status => text()();                      // "active", "closed"
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get lastActivityAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+```
+
+---
+
+## Hive Boxes (Key-Value)
+
+### Connection Box
+
+```dart
+@HiveType(typeId: 1)
+class BridgeConnectionState {
+  @HiveField(0)
+  final String deviceToken;
+  
+  @HiveField(1)
+  final String bridgeUrl;
+  
+  @HiveField(2)
+  final DateTime pairedAt;
+  
+  @HiveField(3)
+  final String tokenType; // "device_pairing"
+}
+```
+
+### Connection Box
+
+```dart
+@HiveType(typeId: 2)
+class ConnectionState {
+  @HiveField(0)
+  final String status; // "connected", "disconnected", "reconnecting"
+  
+  @HiveField(1)
+  final String? bridgeUrl;
+  
+  @HiveField(2)
+  final DateTime? lastConnectedAt;
+  
+  @HiveField(3)
+  final int reconnectAttempts;
+}
+```
+
+### Preferences Box
+
+```dart
+@HiveType(typeId: 3)
+class UserPreferences {
+  @HiveField(0)
+  final ThemeMode themeMode;
+  
+  @HiveField(1)
+  final String? defaultAgentId;
+  
+  @HiveField(2)
+  final bool notificationsEnabled;
+  
+  @HiveField(3)
+  final bool offlineModeEnabled;
+}
+```
+
+---
+
+## Domain Entities (Freezed)
+
+### Message
+
+```dart
+@freezed
+class Message with _$Message {
+  const factory Message({
+    required String id,
+    required String sessionId,
+    required MessageRole role,
+    required String content,
+    required MessageType type,
+    required List<MessagePart> parts,
+    Map<String, dynamic>? metadata,
+    required DateTime createdAt,
+    DateTime? updatedAt,
+    @Default(true) bool synced,
+  }) = _Message;
+
+  factory Message.fromJson(Map<String, dynamic> json) =>
+      _$MessageFromJson(json);
+}
+
+enum MessageRole { user, agent, system }
+enum MessageType { text, toolCall, toolResult, system }
+```
+
+### MessagePart (OpenCode-style)
+
+```dart
+@freezed
+class MessagePart with _$MessagePart {
+  const factory MessagePart.text({
+    required String content,
+  }) = TextPart;
+
+  const factory MessagePart.toolUse({
+    required String tool,
+    required Map<String, dynamic> params,
+    String? id,
+  }) = ToolUsePart;
+
+  const factory MessagePart.toolResult({
+    required String toolCallId,
+    required ToolResult result,
+  }) = ToolResultPart;
+
+  const factory MessagePart.thinking({
+    required String content,
+  }) = ThinkingPart;
+
+  factory MessagePart.fromJson(Map<String, dynamic> json) =>
+      _$MessagePartFromJson(json);
+}
+```
+
+### ChatSession
+
+```dart
+@freezed
+class ChatSession with _$ChatSession {
+  const factory ChatSession({
+    required String id,
+    required String agentType,
+    String? agentId,
+    @Default('') String title,
+    required String workingDirectory,
+    String? branch,
+    @Default(SessionStatus.active) SessionStatus status,
+    required DateTime createdAt,
+    DateTime? lastMessageAt,
+    DateTime? updatedAt,
+    @Default(true) bool synced,
+  }) = _ChatSession;
+
+  factory ChatSession.fromJson(Map<String, dynamic> json) =>
+      _$ChatSessionFromJson(json);
+}
+
+enum SessionStatus { active, paused, closed }
+```
+
+### AgentConfig
+
+```dart
+@freezed
+class AgentConfig with _$AgentConfig {
+  const factory AgentConfig({
+    required String id,
+    required String displayName,
+    required AgentType type,
+    required String bridgeUrl,
+    required String authToken,
+    String? workingDirectory,
+    @Default(AgentConnectionStatus.disconnected) AgentConnectionStatus status,
+    DateTime? lastConnectedAt,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) = _AgentConfig;
+
+  factory AgentConfig.fromJson(Map<String, dynamic> json) =>
+      _$AgentConfigFromJson(json);
+}
+
+enum AgentType { claudeCode, openCode, aider, goose, custom }
+enum AgentConnectionStatus { connected, disconnected, inactive }
+```
+
+### ToolCall
+
+```dart
+@freezed
+class ToolCall with _$ToolCall {
+  const factory ToolCall({
+    required String id,
+    required String sessionId,
+    required String tool,
+    required Map<String, dynamic> params,
+    String? description,
+    String? reasoning,
+    @Default(RiskLevel.low) RiskLevel riskLevel,
+    @Default(ApprovalDecision.pending) ApprovalDecision decision,
+    String? modifications,
+    Map<String, dynamic>? result,
+    required DateTime createdAt,
+    DateTime? decidedAt,
+  }) = _ToolCall;
+
+  factory ToolCall.fromJson(Map<String, dynamic> json) =>
+      _$ToolCallFromJson(json);
+}
+
+enum RiskLevel { low, medium, high, critical }
+enum ApprovalDecision { pending, approved, rejected, modified }
+```
+
+### ToolResult
+
+```dart
+@freezed
+class ToolResult with _$ToolResult {
+  const factory ToolResult({
+    required bool success,
+    required String content,
+    Map<String, dynamic>? metadata,
+    String? error,
+    int? durationMs,
+  }) = _ToolResult;
+
+  factory ToolResult.fromJson(Map<String, dynamic> json) =>
+      _$ToolResultFromJson(json);
+}
+```
+
+---
+
+## Git Models
+
+### GitStatus
+
+```dart
+@freezed
+class GitStatus with _$GitStatus {
+  const factory GitStatus({
+    required String branch,
+    required List<GitFileChange> changes,
+    required int ahead,
+    required int behind,
+    required bool isClean,
+  }) = _GitStatus;
+
+  factory GitStatus.fromJson(Map<String, dynamic> json) =>
+      _$GitStatusFromJson(json);
+}
+```
+
+### GitFileChange
+
+```dart
+@freezed
+class GitFileChange with _$GitFileChange {
+  const factory GitFileChange({
+    required String path,
+    required FileChangeStatus status,
+    int? additions,
+    int? deletions,
+    String? diff,
+  }) = _GitFileChange;
+
+  factory GitFileChange.fromJson(Map<String, dynamic> json) =>
+      _$GitFileChangeFromJson(json);
+}
+
+enum FileChangeStatus { modified, added, deleted, untracked, renamed }
+```
+
+### GitBranch
+
+```dart
+@freezed
+class GitBranch with _$GitBranch {
+  const factory GitBranch({
+    required String name,
+    required bool isCurrent,
+    String? upstream,
+    int? ahead,
+    int? behind,
+  }) = _GitBranch;
+
+  factory GitBranch.fromJson(Map<String, dynamic> json) =>
+      _$GitBranchFromJson(json);
+}
+```
+
+---
+
+## Diff Models
+
+### DiffFile
+
+```dart
+@freezed
+class DiffFile with _$DiffFile {
+  const factory DiffFile({
+    required String path,
+    required String oldPath,
+    required String newPath,
+    required FileChangeStatus status,
+    required int additions,
+    required int deletions,
+    required List<DiffHunk> hunks,
+    String? oldMode,
+    String? newMode,
+  }) = _DiffFile;
+
+  factory DiffFile.fromJson(Map<String, dynamic> json) =>
+      _$DiffFileFromJson(json);
+}
+```
+
+### DiffHunk
+
+```dart
+@freezed
+class DiffHunk with _$DiffHunk {
+  const factory DiffHunk({
+    required String header,
+    required int oldStart,
+    required int oldLines,
+    required int newStart,
+    required int newLines,
+    required List<DiffLine> lines,
+  }) = _DiffHunk;
+
+  factory DiffHunk.fromJson(Map<String, dynamic> json) =>
+      _$DiffHunkFromJson(json);
+}
+```
+
+### DiffLine
+
+```dart
+@freezed
+class DiffLine with _$DiffLine {
+  const factory DiffLine({
+    required DiffLineType type,
+    required String content,
+    int? oldLineNumber,
+    int? newLineNumber,
+  }) = _DiffLine;
+
+  factory DiffLine.fromJson(Map<String, dynamic> json) =>
+      _$DiffLineFromJson(json);
+}
+
+enum DiffLineType { context, added, removed }
+```
+
+---
+
+## File Tree Models
+
+### FileTreeNode
+
+```dart
+@freezed
+class FileTreeNode with _$FileTreeNode {
+  const factory FileTreeNode({
+    required String name,
+    required String path,
+    required FileNodeType type,
+    List<FileTreeNode>? children,
+    int? size,
+    DateTime? modifiedAt,
+    String? content,
+  }) = _FileTreeNode;
+
+  factory FileTreeNode.fromJson(Map<String, dynamic> json) =>
+      _$FileTreeNodeFromJson(json);
+}
+
+enum FileNodeType { file, directory }
+```
+
+---
+
+## Hook Event Models
+
+### HookEvent
+
+```dart
+@freezed
+class HookEvent with _$HookEvent {
+  const factory HookEvent({
+    required String eventType,
+    required String sessionId,
+    required DateTime timestamp,
+    required Map<String, dynamic> payload,
+  }) = _HookEvent;
+
+  factory HookEvent.fromJson(Map<String, dynamic> json) =>
+      _$HookEventFromJson(json);
+}
+```
+
+### PostToolUseEvent
+
+```dart
+@freezed
+class PostToolUseEvent with _$PostToolUseEvent {
+  const factory PostToolUseEvent({
+    required String tool,
+    required Map<String, dynamic> toolInput,
+    required ToolResult result,
+    Map<String, dynamic>? metadata,
+  }) = _PostToolUseEvent;
+
+  factory PostToolUseEvent.fromJson(Map<String, dynamic> json) =>
+      _$PostToolUseEventFromJson(json);
+}
+```
+
+### PreToolUseEvent
+
+```dart
+@freezed
+class PreToolUseEvent with _$PreToolUseEvent {
+  const factory PreToolUseEvent({
+    required String tool,
+    required Map<String, dynamic> toolInput,
+    required String riskLevel,
+    required String description,
+    required bool requiresApproval,
+  }) = _PreToolUseEvent;
+
+  factory PreToolUseEvent.fromJson(Map<String, dynamic> json) =>
+      _$PreToolUseEventFromJson(json);
+}
+```
+
+---
+
+## Related Documentation
+
+- [Project Structure](/architecture/project-structure/) — Flutter directory layout
+- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [Offline Architecture](/operations/offline-architecture/) — Sync and storage patterns
+- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event models
+- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component data
+
+---
+
+*Last updated: 2026-03-17*
+
+---
+Route: /architecture/project-structure/
+Source: docs-site/src/content/docs/architecture\project-structure.md
+Title: Project Structure
+Description: Flutter directory layout and module organization for ReCursor.
+
+> Flutter directory layout and module organization for ReCursor.
+
+---
+
+## Top-Level Layout
+
+```
+recursor/
+├── apps/
+│   └── mobile/                    # Flutter mobile app (iOS + Android)
+│       ├── android/
+│       ├── ios/
+│       ├── lib/
+│       │   ├── main.dart          # App entry point
+│       │   ├── app.dart           # MaterialApp, router, theme
+│       │   ├── core/              # App-wide infrastructure
+│       │   ├── features/          # Feature modules
+│       │   └── shared/            # Shared UI components
+│       ├── test/                  # Unit + widget tests
+│       ├── integration_test/      # Integration tests
+│       ├── assets/                # Fonts, images, certificates
+│       ├── pubspec.yaml
+│       └── analysis_options.yaml
+│
+├── packages/
+│   └── bridge/                    # TypeScript WebSocket bridge server
+│       ├── src/
+│       │   ├── server.ts          # WebSocket server entry
+│       │   ├── agents/            # Agent adapters (Claude Code, OpenCode, etc.)
+│       │   ├── hooks/             # Claude Code Hooks receiver
+│       │   ├── git/               # Git operation handlers
+│       │   ├── terminal/          # Terminal session manager
+│       │   ├── auth/              # Device token validation, rate limiting
+│       │   └── notifications/     # Event queue + WebSocket dispatch
+│       ├── package.json
+│       └── tsconfig.json
+│
+├── docs-site/                     # Documentation (Astro Starlight site)
+│   └── src/content/docs/          # Canonical documentation source
+├── .github/
+│   └── workflows/                 # CI/CD pipelines
+│       ├── test.yml               # PR test pipeline
+│       └── deploy.yml             # Build + deploy pipeline
+├── fastlane/                      # Fastlane config (iOS + Android)
+└── README.md
+```
+
+---
+
+## Flutter App Structure (`apps/mobile/lib/`)
+
+### `core/` — App-Wide Infrastructure
+
+```
+core/
+├── config/
+│   ├── app_config.dart            # Environment config (dev, staging, prod)
+│   ├── router.dart                # GoRouter route definitions
+│   └── theme.dart                 # Material theme, colors, typography
+│
+├── network/
+│   ├── websocket_service.dart     # WebSocket client (connect, reconnect, heartbeat)
+│   ├── websocket_messages.dart    # Message type definitions (from bridge-protocol.md)
+│   └── connection_state.dart      # Connection state enum + notifier
+│
+├── providers/
+│   ├── token_storage_provider.dart # Secure bridge token storage provider
+│   └── websocket_provider.dart     # Shared WebSocket service providers
+│
+├── storage/
+│   ├── secure_token_storage.dart   # flutter_secure_storage wrapper for bridge pairing
+│   ├── database.dart              # Drift database definition
+│   ├── tables/                    # Drift table definitions
+│   │   ├── sessions.dart
+│   │   ├── messages.dart
+│   │   ├── agents.dart
+│   │   ├── approvals.dart
+│   │   └── sync_queue.dart
+│   ├── daos/                      # Data access objects
+│   │   ├── session_dao.dart
+│   │   ├── message_dao.dart
+│   │   └── sync_dao.dart
+│   └── preferences.dart           # Hive key-value store wrapper
+│
+├── notifications/
+│   ├── notification_service.dart  # Local notification setup (flutter_local_notifications)
+│   ├── notification_handler.dart  # WebSocket event -> in-app banner / local notification routing
+│   └── notification_center.dart   # In-app notification list, unread count, persistence
+│
+└── sync/
+    ├── sync_service.dart          # Offline queue flush + pull logic
+    ├── sync_queue.dart            # Queue operations (enqueue, dequeue, retry)
+    └── conflict_resolver.dart     # Last-write-wins + user prompt
+```
+
+### `features/` — Feature Modules
+
+Each feature follows a consistent internal structure:
+
+```
+features/<feature>/
+├── data/
+│   ├── models/                    # Data transfer objects, JSON serialization
+│   └── repositories/              # Repository implementations
+├── domain/
+│   ├── entities/                  # Domain models (immutable, no JSON)
+│   └── providers/                 # Riverpod providers (state + logic)
+└── presentation/
+    ├── screens/                   # Full-page widgets
+    ├── widgets/                   # Feature-specific reusable widgets
+    └── controllers/               # UI logic (if needed beyond providers)
+```
+
+Feature modules:
+
+```
+features/
+├── chat/                          # Agent chat interface
+│   ├── data/
+│   │   ├── models/
+│   │   │   ├── chat_message.dart
+│   │   │   └── chat_session.dart
+│   │   └── repositories/
+│   │       └── chat_repository.dart
+│   ├── domain/
+│   │   ├── entities/
+│   │   │   └── message.dart
+│   │   └── providers/
+│   │       ├── chat_provider.dart
+│   │       └── session_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   ├── chat_screen.dart
+│       │   └── session_list_screen.dart
+│       └── widgets/
+│           ├── message_bubble.dart
+│           ├── streaming_text.dart
+│           ├── chat_input_bar.dart
+│           ├── tool_card.dart          # OpenCode-style tool card
+│           ├── message_part.dart       # OpenCode-style message parts
+│           └── voice_input_sheet.dart
+│
+├── diff/                          # Code diff viewer
+│   ├── data/
+│   │   └── repositories/
+│   │       └── diff_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── diff_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   └── diff_viewer_screen.dart
+│       └── widgets/
+│           ├── diff_viewer.dart       # OpenCode-style diff viewer
+│           ├── diff_file_card.dart
+│           ├── diff_hunk_view.dart
+│           └── syntax_highlighted_text.dart
+│
+├── session/                       # Session management
+│   ├── data/
+│   │   └── repositories/
+│   │       └── session_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── session_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   └── session_detail_screen.dart
+│       └── widgets/
+│           ├── session_timeline.dart   # OpenCode-style timeline
+│           ├── session_card.dart
+│           └── event_badge.dart
+│
+├── git/                           # Git operations
+│   ├── data/
+│   │   └── repositories/
+│   │       └── git_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── git_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   ├── commit_screen.dart
+│       │   └── branch_screen.dart
+│       └── widgets/
+│           ├── git_status_card.dart
+│           └── file_change_tile.dart
+│
+├── approvals/                     # Tool call approvals
+│   ├── data/
+│   │   └── repositories/
+│   │       └── approval_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── approval_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   └── approval_detail_screen.dart
+│       └── widgets/
+│           ├── approval_card.dart
+│           ├── risk_indicator.dart
+│           └── modification_editor.dart
+│
+├── terminal/                      # Terminal session
+│   ├── data/
+│   │   └── repositories/
+│   │       └── terminal_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── terminal_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   └── terminal_screen.dart
+│       └── widgets/
+│           ├── terminal_output.dart
+│           └── ansi_renderer.dart
+│
+├── agents/                        # Agent management
+│   ├── data/
+│   │   └── repositories/
+│   │       └── agent_repository.dart
+│   ├── domain/
+│   │   └── providers/
+│   │       └── agent_provider.dart
+│   └── presentation/
+│       ├── screens/
+│       │   ├── agent_list_screen.dart
+│       │   └── agent_config_screen.dart
+│       └── widgets/
+│           └── agent_card.dart
+│
+├── startup/                       # Bridge-first launch and pairing restore
+│   ├── domain/
+│   │   └── bridge_startup_controller.dart
+│   └── presentation/
+│       └── screens/
+│           ├── splash_screen.dart
+│           └── bridge_setup_screen.dart
+│
+└── settings/                      # App settings
+    └── presentation/
+        ├── screens/
+        │   └── settings_screen.dart
+        └── widgets/
+            └── setting_tile.dart
+```
+
+### `shared/` — Shared UI Components
+
+```
+shared/
+├── widgets/
+│   ├── loading_indicator.dart     # Consistent loading states
+│   ├── error_card.dart            # Error display
+│   ├── empty_state.dart           # Empty list placeholder
+│   ├── connection_status_bar.dart # Online/offline indicator
+│   ├── code_block.dart            # Syntax-highlighted code
+│   ├── expandable_card.dart       # Reusable expandable pattern
+│   └── markdown_view.dart         # Markdown rendering
+│
+├── constants/
+│   ├── colors.dart                # App color palette
+│   ├── typography.dart            # Text styles
+│   └── dimens.dart                # Spacing, sizing constants
+│
+└── utils/
+    ├── date_formatter.dart        # Date/time formatting
+    ├── diff_parser.dart           # Unified diff parsing
+    └── ansi_parser.dart           # ANSI color code parsing
+```
+
+---
+
+## Bridge Server Structure (`packages/bridge/src/`)
+
+```
+bridge/
+├── server.ts                      # Express + WebSocket server entry
+├── config.ts                      # Environment configuration
+├── types.ts                       # TypeScript type definitions
+│
+├── websocket/
+│   ├── server.ts                  # WebSocket server setup
+│   ├── connection_manager.ts      # Client connection tracking
+│   └── message_handler.ts         # Message routing
+│
+├── hooks/
+│   ├── receiver.ts                # Claude Code Hooks HTTP endpoint
+│   ├── validator.ts               # Event validation
+│   └── event_queue.ts             # Event queuing for offline replay
+│
+├── agents/
+│   ├── agent_sdk_adapter.ts       # Agent SDK integration
+│   ├── session_manager.ts         # Session lifecycle management
+│   └── tool_executor.ts           # Tool execution wrapper
+│
+├── git/
+│   ├── git_service.ts             # Git operations
+│   └── diff_parser.ts             # Diff generation
+│
+├── terminal/
+│   ├── terminal_manager.ts        # Terminal session management
+│   └── output_stream.ts           # Terminal output streaming
+│
+├── auth/
+│   ├── token_validator.ts         # Device pairing token validation
+│   └── rate_limiter.ts            # Rate limiting
+│
+└── notifications/
+    ├── event_bus.ts               # Internal event bus
+    └── dispatcher.ts              # WebSocket dispatch
+```
+
+---
+
+## Key Principles
+
+1. **Feature-Based Organization**: Each feature is self-contained with its own data, domain, and presentation layers.
+
+2. **Clean Architecture**: Dependencies flow inward:
+   - Presentation depends on Domain
+   - Domain depends on Data
+   - Data depends on Core
+
+3. **Riverpod for State**: All state management uses Riverpod providers, defined in `domain/providers/`.
+
+4. **Repository Pattern**: All data access goes through repositories, which abstract local (Drift/Hive) vs. remote (WebSocket) sources.
+
+5. **OpenCode UI Patterns**: UI components follow OpenCode patterns (tool cards, diff viewer, session timeline).
+
+---
+
+## Related Documentation
+
+- [Data Models](/architecture/data-models/) — Drift schemas and domain entities
+- [Architecture Overview](/architecture/system-overview/) — System architecture
+- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component mapping
+
+---
+
+*Last updated: 2026-03-17*
+
+---
+Route: /architecture/system-overview/
+Source: docs-site/src/content/docs/architecture\system-overview.md
+Title: Architecture Overview
+Description: System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
+
+> System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
+
+---
+
+## System Context
+
+```mermaid
+flowchart TB
+    subgraph Mobile["📱 ReCursor Flutter App"]
+        UI["OpenCode-like UI Layer"]
+        State["Riverpod State Management"]
+        WSClient["WebSocket Client"]
+    end
+
+    subgraph Desktop["💻 Development Machine"]
+        Bridge["ReCursor Bridge Server\n(TypeScript/Node.js)"]
+        
+        subgraph Integration["Claude Code Integration"]
+            Hooks["Hooks System\n(HTTP Event Observer)"]
+            AgentSDK["Agent SDK\n(Parallel Session)"]
+            CC["Claude Code CLI"]
+        end
+    end
+
+    subgraph Anthropic["☁️ Anthropic Services"]
+        API["Claude API"]
+    end
+
+    UI <--> State
+    State <--> WSClient
+    WSClient <-->|wss:// (Tailscale/WireGuard)| Bridge
+    Bridge <-->|HTTP POST| Hooks
+    Hooks -->|Observes| CC
+    Bridge <-->|Optional| AgentSDK
+    AgentSDK <-->|API Calls| API
+    CC <-->|Internal| API
+```
+
+---
+
+## Key Architectural Decisions
+
+### 1. Claude Code Integration Strategy
+
+| Approach | Status | Notes |
+|----------|--------|-------|
+| Direct Remote Control Protocol | ❌ Not Available | First-party only (claude.ai/code, official apps). No public API for third-party clients. |
+| **Claude Code Hooks** | ✅ Supported | HTTP-based event observation (one-way) |
+| **Agent SDK** | ✅ Supported | Parallel agent sessions (not mirroring) |
+| MCP (Model Context Protocol) | ✅ Supported | Tool interoperability |
+
+**Selected Architecture:** Hybrid approach using Hooks for event observation + Agent SDK for parallel sessions. ReCursor does not claim to mirror or control existing Claude Code sessions.
+
+### 2. UI/UX Pattern
+
+ReCursor adopts **OpenCode's UI patterns** for the mobile interface:
+
+- **Tool Cards**: Rich, interactive cards for tool use and results
+- **Diff Viewer**: Syntax-highlighted unified/side-by-side diffs
+- **Session Timeline**: Visual timeline of agent actions and decisions
+- **Chat Interface**: Streaming text with markdown rendering
+
+### 3. Communication Pattern
+
+```
+Mobile App <--WebSocket--> Bridge Server <--HTTP--> Claude Code Hooks
+     ↑                                              |
+     |                                              ↓
+     └────────────────────────────────────── Observes Events
+```
+
+- **WebSocket**: Bidirectional, real-time communication between mobile and bridge
+- **HTTP Hooks**: One-way event streaming from Claude Code to bridge
+- **No Direct Mobile-to-Claude-Code**: All communication flows through the bridge
+
+---
+
+## Component Responsibilities
+
+### ReCursor Flutter App
+
+| Component | Responsibility |
+|-----------|--------------|
+| UI Layer | Render OpenCode-style tool cards, diff viewer, timeline |
+| State Management | Riverpod providers for sessions, messages, connection |
+| WebSocket Client | Connect to bridge, handle reconnections, heartbeat |
+| Local Storage | Drift for persistence, Hive for caching |
+
+### Bridge Server
+
+| Component | Responsibility |
+|-----------|--------------|
+| WebSocket Server | Accept mobile connections, manage sessions |
+| Event Queue | Buffer events from Hooks, replay on reconnect |
+| HTTP Endpoint | Receive events from Claude Code Hooks |
+| Agent SDK Adapter | Optional parallel session management |
+
+### Claude Code Integration
+
+| Component | Responsibility |
+|-----------|--------------|
+| Hooks | POST events to bridge (tool use, messages, session state) |
+| Agent SDK | Parallel agent session (if user wants independent agent) |
+| Claude Code CLI | Source of truth for actual coding session |
+
+---
+
+## Security Model
+
+```mermaid
+flowchart LR
+    subgraph Network["Network Layers"]
+        WireGuard["WireGuard/Tailscale\n(Network Layer)"]
+        TLS["TLS 1.3\n(Transport Layer)"]
+        Auth["Device Pairing Token\n(Application Layer)"]
+    end
+
+    Phone["📱 Mobile"] --> WireGuard
+    WireGuard --> TLS
+    TLS --> Auth
+    Auth --> Bridge["Bridge Server"]
+```
+
+1. **Network Layer**: Tailscale/WireGuard mesh VPN (or your preferred secure tunnel)
+2. **Transport Layer**: WSS (WebSocket Secure) with TLS 1.3
+3. **Application Layer**: Device pairing token on WebSocket handshake (no user accounts, no login)
+
+### Connection Mode Detection
+
+After establishing the WebSocket connection, the bridge analyzes the connection to determine the **connection mode**. This informs the user of the security posture and triggers appropriate warnings:
+
+| Mode | Detection Criteria | Security Level | User Experience |
+|------|-------------------|----------------|-----------------|
+| **Local-only** | Loopback address (`127.0.0.1`, `::1`) | ✅ Secure | House icon indicator |
+| **Private network** | RFC1918 private IP (10.x, 172.16-31.x, 192.168.x) | ✅ Secure | WiFi icon indicator |
+| **Secure remote** | Tailscale/WireGuard IP (100.x.x.x) or validated tunnel domain | ✅ Secure | Shield icon indicator |
+| **Direct public remote** | Public IP or domain without tunnel validation | ⚠️ Warning | Warning triangle, requires acknowledgment |
+| **Misconfigured** | `ws://` instead of `wss://`, or other insecure setup | ❌ Blocked | Error screen, connection refused |
+
+**Health Verification**: After `connection_ack`, the client sends a `health_check` message. The bridge responds with `health_status` including the detected connection mode. The app displays the mode indicator and, for "direct public remote," requires explicit user acknowledgment before proceeding to the main shell.
+
+---
+
+## Data Flow Summary
+
+### Outbound (Mobile → Agent)
+
+1. User sends message from mobile app
+2. Message queued locally (if offline)
+3. WebSocket transmits to bridge
+4. Bridge forwards to Agent SDK session (if active)
+5. Agent SDK calls Claude API
+
+### Inbound (Agent → Mobile)
+
+1. Claude Code executes tool/action
+2. Hooks POST event to bridge
+3. Bridge queues event (if mobile disconnected)
+4. WebSocket transmits to mobile
+5. UI renders OpenCode-style component
+
+---
+
+## Limitations & Constraints
+
+| Constraint | Impact | Mitigation |
+|------------|--------|------------|
+| Hooks are one-way | Cannot inject messages into Claude Code | Use Agent SDK for parallel session |
+| No session mirroring | Mobile sees events but not full context | Hooks include rich event metadata |
+| Requires local Claude Code | Cannot work without desktop agent | Clear user messaging, offline queue |
+
+---
+
+## Related Documentation
+
+- [Data Flow Details](/architecture/data-flow/) — Message-level sequence diagrams
+- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook configuration
+- [Agent SDK Integration](/integrations/agent-sdk/) — Parallel session setup
+- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component mapping
+- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [Security Architecture](/operations/security-architecture/) — Security implementation details
+
+---
+
+*Last updated: 2026-03-17*
+
+---
+Route: /integrations/agent-sdk/
+Source: docs-site/src/content/docs/integrations\agent-sdk.md
+Title: Agent SDK Integration
+Description: Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols.
+
+> Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols.
+
+---
+
+## Overview
+
+The **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) is the officially supported way to build agentic applications that interact with Claude. ReCursor uses the Agent SDK to create **parallel agent sessions** that can receive user input from the mobile app and execute tools independently.
+
+> **Key Concept**: Agent SDK sessions are **parallel**, not mirrored. They exist alongside Claude Code sessions rather than controlling them.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Mobile["📱 ReCursor App"]
+        UI["OpenCode-style UI"]
+        WSClient["WebSocket Client"]
+    end
+
+    subgraph Desktop["💻 Development Machine"]
+        Bridge["Bridge Server"]
+        
+        subgraph Sessions["Agent Sessions"]
+            CC["Claude Code CLI\n(User's main session)"]
+            SDK["Agent SDK Session\n(Parallel, ReCursor-managed)"]
+        end
+    end
+
+    subgraph Anthropic["☁️ Anthropic API"]
+        API["Claude API"]
+    end
+
+    UI <--> WSClient
+    WSClient <-->|WebSocket| Bridge
+    Bridge <-->|Agent SDK| SDK
+    SDK <-->|API Calls| API
+    CC <-->|Internal| API
+```
+
+---
+
+## When to Use Agent SDK
+
+| Scenario | Solution |
+|----------|----------|
+| User wants to chat with agent from mobile | ✅ Agent SDK session |
+| User wants to approve tool calls from mobile | ⚠️ Hooks + Agent SDK (see below) |
+| User wants to see what Claude Code is doing | ✅ Hooks |
+| User wants to control existing Claude Code session | ❌ Not supported (Remote Control is first-party only) |
+
+### Hybrid Approach
+
+For full functionality, ReCursor uses both:
+
+1. **Hooks** — Observe Claude Code events (tool use, session state)
+2. **Agent SDK** — Receive user input and execute independent actions
+
+When a user "approves" a tool call in the mobile app:
+- The approval is sent to the Agent SDK session
+- The Agent SDK session executes a similar tool
+- Claude Code continues independently (Hooks show what it did)
+
+---
+
+## Agent SDK Setup
+
+### Installation
+
+```bash
+npm install @anthropic-ai/claude-agent-sdk
+```
+
+### Basic Session
+
+```typescript
+import { Agent } from '@anthropic-ai/claude-agent-sdk';
+import { ReadTool, EditTool, BashTool } from '@anthropic-ai/claude-agent-sdk/tools';
+
+const agent = new Agent({
+  model: 'claude-3-5-sonnet-20241022',
+  tools: [new ReadTool(), new EditTool(), new BashTool()],
+  workingDirectory: '/home/user/project',
+});
+
+// Start a conversation
+const response = await agent.run({
+  messages: [{ role: 'user', content: 'Tighten the bridge startup validation in bridge_setup_screen.dart' }],
+});
+```
+
+### Integration with Bridge Server
+
+```typescript
+// Bridge server manages Agent SDK sessions
+import { Agent } from '@anthropic-ai/claude-agent-sdk';
+import { EventEmitter } from 'events';
+
+class AgentSessionManager {
+  private sessions: Map<string, Agent> = new Map();
+  private eventEmitter: EventEmitter = new EventEmitter();
+
+  async createSession(sessionId: string, config: SessionConfig): Promise<void> {
+    const agent = new Agent({
+      model: config.model || 'claude-3-5-sonnet-20241022',
+      tools: this.loadTools(config.toolAllowlist),
+      workingDirectory: config.workingDirectory,
+    });
+
+    this.sessions.set(sessionId, agent);
+    
+    // Forward events to mobile
+    agent.on('tool_use', (event) => {
+      this.eventEmitter.emit('tool-use', { sessionId, event });
+    });
+
+    agent.on('message', (event) => {
+      this.eventEmitter.emit('message', { sessionId, event });
+    });
+  }
+
+  async sendMessage(sessionId: string, message: string): Promise<void> {
+    const agent = this.sessions.get(sessionId);
+    if (!agent) throw new Error('Session not found');
+
+    // Stream response back to mobile
+    const stream = agent.run({
+      messages: [{ role: 'user', content: message }],
+    });
+
+    for await (const chunk of stream) {
+      this.eventEmitter.emit('stream_chunk', { sessionId, chunk });
+    }
+  }
+
+  async executeTool(sessionId: string, toolCall: ToolCall): Promise<ToolResult> {
+    const agent = this.sessions.get(sessionId);
+    if (!agent) throw new Error('Session not found');
+
+    return agent.executeTool(toolCall);
+  }
+}
+```
+
+---
+
+## Message Flow
+
+### User Sends Message
+
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+    participant SDK as Agent SDK
+    participant API as Claude API
+
+    Mobile->>Bridge: message { text, session_id }
+    Bridge->>SDK: agent.run({ messages })
+    SDK->>API: Claude API request
+    API-->>SDK: Stream response
+    
+    loop Streaming
+        SDK->>Bridge: Stream chunk
+        Bridge->>Mobile: stream_chunk
+        Mobile->>Mobile: Update UI
+    end
+    
+    SDK-->>Bridge: Complete
+    Bridge-->>Mobile: stream_end
+```
+
+### Tool Execution
+
+```mermaid
+sequenceDiagram
+    participant Mobile as ReCursor App
+    participant Bridge as Bridge Server
+    participant SDK as Agent SDK
+    participant Tools as Tool Implementations
+
+    SDK->>SDK: Tool use requested
+    SDK->>Bridge: tool_use event
+    Bridge->>Mobile: approval_required
+    
+    alt Approved
+        Mobile->>Bridge: approval_response { approved }
+        Bridge->>SDK: Continue execution
+        SDK->>Tools: Execute tool
+        Tools-->>SDK: Result
+        SDK->>Bridge: tool_result
+        Bridge->>Mobile: Render Tool Card
+    else Rejected
+        Mobile->>Bridge: approval_response { rejected }
+        Bridge->>SDK: Halt execution
+        SDK-->>Bridge: Error
+    end
+```
+
+---
+
+## Tool Configuration
+
+### Available Tools
+
+```typescript
+import {
+  ReadTool,
+  EditTool,
+  BashTool,
+  GlobTool,
+  GrepTool,
+  LSTool,
+} from '@anthropic-ai/claude-agent-sdk/tools';
+
+const tools = [
+  new ReadTool(),      // Read file contents
+  new EditTool(),      // Edit files (find/replace)
+  new BashTool({      // Execute shell commands
+    allowedCommands: ['git', 'flutter', 'npm'], // Optional allowlist
+  }),
+  new GlobTool(),      // File globbing
+  new GrepTool(),      // Text search
+  new LSTool(),        // List directory contents
+];
+```
+
+### Custom Tools
+
+```typescript
+import { Tool, ToolInput, ToolResult } from '@anthropic-ai/claude-agent-sdk';
+
+class DeployTool implements Tool {
+  name = 'deploy_app';
+  description = 'Deploy the application to staging/production';
+  
+  async execute(input: ToolInput): Promise<ToolResult> {
+    const { environment, version } = input.parameters;
+    
+    // Custom deployment logic
+    const result = await this.deploy(environment, version);
+    
+    return {
+      success: result.success,
+      content: result.message,
+    };
+  }
+}
+```
+
+---
+
+## Session Management
+
+### Session Lifecycle
+
+```typescript
+interface SessionLifecycle {
+  // Create new session
+  async createSession(config: SessionConfig): Promise<string>;
+  
+  // Resume existing session (if supported)
+  async resumeSession(sessionId: string): Promise<void>;
+  
+  // Pause (keep context, stop processing)
+  async pauseSession(sessionId: string): Promise<void>;
+  
+  // Close (cleanup resources)
+  async closeSession(sessionId: string): Promise<void>;
+}
+```
+
+### Session Context
+
+```typescript
+interface SessionContext {
+  sessionId: string;
+  workingDirectory: string;
+  gitBranch?: string;
+  toolAllowlist: string[];
+  model: string;
+  temperature: number;
+  
+  // Conversation history (for resuming)
+  messageHistory: Message[];
+}
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Bridge server .env
+ANTHROPIC_API_KEY=sk-ant-...
+AGENT_MODEL=claude-3-5-sonnet-20241022
+AGENT_MAX_ITERATIONS=25
+AGENT_TEMPERATURE=0.7
+```
+
+### Per-Session Configuration
+
+```typescript
+interface SessionConfig {
+  model?: string;
+  temperature?: number;
+  maxIterations?: number;
+  toolAllowlist?: string[];
+  workingDirectory: string;
+  initialInstructions?: string;
+}
+```
+
+---
+
+## Error Handling
+
+### Common Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `APIError` | Invalid API key or rate limit | Check API key, implement backoff |
+| `ToolError` | Tool execution failed | Show error in tool card |
+| `TimeoutError` | Tool took too long | Set appropriate timeouts |
+| `SessionError` | Session ID not found | Validate session on mobile |
+
+### Retry Strategy
+
+```typescript
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await delay(Math.pow(2, i) * 1000); // Exponential backoff
+    }
+  }
+  throw new Error('Unreachable');
+}
+```
+
+---
+
+## Security Considerations
+
+### API Key Management
+
+- Store `ANTHROPIC_API_KEY` in bridge server environment only
+- Never expose to mobile app
+- Rotate keys regularly
+
+### Tool Restrictions
+
+```typescript
+// Restrict dangerous tools
+const safeTools = [
+  new ReadTool(),
+  new EditTool(),
+  new BashTool({
+    allowedCommands: ['git', 'flutter', 'npm'],
+    blockedCommands: ['rm -rf', 'sudo', 'chmod'],
+  }),
+];
+```
+
+### Working Directory Isolation
+
+```typescript
+// Verify working directory is within allowed paths
+function validateWorkingDirectory(dir: string): void {
+  const allowedRoot = process.env.ALLOWED_PROJECT_ROOT;
+  if (!dir.startsWith(allowedRoot)) {
+    throw new Error('Working directory outside allowed root');
+  }
+}
+```
+
+---
+
+## Related Documentation
+
+- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event observation
+- [Architecture Overview](/architecture/system-overview/) — System architecture
+- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
+- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+
+---
+
+*Last updated: 2026-03-17*
+
+---
 Route: /integrations/claude-code-hooks/
-Source: /docs/integration/claude-code-hooks.md
+Source: docs-site/src/content/docs/integrations\claude-code-hooks.md
 Title: Claude Code Hooks Integration
 Description: Configure Claude Code Hooks to POST events to the ReCursor bridge server for mobile consumption. This is a supported integration path for one-way event observation — not a Remote Control protocol.
 
@@ -3061,411 +3340,8 @@ When validation fails, the bridge server responds with:
 *Last updated: 2026-03-20 | Verified against Claude Code source truth*
 
 ---
-Route: /integrations/agent-sdk/
-Source: /docs/integration/agent-sdk.md
-Title: Agent SDK Integration
-Description: Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols.
-
-> Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols.
-
----
-
-## Overview
-
-The **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) is the officially supported way to build agentic applications that interact with Claude. ReCursor uses the Agent SDK to create **parallel agent sessions** that can receive user input from the mobile app and execute tools independently.
-
-> **Key Concept**: Agent SDK sessions are **parallel**, not mirrored. They exist alongside Claude Code sessions rather than controlling them.
-
----
-
-## Architecture
-
-```mermaid
-flowchart TB
-    subgraph Mobile["📱 ReCursor App"]
-        UI["OpenCode-style UI"]
-        WSClient["WebSocket Client"]
-    end
-
-    subgraph Desktop["💻 Development Machine"]
-        Bridge["Bridge Server"]
-        
-        subgraph Sessions["Agent Sessions"]
-            CC["Claude Code CLI\n(User's main session)"]
-            SDK["Agent SDK Session\n(Parallel, ReCursor-managed)"]
-        end
-    end
-
-    subgraph Anthropic["☁️ Anthropic API"]
-        API["Claude API"]
-    end
-
-    UI <--> WSClient
-    WSClient <-->|WebSocket| Bridge
-    Bridge <-->|Agent SDK| SDK
-    SDK <-->|API Calls| API
-    CC <-->|Internal| API
-```
-
----
-
-## When to Use Agent SDK
-
-| Scenario | Solution |
-|----------|----------|
-| User wants to chat with agent from mobile | ✅ Agent SDK session |
-| User wants to approve tool calls from mobile | ⚠️ Hooks + Agent SDK (see below) |
-| User wants to see what Claude Code is doing | ✅ Hooks |
-| User wants to control existing Claude Code session | ❌ Not supported (Remote Control is first-party only) |
-
-### Hybrid Approach
-
-For full functionality, ReCursor uses both:
-
-1. **Hooks** — Observe Claude Code events (tool use, session state)
-2. **Agent SDK** — Receive user input and execute independent actions
-
-When a user "approves" a tool call in the mobile app:
-- The approval is sent to the Agent SDK session
-- The Agent SDK session executes a similar tool
-- Claude Code continues independently (Hooks show what it did)
-
----
-
-## Agent SDK Setup
-
-### Installation
-
-```bash
-npm install @anthropic-ai/claude-agent-sdk
-```
-
-### Basic Session
-
-```typescript
-import { Agent } from '@anthropic-ai/claude-agent-sdk';
-import { ReadTool, EditTool, BashTool } from '@anthropic-ai/claude-agent-sdk/tools';
-
-const agent = new Agent({
-  model: 'claude-3-5-sonnet-20241022',
-  tools: [new ReadTool(), new EditTool(), new BashTool()],
-  workingDirectory: '/home/user/project',
-});
-
-// Start a conversation
-const response = await agent.run({
-  messages: [{ role: 'user', content: 'Tighten the bridge startup validation in bridge_setup_screen.dart' }],
-});
-```
-
-### Integration with Bridge Server
-
-```typescript
-// Bridge server manages Agent SDK sessions
-import { Agent } from '@anthropic-ai/claude-agent-sdk';
-import { EventEmitter } from 'events';
-
-class AgentSessionManager {
-  private sessions: Map<string, Agent> = new Map();
-  private eventEmitter: EventEmitter = new EventEmitter();
-
-  async createSession(sessionId: string, config: SessionConfig): Promise<void> {
-    const agent = new Agent({
-      model: config.model || 'claude-3-5-sonnet-20241022',
-      tools: this.loadTools(config.toolAllowlist),
-      workingDirectory: config.workingDirectory,
-    });
-
-    this.sessions.set(sessionId, agent);
-    
-    // Forward events to mobile
-    agent.on('tool_use', (event) => {
-      this.eventEmitter.emit('tool-use', { sessionId, event });
-    });
-
-    agent.on('message', (event) => {
-      this.eventEmitter.emit('message', { sessionId, event });
-    });
-  }
-
-  async sendMessage(sessionId: string, message: string): Promise<void> {
-    const agent = this.sessions.get(sessionId);
-    if (!agent) throw new Error('Session not found');
-
-    // Stream response back to mobile
-    const stream = agent.run({
-      messages: [{ role: 'user', content: message }],
-    });
-
-    for await (const chunk of stream) {
-      this.eventEmitter.emit('stream_chunk', { sessionId, chunk });
-    }
-  }
-
-  async executeTool(sessionId: string, toolCall: ToolCall): Promise<ToolResult> {
-    const agent = this.sessions.get(sessionId);
-    if (!agent) throw new Error('Session not found');
-
-    return agent.executeTool(toolCall);
-  }
-}
-```
-
----
-
-## Message Flow
-
-### User Sends Message
-
-```mermaid
-sequenceDiagram
-    participant Mobile as ReCursor App
-    participant Bridge as Bridge Server
-    participant SDK as Agent SDK
-    participant API as Claude API
-
-    Mobile->>Bridge: message { text, session_id }
-    Bridge->>SDK: agent.run({ messages })
-    SDK->>API: Claude API request
-    API-->>SDK: Stream response
-    
-    loop Streaming
-        SDK->>Bridge: Stream chunk
-        Bridge->>Mobile: stream_chunk
-        Mobile->>Mobile: Update UI
-    end
-    
-    SDK-->>Bridge: Complete
-    Bridge-->>Mobile: stream_end
-```
-
-### Tool Execution
-
-```mermaid
-sequenceDiagram
-    participant Mobile as ReCursor App
-    participant Bridge as Bridge Server
-    participant SDK as Agent SDK
-    participant Tools as Tool Implementations
-
-    SDK->>SDK: Tool use requested
-    SDK->>Bridge: tool_use event
-    Bridge->>Mobile: approval_required
-    
-    alt Approved
-        Mobile->>Bridge: approval_response { approved }
-        Bridge->>SDK: Continue execution
-        SDK->>Tools: Execute tool
-        Tools-->>SDK: Result
-        SDK->>Bridge: tool_result
-        Bridge->>Mobile: Render Tool Card
-    else Rejected
-        Mobile->>Bridge: approval_response { rejected }
-        Bridge->>SDK: Halt execution
-        SDK-->>Bridge: Error
-    end
-```
-
----
-
-## Tool Configuration
-
-### Available Tools
-
-```typescript
-import {
-  ReadTool,
-  EditTool,
-  BashTool,
-  GlobTool,
-  GrepTool,
-  LSTool,
-} from '@anthropic-ai/claude-agent-sdk/tools';
-
-const tools = [
-  new ReadTool(),      // Read file contents
-  new EditTool(),      // Edit files (find/replace)
-  new BashTool({      // Execute shell commands
-    allowedCommands: ['git', 'flutter', 'npm'], // Optional allowlist
-  }),
-  new GlobTool(),      // File globbing
-  new GrepTool(),      // Text search
-  new LSTool(),        // List directory contents
-];
-```
-
-### Custom Tools
-
-```typescript
-import { Tool, ToolInput, ToolResult } from '@anthropic-ai/claude-agent-sdk';
-
-class DeployTool implements Tool {
-  name = 'deploy_app';
-  description = 'Deploy the application to staging/production';
-  
-  async execute(input: ToolInput): Promise<ToolResult> {
-    const { environment, version } = input.parameters;
-    
-    // Custom deployment logic
-    const result = await this.deploy(environment, version);
-    
-    return {
-      success: result.success,
-      content: result.message,
-    };
-  }
-}
-```
-
----
-
-## Session Management
-
-### Session Lifecycle
-
-```typescript
-interface SessionLifecycle {
-  // Create new session
-  async createSession(config: SessionConfig): Promise<string>;
-  
-  // Resume existing session (if supported)
-  async resumeSession(sessionId: string): Promise<void>;
-  
-  // Pause (keep context, stop processing)
-  async pauseSession(sessionId: string): Promise<void>;
-  
-  // Close (cleanup resources)
-  async closeSession(sessionId: string): Promise<void>;
-}
-```
-
-### Session Context
-
-```typescript
-interface SessionContext {
-  sessionId: string;
-  workingDirectory: string;
-  gitBranch?: string;
-  toolAllowlist: string[];
-  model: string;
-  temperature: number;
-  
-  // Conversation history (for resuming)
-  messageHistory: Message[];
-}
-```
-
----
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Bridge server .env
-ANTHROPIC_API_KEY=sk-ant-...
-AGENT_MODEL=claude-3-5-sonnet-20241022
-AGENT_MAX_ITERATIONS=25
-AGENT_TEMPERATURE=0.7
-```
-
-### Per-Session Configuration
-
-```typescript
-interface SessionConfig {
-  model?: string;
-  temperature?: number;
-  maxIterations?: number;
-  toolAllowlist?: string[];
-  workingDirectory: string;
-  initialInstructions?: string;
-}
-```
-
----
-
-## Error Handling
-
-### Common Errors
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `APIError` | Invalid API key or rate limit | Check API key, implement backoff |
-| `ToolError` | Tool execution failed | Show error in tool card |
-| `TimeoutError` | Tool took too long | Set appropriate timeouts |
-| `SessionError` | Session ID not found | Validate session on mobile |
-
-### Retry Strategy
-
-```typescript
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  maxRetries: number = 3
-): Promise<T> {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await operation();
-    } catch (error) {
-      if (i === maxRetries - 1) throw error;
-      await delay(Math.pow(2, i) * 1000); // Exponential backoff
-    }
-  }
-  throw new Error('Unreachable');
-}
-```
-
----
-
-## Security Considerations
-
-### API Key Management
-
-- Store `ANTHROPIC_API_KEY` in bridge server environment only
-- Never expose to mobile app
-- Rotate keys regularly
-
-### Tool Restrictions
-
-```typescript
-// Restrict dangerous tools
-const safeTools = [
-  new ReadTool(),
-  new EditTool(),
-  new BashTool({
-    allowedCommands: ['git', 'flutter', 'npm'],
-    blockedCommands: ['rm -rf', 'sudo', 'chmod'],
-  }),
-];
-```
-
-### Working Directory Isolation
-
-```typescript
-// Verify working directory is within allowed paths
-function validateWorkingDirectory(dir: string): void {
-  const allowedRoot = process.env.ALLOWED_PROJECT_ROOT;
-  if (!dir.startsWith(allowedRoot)) {
-    throw new Error('Working directory outside allowed root');
-  }
-}
-```
-
----
-
-## Related Documentation
-
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event observation
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-
----
-
-*Last updated: 2026-03-17*
-
----
 Route: /integrations/opencode-ui-patterns/
-Source: /docs/integration/opencode-ui-patterns.md
+Source: docs-site/src/content/docs/integrations\opencode-ui-patterns.md
 Title: OpenCode UI Patterns for ReCursor
 Description: Mapping OpenCode's terminal-native UI components to Flutter mobile widgets.
 
@@ -4020,8 +3896,733 @@ class _ToolCardState extends State<ToolCard>
 *Last updated: 2026-03-17*
 
 ---
+Route: /operations/ci-cd/
+Source: docs-site/src/content/docs/operations\ci-cd.md
+Title: CI/CD Pipeline
+Description: GitHub Actions + Fastlane for building, testing, and distributing ReCursor to iOS and Android.
+
+> GitHub Actions + Fastlane for building, testing, and distributing ReCursor to iOS and Android.
+
+---
+
+## Pipeline Overview
+
+```
+PR opened/updated:
+  [flutter analyze] -> [flutter test] -> (pass/fail)
+
+Push to main:
+  [flutter analyze] -> [flutter test] -> [build Android APK/AAB] -> [build iOS IPA]
+                                              |                          |
+                                         Play Store              TestFlight
+                                        (internal track)
+```
+
+---
+
+## GitHub Actions Workflow Structure
+
+Three jobs:
+1. **`test`** — runs on `ubuntu-latest`: analyze, unit tests, widget tests, golden tests
+2. **`build-android`** — runs on `ubuntu-latest`: build AAB, upload to Play Store internal track
+3. **`build-ios`** — runs on `macos-latest` (required for Xcode): build IPA, upload to TestFlight
+
+---
+
+## Workflow Configuration
+
+```yaml
+# .github/workflows/test.yml
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: apps/mobile
+      
+      - name: Analyze
+        run: flutter analyze
+        working-directory: apps/mobile
+      
+      - name: Run tests
+        run: flutter test
+        working-directory: apps/mobile
+```
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Same as test.yml
+
+  build-android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+      
+      - name: Setup Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+        working-directory: apps/mobile
+      
+      - name: Build AAB
+        run: fastlane android deploy
+        working-directory: apps/mobile
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+  build-ios:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+      
+      - name: Setup Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Build IPA
+        run: fastlane ios deploy
+        working-directory: apps/mobile
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
+```
+
+---
+
+## iOS Code Signing (Fastlane Match)
+
+- Store encrypted certificates and provisioning profiles in a **private Git repo**.
+- Required GitHub Secrets:
+  - `MATCH_GIT_BASIC_AUTHORIZATION` — base64-encoded `username:PAT`
+  - `MATCH_PASSWORD` — encryption passphrase
+  - App Store Connect API key (preferred over `FASTLANE_PASSWORD` to avoid 2FA issues)
+- Use `setup_ci` in the Fastlane lane to create a temporary keychain on the CI runner.
+
+### Fastfile (iOS)
+
+```ruby
+# fastlane/Fastfile
+platform :ios do
+  desc "Deploy iOS app to TestFlight"
+  lane :deploy do
+    setup_ci
+    
+    match(
+      type: "appstore",
+      readonly: is_ci,
+    )
+    
+    build_app(
+      scheme: "Runner",
+      workspace: "ios/Runner.xcworkspace",
+    )
+    
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
+```
+
+---
+
+## Android Code Signing
+
+- Store the keystore as a **base64-encoded GitHub Secret** (`KEYSTORE_BASE64`).
+- Decode in workflow: `echo $KEYSTORE_BASE64 | base64 --decode > android/app/keystore.jks`
+- Reference key alias and passwords from secrets in `key.properties`.
+- Upload to Play Store internal track via Fastlane's `supply` action.
+- **Note:** First release must be uploaded manually via Play Console.
+
+### Fastfile (Android)
+
+```ruby
+# fastlane/Fastfile
+platform :android do
+  desc "Deploy Android app to Play Store"
+  lane :deploy do
+    build_android_app(
+      task: "bundle",
+      build_type: "release",
+    )
+    
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+    )
+  end
+end
+```
+
+---
+
+## Key Principles
+
+- **Never echo secret values in logs.**
+- PR builds run tests only, never deploy.
+- Use branch-based triggers: PRs -> test; `main` push -> test + deploy.
+- Pin Flutter version in CI to match local development (`subosito/flutter-action`).
+- Cache pub dependencies and build artifacts between runs.
+
+---
+
+## Alternative: Codemagic
+
+- Purpose-built for Flutter with macOS build machines included.
+- Built-in code signing management (no Fastlane config needed).
+- Costs money but saves significant setup time, especially for iOS.
+- Consider if GitHub Actions macOS runner costs or complexity become prohibitive.
+
+---
+
+## Related Documentation
+
+- [Testing Strategy](/operations/testing-strategy/) — Testing approach
+- [Architecture Overview](/architecture/system-overview/) — System architecture
+
+---
+
+*Last updated: 2026-03-17*
+
+---
+Route: /operations/offline-architecture/
+Source: docs-site/src/content/docs/operations\offline-architecture.md
+Title: Offline-First Architecture
+Description: How the ReCursor app works without connectivity and syncs when reconnected.
+
+> How the ReCursor app works without connectivity and syncs when reconnected.
+
+---
+
+## Storage Strategy
+
+| Data Type | Storage | Rationale |
+|-----------|---------|-----------|
+| Conversations, tasks, agent configs | **Drift** (SQLite) | Type-safe queries, migrations, reactive streams, relational integrity |
+| UI preferences, cached tokens, session state | **Hive** | Fast key-value for ephemeral data |
+| File content cache | **File system** | Large blobs don't belong in SQLite |
+
+---
+
+## Repository Pattern
+
+```
+UI Layer (Riverpod providers)
+    |
+Repository Layer (abstracts local vs. remote)
+    |
+    +-- Local Data Source (Drift / Hive)
+    +-- Remote Data Source (Bridge WebSocket)
+```
+
+- Repository reads from local DB first (instant UI response).
+- Fetches from bridge in background and updates local state.
+- Drift's reactive queries (`watch()`) automatically update the UI when local data changes.
+
+---
+
+## Sync Queue
+
+When offline, mutations go into a local queue:
+
+```dart
+// SyncQueue table (Drift)
+class SyncQueue extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get operation => text()(); // "send_message", "approve_tool", "git_command"
+  TextColumn get payload => text()(); // JSON: full operation
+  TextColumn get sessionId => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get synced => boolean().withDefault(const Constant(false))();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  TextColumn get lastError => text().nullable()();
+}
+```
+
+### Queue Operations
+
+```dart
+class SyncService {
+  final SyncQueueDao _queueDao;
+  final WebSocketService _ws;
+
+  // Enqueue mutation when offline
+  Future<void> enqueue(String operation, Map<String, dynamic> payload) async {
+    await _queueDao.insert(SyncQueueCompanion(
+      operation: Value(operation),
+      payload: Value(jsonEncode(payload)),
+      createdAt: Value(DateTime.now()),
+    ));
+  }
+
+  // Flush queue on reconnect
+  Future<void> flushQueue() async {
+    final pending = await _queueDao.getPending();
+    
+    for (final item in pending) {
+      try {
+        await _sendToBridge(item);
+        await _queueDao.markSynced(item.id);
+      } catch (e) {
+        await _queueDao.incrementRetry(item.id, e.toString());
+      }
+    }
+  }
+}
+```
+
+---
+
+## Conflict Resolution
+
+### Default: Last-Write-Wins
+
+```dart
+class ConflictResolver {
+  T resolve(T local, T remote) {
+    // Compare updated_at timestamps
+    if (local.updatedAt.isAfter(remote.updatedAt)) {
+      return local; // Local wins
+    }
+    return remote; // Remote wins
+  }
+}
+```
+
+### Critical Operations
+
+For destructive operations (git push, file overwrite), prompt user:
+
+```dart
+Future<ConflictResolution> resolveCriticalConflict({
+  required SyncConflict conflict,
+}) async {
+  // Show dialog to user
+  return showDialog<ConflictResolution>(
+    context: context,
+    builder: (_) => ConflictDialog(conflict: conflict),
+  );
+}
+
+enum ConflictResolution {
+  useLocal,
+  useRemote,
+  merge,
+  cancel,
+}
+```
+
+---
+
+## Network Detection
+
+```dart
+class NetworkService {
+  final Connectivity _connectivity;
+  final WebSocketService _ws;
+
+  Stream<ConnectionStatus> get status {
+    return _connectivity.onConnectivityChanged
+      .asyncMap((result) => _mapToStatus(result));
+  }
+
+  Future<ConnectionStatus> _mapToStatus(ConnectivityResult result) async {
+    if (result == ConnectivityResult.none) {
+      return ConnectionStatus.offline;
+    }
+    
+    // Ping bridge to confirm reachability
+    final reachable = await _pingBridge();
+    return reachable 
+      ? ConnectionStatus.online 
+      : ConnectionStatus.bridg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Unreachable;
+  }
+}
+```
+
+### Connection States
+
+| State | Description | Behavior |
+|-------|-------------|----------|
+| `online` | Connected to bridge | Sync queue, real-time updates |
+| `offline` | No connectivity | Queue mutations locally |
+| `bridge_unreachable` | Network but no bridge | Retry with backoff, queue mutations |
+
+---
+
+## Sync Strategies
+
+### Push-First (Outbound)
+
+1. User action (send message, approve tool)
+2. Save to local DB
+3. Try to send via WebSocket
+4. If failed, add to SyncQueue
+5. Show "pending" state in UI
+
+### Pull-First (Inbound)
+
+1. On reconnect, request all events since last sync
+2. Merge with local state
+3. Resolve conflicts
+4. Update UI
+
+### Event Replay
+
+```dart
+class EventReplay {
+  Future<void> replaySince(DateTime lastSync) async {
+    final events = await _bridge.getEventsSince(lastSync);
+    
+    for (final event in events) {
+      await _applyEvent(event);
+    }
+  }
+}
+```
+
+---
+
+## Retry Strategy
+
+```dart
+class RetryPolicy {
+  final int maxRetries = 5;
+  final List<Duration> backoffDelays = [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 5),
+    Duration(seconds: 10),
+    Duration(seconds: 30),
+  ];
+
+  Future<T> withRetry<T>(Future<T> Function() operation, int attempt) async {
+    try {
+      return await operation();
+    } catch (e) {
+      if (attempt >= maxRetries) rethrow;
+      
+      await Future.delayed(backoffDelays[attempt]);
+      return withRetry(operation, attempt + 1);
+    }
+  }
+}
+```
+
+---
+
+## Storage Limits
+
+| Data Type | Max Size | Cleanup Strategy |
+|-----------|----------|------------------|
+| SyncQueue | 1000 items | FIFO eviction |
+| Messages | 30 days | Archive to file |
+| Sessions | 90 days | Soft delete |
+| File cache | 100 MB | LRU eviction |
+
+---
+
+## Future Scaling
+
+If sync complexity grows, consider:
+
+- **PowerSync** — integrates with Drift, handles bidirectional sync automatically
+- **Couchbase Lite** — built-in conflict resolution
+- Both have commercial licensing but eliminate custom sync engine maintenance.
+
+---
+
+## Related Documentation
+
+- [Data Models](/architecture/data-models/) — Drift schemas
+- [Architecture Overview](/architecture/system-overview/) — System architecture
+- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket specification
+
+---
+
+*Last updated: 2026-03-17*
+
+---
+Route: /operations/push-notifications/
+Source: docs-site/src/content/docs/operations\push-notifications.md
+Title: In-App Notification Architecture
+Description: How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based.
+
+> How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based.
+
+---
+
+## Overview
+
+```
+Agent Event -> Bridge Server -> WebSocket -> Mobile App -> Local Notification (if backgrounded)
+```
+
+All notifications flow through the existing WebSocket connection. No external push services (FCM/APNs) are used.
+
+---
+
+## Notification Delivery
+
+### When App is Connected (Foreground)
+
+- Bridge sends a `notification` message over the WebSocket.
+- App displays an in-app banner/toast or updates the notification center badge.
+- No OS-level notification needed — the user is already in the app.
+
+### When App is Backgrounded
+
+- If the WebSocket connection is still alive (kept by OS background mode), the app receives the event and displays a **local notification** via `flutter_local_notifications`.
+- Local notifications support action buttons (e.g., "Approve" / "View").
+
+### When App is Disconnected
+
+- Bridge stores events in a **pending event queue**.
+- On reconnect, bridge replays all unacknowledged events.
+- App processes the backlog and shows relevant notifications.
+
+---
+
+## Notification Types
+
+| Type | Trigger | Priority | Action |
+|------|---------|----------|--------|
+| Task Complete | Agent finishes a task | Normal | Navigate to result |
+| Approval Required | Agent needs tool call approval | High | Approve/reject buttons |
+| Error | Agent encounters an error | High | Navigate to chat |
+| Agent Idle | Agent waiting for input | Low | Navigate to chat |
+
+---
+
+## WebSocket Message Format
+
+```json
+{
+  "type": "notification",
+  "id": "notif-001",
+  "payload": {
+    "session_id": "sess-abc123",
+    "notification_type": "approval_required",
+    "title": "Approval needed: Update bridge_setup_screen.dart",
+    "body": "Claude Code wants to tighten bridge URL validation before pairing.",
+    "priority": "high",
+    "data": {
+      "tool_call_id": "tool-001",
+      "screen": "approval_detail"
+    }
+  }
+}
+```
+
+---
+
+## Acknowledgment
+
+```json
+{
+  "type": "notification_ack",
+  "payload": {
+    "notification_ids": ["notif-001", "notif-002"]
+  }
+}
+```
+
+The bridge removes acknowledged events from the pending queue.
+
+---
+
+## In-App Notification Center
+
+- Bell icon in the app bar with unread count badge.
+- Tap to open notification list (grouped by session).
+- Each notification is tappable — routes to the relevant screen.
+- "Mark all read" action.
+- Notifications persist locally in Drift for offline access.
+
+---
+
+## Reliability
+
+- WebSocket heartbeat ensures connection is alive.
+- If heartbeat fails, app shows "disconnected" banner — user knows notifications won't arrive.
+- On reconnect, bridge replays full event backlog (bounded by configurable max age, e.g., 24 hours).
+- No silent failure — if the connection is down, the user sees it immediately.
+
+---
+
+## Trade-offs vs. Firebase
+
+| | WebSocket-only | Firebase FCM |
+|---|---|---|
+| Works when app is killed | No | Yes |
+| Requires Google/Apple services | No | Yes |
+| Privacy | Full control | Data via Google servers |
+| Complexity | Simpler, no external setup | FCM config, APNs certs |
+| Reliability when connected | Immediate, guaranteed | Best-effort delivery |
+
+The WebSocket-only approach is chosen because the app's primary value requires an active bridge connection anyway. If the bridge is unreachable, notifications are moot.
+
+---
+
+## Local Notification Configuration
+
+```dart
+// Initialize local notifications
+final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+const iosSettings = DarwinInitializationSettings(
+  requestAlertPermission: true,
+  requestBadgePermission: true,
+  requestSoundPermission: true,
+);
+
+await flutterLocalNotificationsPlugin.initialize(
+  const InitializationSettings(android: androidSettings, iOS: iosSettings),
+  onDidReceiveNotificationResponse: (response) {
+    // Handle notification tap
+    _handleNotificationTap(response.payload);
+  },
+);
+
+// Show local notification
+Future<void> showLocalNotification(AppNotification notification) async {
+  const androidDetails = AndroidNotificationDetails(
+    'recursor_channel',
+    'ReCursor Notifications',
+    importance: Importance.high,
+    priority: Priority.high,
+    showWhen: true,
+  );
+  
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+  
+  await flutterLocalNotificationsPlugin.show(
+    notification.id.hashCode,
+    notification.title,
+    notification.body,
+    const NotificationDetails(android: androidDetails, iOS: iosDetails),
+    payload: jsonEncode(notification.data),
+  );
+}
+```
+
+---
+
+## Related Documentation
+
+- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [Architecture Overview](/architecture/system-overview/) — System architecture
+- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
+
+---
+
+*Last updated: 2026-03-17*
+
+---
 Route: /operations/security-architecture/
-Source: /docs/security-architecture.md
+Source: docs-site/src/content/docs/operations\security-architecture.md
 Title: Security Architecture
 Description: Best practices for securing the WebSocket bridge between the ReCursor mobile app and the coding agent.
 
@@ -4852,733 +5453,8 @@ class TOFUTrustManager {
 *Last updated: 2026-03-20*
 
 ---
-Route: /operations/offline-architecture/
-Source: /docs/offline-architecture.md
-Title: Offline-First Architecture
-Description: How the ReCursor app works without connectivity and syncs when reconnected.
-
-> How the ReCursor app works without connectivity and syncs when reconnected.
-
----
-
-## Storage Strategy
-
-| Data Type | Storage | Rationale |
-|-----------|---------|-----------|
-| Conversations, tasks, agent configs | **Drift** (SQLite) | Type-safe queries, migrations, reactive streams, relational integrity |
-| UI preferences, cached tokens, session state | **Hive** | Fast key-value for ephemeral data |
-| File content cache | **File system** | Large blobs don't belong in SQLite |
-
----
-
-## Repository Pattern
-
-```
-UI Layer (Riverpod providers)
-    |
-Repository Layer (abstracts local vs. remote)
-    |
-    +-- Local Data Source (Drift / Hive)
-    +-- Remote Data Source (Bridge WebSocket)
-```
-
-- Repository reads from local DB first (instant UI response).
-- Fetches from bridge in background and updates local state.
-- Drift's reactive queries (`watch()`) automatically update the UI when local data changes.
-
----
-
-## Sync Queue
-
-When offline, mutations go into a local queue:
-
-```dart
-// SyncQueue table (Drift)
-class SyncQueue extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get operation => text()(); // "send_message", "approve_tool", "git_command"
-  TextColumn get payload => text()(); // JSON: full operation
-  TextColumn get sessionId => text().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  BoolColumn get synced => boolean().withDefault(const Constant(false))();
-  IntColumn get retryCount => integer().withDefault(const Constant(0))();
-  TextColumn get lastError => text().nullable()();
-}
-```
-
-### Queue Operations
-
-```dart
-class SyncService {
-  final SyncQueueDao _queueDao;
-  final WebSocketService _ws;
-
-  // Enqueue mutation when offline
-  Future<void> enqueue(String operation, Map<String, dynamic> payload) async {
-    await _queueDao.insert(SyncQueueCompanion(
-      operation: Value(operation),
-      payload: Value(jsonEncode(payload)),
-      createdAt: Value(DateTime.now()),
-    ));
-  }
-
-  // Flush queue on reconnect
-  Future<void> flushQueue() async {
-    final pending = await _queueDao.getPending();
-    
-    for (final item in pending) {
-      try {
-        await _sendToBridge(item);
-        await _queueDao.markSynced(item.id);
-      } catch (e) {
-        await _queueDao.incrementRetry(item.id, e.toString());
-      }
-    }
-  }
-}
-```
-
----
-
-## Conflict Resolution
-
-### Default: Last-Write-Wins
-
-```dart
-class ConflictResolver {
-  T resolve(T local, T remote) {
-    // Compare updated_at timestamps
-    if (local.updatedAt.isAfter(remote.updatedAt)) {
-      return local; // Local wins
-    }
-    return remote; // Remote wins
-  }
-}
-```
-
-### Critical Operations
-
-For destructive operations (git push, file overwrite), prompt user:
-
-```dart
-Future<ConflictResolution> resolveCriticalConflict({
-  required SyncConflict conflict,
-}) async {
-  // Show dialog to user
-  return showDialog<ConflictResolution>(
-    context: context,
-    builder: (_) => ConflictDialog(conflict: conflict),
-  );
-}
-
-enum ConflictResolution {
-  useLocal,
-  useRemote,
-  merge,
-  cancel,
-}
-```
-
----
-
-## Network Detection
-
-```dart
-class NetworkService {
-  final Connectivity _connectivity;
-  final WebSocketService _ws;
-
-  Stream<ConnectionStatus> get status {
-    return _connectivity.onConnectivityChanged
-      .asyncMap((result) => _mapToStatus(result));
-  }
-
-  Future<ConnectionStatus> _mapToStatus(ConnectivityResult result) async {
-    if (result == ConnectivityResult.none) {
-      return ConnectionStatus.offline;
-    }
-    
-    // Ping bridge to confirm reachability
-    final reachable = await _pingBridge();
-    return reachable 
-      ? ConnectionStatus.online 
-      : ConnectionStatus.bridg
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Unreachable;
-  }
-}
-```
-
-### Connection States
-
-| State | Description | Behavior |
-|-------|-------------|----------|
-| `online` | Connected to bridge | Sync queue, real-time updates |
-| `offline` | No connectivity | Queue mutations locally |
-| `bridge_unreachable` | Network but no bridge | Retry with backoff, queue mutations |
-
----
-
-## Sync Strategies
-
-### Push-First (Outbound)
-
-1. User action (send message, approve tool)
-2. Save to local DB
-3. Try to send via WebSocket
-4. If failed, add to SyncQueue
-5. Show "pending" state in UI
-
-### Pull-First (Inbound)
-
-1. On reconnect, request all events since last sync
-2. Merge with local state
-3. Resolve conflicts
-4. Update UI
-
-### Event Replay
-
-```dart
-class EventReplay {
-  Future<void> replaySince(DateTime lastSync) async {
-    final events = await _bridge.getEventsSince(lastSync);
-    
-    for (final event in events) {
-      await _applyEvent(event);
-    }
-  }
-}
-```
-
----
-
-## Retry Strategy
-
-```dart
-class RetryPolicy {
-  final int maxRetries = 5;
-  final List<Duration> backoffDelays = [
-    Duration(seconds: 1),
-    Duration(seconds: 2),
-    Duration(seconds: 5),
-    Duration(seconds: 10),
-    Duration(seconds: 30),
-  ];
-
-  Future<T> withRetry<T>(Future<T> Function() operation, int attempt) async {
-    try {
-      return await operation();
-    } catch (e) {
-      if (attempt >= maxRetries) rethrow;
-      
-      await Future.delayed(backoffDelays[attempt]);
-      return withRetry(operation, attempt + 1);
-    }
-  }
-}
-```
-
----
-
-## Storage Limits
-
-| Data Type | Max Size | Cleanup Strategy |
-|-----------|----------|------------------|
-| SyncQueue | 1000 items | FIFO eviction |
-| Messages | 30 days | Archive to file |
-| Sessions | 90 days | Soft delete |
-| File cache | 100 MB | LRU eviction |
-
----
-
-## Future Scaling
-
-If sync complexity grows, consider:
-
-- **PowerSync** — integrates with Drift, handles bidirectional sync automatically
-- **Couchbase Lite** — built-in conflict resolution
-- Both have commercial licensing but eliminate custom sync engine maintenance.
-
----
-
-## Related Documentation
-
-- [Data Models](/architecture/data-models/) — Drift schemas
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket specification
-
----
-
-*Last updated: 2026-03-17*
-
----
-Route: /operations/push-notifications/
-Source: /docs/push-notifications.md
-Title: In-App Notification Architecture
-Description: How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based.
-
-> How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based.
-
----
-
-## Overview
-
-```
-Agent Event -> Bridge Server -> WebSocket -> Mobile App -> Local Notification (if backgrounded)
-```
-
-All notifications flow through the existing WebSocket connection. No external push services (FCM/APNs) are used.
-
----
-
-## Notification Delivery
-
-### When App is Connected (Foreground)
-
-- Bridge sends a `notification` message over the WebSocket.
-- App displays an in-app banner/toast or updates the notification center badge.
-- No OS-level notification needed — the user is already in the app.
-
-### When App is Backgrounded
-
-- If the WebSocket connection is still alive (kept by OS background mode), the app receives the event and displays a **local notification** via `flutter_local_notifications`.
-- Local notifications support action buttons (e.g., "Approve" / "View").
-
-### When App is Disconnected
-
-- Bridge stores events in a **pending event queue**.
-- On reconnect, bridge replays all unacknowledged events.
-- App processes the backlog and shows relevant notifications.
-
----
-
-## Notification Types
-
-| Type | Trigger | Priority | Action |
-|------|---------|----------|--------|
-| Task Complete | Agent finishes a task | Normal | Navigate to result |
-| Approval Required | Agent needs tool call approval | High | Approve/reject buttons |
-| Error | Agent encounters an error | High | Navigate to chat |
-| Agent Idle | Agent waiting for input | Low | Navigate to chat |
-
----
-
-## WebSocket Message Format
-
-```json
-{
-  "type": "notification",
-  "id": "notif-001",
-  "payload": {
-    "session_id": "sess-abc123",
-    "notification_type": "approval_required",
-    "title": "Approval needed: Update bridge_setup_screen.dart",
-    "body": "Claude Code wants to tighten bridge URL validation before pairing.",
-    "priority": "high",
-    "data": {
-      "tool_call_id": "tool-001",
-      "screen": "approval_detail"
-    }
-  }
-}
-```
-
----
-
-## Acknowledgment
-
-```json
-{
-  "type": "notification_ack",
-  "payload": {
-    "notification_ids": ["notif-001", "notif-002"]
-  }
-}
-```
-
-The bridge removes acknowledged events from the pending queue.
-
----
-
-## In-App Notification Center
-
-- Bell icon in the app bar with unread count badge.
-- Tap to open notification list (grouped by session).
-- Each notification is tappable — routes to the relevant screen.
-- "Mark all read" action.
-- Notifications persist locally in Drift for offline access.
-
----
-
-## Reliability
-
-- WebSocket heartbeat ensures connection is alive.
-- If heartbeat fails, app shows "disconnected" banner — user knows notifications won't arrive.
-- On reconnect, bridge replays full event backlog (bounded by configurable max age, e.g., 24 hours).
-- No silent failure — if the connection is down, the user sees it immediately.
-
----
-
-## Trade-offs vs. Firebase
-
-| | WebSocket-only | Firebase FCM |
-|---|---|---|
-| Works when app is killed | No | Yes |
-| Requires Google/Apple services | No | Yes |
-| Privacy | Full control | Data via Google servers |
-| Complexity | Simpler, no external setup | FCM config, APNs certs |
-| Reliability when connected | Immediate, guaranteed | Best-effort delivery |
-
-The WebSocket-only approach is chosen because the app's primary value requires an active bridge connection anyway. If the bridge is unreachable, notifications are moot.
-
----
-
-## Local Notification Configuration
-
-```dart
-// Initialize local notifications
-final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
-const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-const iosSettings = DarwinInitializationSettings(
-  requestAlertPermission: true,
-  requestBadgePermission: true,
-  requestSoundPermission: true,
-);
-
-await flutterLocalNotificationsPlugin.initialize(
-  const InitializationSettings(android: androidSettings, iOS: iosSettings),
-  onDidReceiveNotificationResponse: (response) {
-    // Handle notification tap
-    _handleNotificationTap(response.payload);
-  },
-);
-
-// Show local notification
-Future<void> showLocalNotification(AppNotification notification) async {
-  const androidDetails = AndroidNotificationDetails(
-    'recursor_channel',
-    'ReCursor Notifications',
-    importance: Importance.high,
-    priority: Priority.high,
-    showWhen: true,
-  );
-  
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-  );
-  
-  await flutterLocalNotificationsPlugin.show(
-    notification.id.hashCode,
-    notification.title,
-    notification.body,
-    const NotificationDetails(android: androidDetails, iOS: iosDetails),
-    payload: jsonEncode(notification.data),
-  );
-}
-```
-
----
-
-## Related Documentation
-
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
-
----
-
-*Last updated: 2026-03-17*
-
----
-Route: /operations/ci-cd/
-Source: /docs/ci-cd.md
-Title: CI/CD Pipeline
-Description: GitHub Actions + Fastlane for building, testing, and distributing ReCursor to iOS and Android.
-
-> GitHub Actions + Fastlane for building, testing, and distributing ReCursor to iOS and Android.
-
----
-
-## Pipeline Overview
-
-```
-PR opened/updated:
-  [flutter analyze] -> [flutter test] -> (pass/fail)
-
-Push to main:
-  [flutter analyze] -> [flutter test] -> [build Android APK/AAB] -> [build iOS IPA]
-                                              |                          |
-                                         Play Store              TestFlight
-                                        (internal track)
-```
-
----
-
-## GitHub Actions Workflow Structure
-
-Three jobs:
-1. **`test`** — runs on `ubuntu-latest`: analyze, unit tests, widget tests, golden tests
-2. **`build-android`** — runs on `ubuntu-latest`: build AAB, upload to Play Store internal track
-3. **`build-ios`** — runs on `macos-latest` (required for Xcode): build IPA, upload to TestFlight
-
----
-
-## Workflow Configuration
-
-```yaml
-# .github/workflows/test.yml
-name: Test
-
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-      
-      - name: Install dependencies
-        run: flutter pub get
-        working-directory: apps/mobile
-      
-      - name: Analyze
-        run: flutter analyze
-        working-directory: apps/mobile
-      
-      - name: Run tests
-        run: flutter test
-        working-directory: apps/mobile
-```
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      # Same as test.yml
-
-  build-android:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-      
-      - name: Setup Fastlane
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-      
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
-        working-directory: apps/mobile
-      
-      - name: Build AAB
-        run: fastlane android deploy
-        working-directory: apps/mobile
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-  build-ios:
-    needs: test
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-      
-      - name: Setup Fastlane
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-      
-      - name: Build IPA
-        run: fastlane ios deploy
-        working-directory: apps/mobile
-        env:
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
-```
-
----
-
-## iOS Code Signing (Fastlane Match)
-
-- Store encrypted certificates and provisioning profiles in a **private Git repo**.
-- Required GitHub Secrets:
-  - `MATCH_GIT_BASIC_AUTHORIZATION` — base64-encoded `username:PAT`
-  - `MATCH_PASSWORD` — encryption passphrase
-  - App Store Connect API key (preferred over `FASTLANE_PASSWORD` to avoid 2FA issues)
-- Use `setup_ci` in the Fastlane lane to create a temporary keychain on the CI runner.
-
-### Fastfile (iOS)
-
-```ruby
-# fastlane/Fastfile
-platform :ios do
-  desc "Deploy iOS app to TestFlight"
-  lane :deploy do
-    setup_ci
-    
-    match(
-      type: "appstore",
-      readonly: is_ci,
-    )
-    
-    build_app(
-      scheme: "Runner",
-      workspace: "ios/Runner.xcworkspace",
-    )
-    
-    upload_to_testflight(
-      skip_waiting_for_build_processing: true,
-    )
-  end
-end
-```
-
----
-
-## Android Code Signing
-
-- Store the keystore as a **base64-encoded GitHub Secret** (`KEYSTORE_BASE64`).
-- Decode in workflow: `echo $KEYSTORE_BASE64 | base64 --decode > android/app/keystore.jks`
-- Reference key alias and passwords from secrets in `key.properties`.
-- Upload to Play Store internal track via Fastlane's `supply` action.
-- **Note:** First release must be uploaded manually via Play Console.
-
-### Fastfile (Android)
-
-```ruby
-# fastlane/Fastfile
-platform :android do
-  desc "Deploy Android app to Play Store"
-  lane :deploy do
-    build_android_app(
-      task: "bundle",
-      build_type: "release",
-    )
-    
-    upload_to_play_store(
-      track: "internal",
-      release_status: "draft",
-    )
-  end
-end
-```
-
----
-
-## Key Principles
-
-- **Never echo secret values in logs.**
-- PR builds run tests only, never deploy.
-- Use branch-based triggers: PRs -> test; `main` push -> test + deploy.
-- Pin Flutter version in CI to match local development (`subosito/flutter-action`).
-- Cache pub dependencies and build artifacts between runs.
-
----
-
-## Alternative: Codemagic
-
-- Purpose-built for Flutter with macOS build machines included.
-- Built-in code signing management (no Fastlane config needed).
-- Costs money but saves significant setup time, especially for iOS.
-- Consider if GitHub Actions macOS runner costs or complexity become prohibitive.
-
----
-
-## Related Documentation
-
-- [Testing Strategy](/operations/testing-strategy/) — Testing approach
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-
----
-
-*Last updated: 2026-03-17*
-
----
 Route: /operations/testing-strategy/
-Source: /docs/testing-strategy.md
+Source: docs-site/src/content/docs/operations\testing-strategy.md
 Title: Testing Strategy
 Description: Comprehensive testing approach for ReCursor, a Flutter app with WebSocket connections and Claude Code integrations.
 
@@ -5936,7 +5812,7 @@ testWidgets('displays Claude Code event from bridge', (tester) async {
 
 ---
 Route: /reference/bridge-http-api/
-Source: /docs/bridge-http-api.md
+Source: docs-site/src/content/docs/reference\bridge-http-api.md
 Title: Bridge HTTP API Specification
 Description: REST endpoint specification for the ReCursor bridge server. Complements the WebSocket protocol with HTTP endpoints for hook ingestion, health checks, and control operations.
 
@@ -6466,7 +6342,7 @@ All HTTP endpoints require TLS. See [security-architecture.md](/operations/secur
 
 ---
 Route: /reference/error-handling/
-Source: /docs/error-handling.md
+Source: docs-site/src/content/docs/reference\error-handling.md
 Title: Error Handling & Recovery Specification
 Description: Error taxonomy, session recovery patterns, and reconnection strategies for the ReCursor bridge protocol. Grounded in benchmark research from remote-claude, BAREclaw, and code-server patterns.
 
@@ -7052,7 +6928,7 @@ interface ErrorMetric {
 
 ---
 Route: /reference/type-mapping/
-Source: /docs/type-mapping.md
+Source: docs-site/src/content/docs/reference\type-mapping.md
 Title: Dart ↔ TypeScript Type Mapping Specification
 Description: Cross-language contract defining type-safe serialization between Flutter (Dart) and Bridge (TypeScript). TypeScript protocol is source-of-truth.
 
@@ -7860,7 +7736,7 @@ fs.writeFileSync('../apps/mobile/lib/core/models/protocol.g.dart', dartOutput);
 
 ---
 Route: /legal/privacy-policy/
-Source: /docs/legal/privacy-policy.md
+Source: docs-site/src/content/docs/legal\privacy-policy.md
 Title: Privacy Policy
 Description: **Last updated: 2026-03-17**
 
@@ -7907,7 +7783,7 @@ Questions? Open an issue at https://github.com/RecursiveDev/ReCursor/issues
 
 ---
 Route: /legal/terms-of-service/
-Source: /docs/legal/terms-of-service.md
+Source: docs-site/src/content/docs/legal\terms-of-service.md
 Title: Terms of Service
 Description: **Last updated: 2026-03-17**
 
