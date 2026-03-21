@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import {
   AnthropicMessageRuntime,
+  DisabledAgentRuntime,
   type AgentRuntime,
   type AgentRuntimeMessage,
   type AgentRuntimeToolResultBlock,
@@ -117,7 +118,12 @@ export class AgentSessionManager {
 
   constructor(runtime?: AgentRuntime, toolExecutor?: ToolExecutor) {
     this.runtime =
-      runtime ?? new AnthropicMessageRuntime(new Anthropic({ apiKey: config.ANTHROPIC_API_KEY }));
+      runtime ??
+      (config.ANTHROPIC_API_KEY
+        ? new AnthropicMessageRuntime(new Anthropic({ apiKey: config.ANTHROPIC_API_KEY }))
+        : new DisabledAgentRuntime(
+            "ANTHROPIC_API_KEY is not configured. Agent SDK features are disabled; bridge hooks and mobile pairing remain available.",
+          ));
     this.toolExecutor = toolExecutor ?? new ToolExecutor();
   }
 

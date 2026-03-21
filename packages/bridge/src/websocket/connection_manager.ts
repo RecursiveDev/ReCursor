@@ -13,8 +13,14 @@ export interface ClientConnectionMetadata {
   bridgeUrl?: string;
 }
 
+export interface ConnectionStateSnapshot {
+  totalClients: number;
+  authenticatedClients: number;
+}
+
 export class ConnectionManager {
   private clients = new Map<string, MobileClient>();
+  private listeners = new Set<(snapshot: ConnectionStateSnapshot) => void>();
 
   addClient(id: string, ws: WebSocket, metadata?: ClientConnectionMetadata): void {
     const client: MobileClient = {
@@ -30,6 +36,7 @@ export class ConnectionManager {
       connectedAt: new Date().toISOString(),
     };
     this.clients.set(id, client);
+    this.emitChange();
     log(`Client added: ${id}`);
   }
 
@@ -37,6 +44,7 @@ export class ConnectionManager {
     const client = this.clients.get(id);
     if (client) {
       client.authenticated = true;
+      this.emitChange();
       log(`Client authenticated: ${id}`);
     }
   }
@@ -50,6 +58,7 @@ export class ConnectionManager {
 
   removeClient(id: string): void {
     this.clients.delete(id);
+    this.emitChange();
     log(`Client removed: ${id}`);
   }
 
@@ -69,6 +78,15 @@ export class ConnectionManager {
 
   getTotalClientCount(): number {
     return this.clients.size;
+  }
+
+  subscribe(listener: (snapshot: ConnectionStateSnapshot) => void): () => void {
+    this.listeners.add(listener);
+    listener(this.snapshot());
+
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   broadcast(message: BridgeMessage<unknown>, filter?: (client: MobileClient) => boolean): void {
@@ -101,6 +119,20 @@ export class ConnectionManager {
       }
     }
     return result;
+  }
+
+  private emitChange(): void {
+    const snapshot = this.snapshot();
+    for (const listener of this.listeners) {
+      listener(snapshot);
+    }
+  }
+
+  private snapshot(): ConnectionStateSnapshot {
+    return {
+      totalClients: this.getTotalClientCount(),
+      authenticatedClients: this.getAuthenticatedClientCount(),
+    };
   }
 
   private sendRaw(client: MobileClient, json: string): void {

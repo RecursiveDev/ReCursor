@@ -1,4 +1,6 @@
-import http from "http";
+import fs from "fs";
+import http, { type Server as HttpServer } from "http";
+import https from "https";
 import express from "express";
 import cors from "cors";
 import { config } from "./config";
@@ -18,7 +20,28 @@ function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] [Server] ${msg}`);
 }
 
-export async function startServer(): Promise<void> {
+function createHttpServer(app: express.Express): HttpServer {
+  if (!config.TLS_ENABLED || !config.BRIDGE_TLS_CERT_PATH || !config.BRIDGE_TLS_KEY_PATH) {
+    log("Starting bridge without TLS (HTTP mode)");
+    return http.createServer(app);
+  }
+
+  log(`Starting bridge with TLS cert ${config.BRIDGE_TLS_CERT_PATH}`);
+  return https.createServer(
+    {
+      cert: fs.readFileSync(config.BRIDGE_TLS_CERT_PATH),
+      key: fs.readFileSync(config.BRIDGE_TLS_KEY_PATH),
+    },
+    app,
+  );
+}
+
+export interface BridgeRuntime {
+  connectionManager: ConnectionManager;
+  stop(): Promise<void>;
+}
+
+export async function createBridgeRuntime(): Promise<BridgeRuntime> {
   const connectionManager = new ConnectionManager();
   const agentSessionManager = new AgentSessionManager();
   const agentSdkAdapter = new AgentSdkAdapter(agentSessionManager, connectionManager);
@@ -51,24 +74,54 @@ export async function startServer(): Promise<void> {
   });
   app.use("/hooks", hooksRouter);
 
-  const httpServer = http.createServer(app);
-
-  const _wsServer = new WebSocketServer(httpServer, connectionManager, messageHandler);
+  const httpServer = createHttpServer(app);
+  const wsServer = new WebSocketServer(httpServer, connectionManager, messageHandler);
 
   await new Promise<void>((resolve) => {
     httpServer.listen(config.PORT, () => {
       log(`Bridge server listening on port ${config.PORT}`);
       log(`Allowed project root: ${config.ALLOWED_PROJECT_ROOT}`);
+      if (config.ANTHROPIC_API_KEY) {
+        log("Agent SDK features enabled");
+      } else {
+        log("Agent SDK features disabled (ANTHROPIC_API_KEY not configured)");
+      }
       resolve();
     });
   });
 
+  return {
+    connectionManager,
+    async stop(): Promise<void> {
+      await new Promise<void>((resolve, reject) => {
+        wsServer.close();
+        httpServer.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
+export async function startServer(): Promise<void> {
+  const runtime = await createBridgeRuntime();
+
   const shutdown = (signal: string) => {
     log(`Received ${signal}, shutting down...`);
-    httpServer.close(() => {
-      log("HTTP server closed");
-      process.exit(0);
-    });
+    runtime
+      .stop()
+      .then(() => {
+        log("Bridge runtime closed");
+        process.exit(0);
+      })
+      .catch((error) => {
+        log(`Failed to close bridge runtime cleanly: ${String(error)}`);
+        process.exit(1);
+      });
 
     setTimeout(() => {
       log("Forced shutdown after timeout");
@@ -78,4 +131,8 @@ export async function startServer(): Promise<void> {
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
+
+  await new Promise<void>(() => {
+    // Keep the process alive while the bridge runtime is running.
+  });
 }

@@ -60,6 +60,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+export class DisabledAgentRuntime implements AgentRuntime {
+  constructor(private readonly reason: string) {}
+
+  async runTurn(_request: AgentRuntimeTurnRequest): Promise<AgentRuntimeTurnResult> {
+    throw new Error(this.reason);
+  }
+}
+
 export class AnthropicMessageRuntime implements AgentRuntime {
   constructor(private client: Anthropic) {}
 

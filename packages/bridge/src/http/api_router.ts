@@ -1,5 +1,6 @@
 import { Router, type Request } from "express";
 import os from "os";
+import { config } from "../config";
 import { validateBridgeToken } from "../auth/token_validator";
 import type { AgentSessionManager } from "../agents/session_manager";
 import type { ConnectionManager } from "../websocket/connection_manager";
@@ -59,12 +60,17 @@ export function createApiRouter(
     });
   });
 
-  router.get("/info", validateBridgeToken, (req, res) => {
+  router.get("/info", validateBridgeToken, (_req, res) => {
+    const features = ["websocket_sessions", "hook_events", "health_verification"];
+    if (config.ANTHROPIC_API_KEY) {
+      features.push("agent_sdk");
+    }
+
     res.json({
       name: "recursor-bridge",
       version: "0.1.0",
       protocol_version: "1.0",
-      features: ["websocket_sessions", "hook_events", "agent_sdk", "health_verification"],
+      features,
       supported_agents: [...SUPPORTED_AGENTS],
       supported_hooks: [...VALID_EVENT_TYPES],
       limits: {
