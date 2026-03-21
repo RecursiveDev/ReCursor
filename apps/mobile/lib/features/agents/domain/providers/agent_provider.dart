@@ -109,6 +109,7 @@ class AgentNotifier extends AsyncNotifier<List<AgentConfig>> {
           'token': token,
           'client_version': '0.1.0',
           'platform': 'flutter',
+          'purpose': 'probe',
         },
         'timestamp': DateTime.now().toIso8601String(),
         'id': 'test-${_uuid.v4()}',

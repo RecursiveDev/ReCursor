@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recursor_mobile/core/network/bridge_connection_validator.dart';
 import 'package:recursor_mobile/core/network/connection_state.dart';
+import 'package:recursor_mobile/core/network/websocket_messages.dart';
 import 'package:recursor_mobile/core/network/websocket_service.dart';
 import 'package:recursor_mobile/core/storage/preferences.dart';
 import 'package:recursor_mobile/core/storage/secure_token_storage.dart';
@@ -133,7 +134,11 @@ class FakeStartupWebSocketService extends WebSocketService {
   ConnectionStatus get currentStatus => _currentStatus;
 
   @override
-  Future<void> connect({required String url, required String token}) async {
+  Future<void> connect({
+    required String url,
+    required String token,
+    ConnectionPurpose purpose = ConnectionPurpose.primary,
+  }) async {
     lastUrl = url;
     lastToken = token;
     if (error != null) {

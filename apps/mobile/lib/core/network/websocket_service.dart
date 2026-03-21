@@ -26,6 +26,7 @@ class WebSocketService {
   WebSocketChannel? _channel;
   String? _url;
   String? _token;
+  ConnectionPurpose? _connectionPurpose;
   Map<String, dynamic>? _lastConnectionAckPayload;
   Map<String, dynamic>? _lastHealthStatusPayload;
 
@@ -49,11 +50,16 @@ class WebSocketService {
   Stream<BridgeMessage> get messages => _messageController.stream;
   Stream<ConnectionStatus> get connectionStatus => _statusController.stream;
   ConnectionStatus get currentStatus => _status;
+  ConnectionPurpose? get connectionPurpose => _connectionPurpose;
   Map<String, dynamic>? get lastConnectionAckPayload =>
       _lastConnectionAckPayload;
   Map<String, dynamic>? get lastHealthStatusPayload => _lastHealthStatusPayload;
 
-  Future<void> connect({required String url, required String token}) async {
+  Future<void> connect({
+    required String url,
+    required String token,
+    ConnectionPurpose purpose = ConnectionPurpose.primary,
+  }) async {
     final validation = BridgeConnectionValidator.validate(
       url: url,
       token: token,
@@ -64,6 +70,7 @@ class WebSocketService {
 
     _url = url.trim();
     _token = token.trim();
+    _connectionPurpose = purpose;
     _intentionalDisconnect = false;
     _authFailed = false;
     _reconnectAttempts = 0;
@@ -168,6 +175,7 @@ class WebSocketService {
           token: _token!,
           clientVersion: '0.1.0',
           platform: _platformString(),
+          purpose: _connectionPurpose ?? ConnectionPurpose.primary,
         ),
       );
 
@@ -196,6 +204,7 @@ class WebSocketService {
   void disconnect() {
     _intentionalDisconnect = true;
     _authFailed = false;
+    _connectionPurpose = null;
     _completeAuthError(
       const BridgeConnectionException('Bridge connection closed.'),
     );
@@ -239,6 +248,11 @@ class WebSocketService {
         _lastConnectionAckPayload = Map<String, dynamic>.unmodifiable(
           Map<String, dynamic>.from(message.payload),
         );
+        final ConnectionPurpose? acknowledgedPurpose =
+            _parseConnectionPurpose(message.payload['purpose'] as String?);
+        if (acknowledgedPurpose != null) {
+          _connectionPurpose = acknowledgedPurpose;
+        }
         _setStatus(ConnectionStatus.connected);
         _completeAuthSuccess();
         return;
@@ -454,12 +468,21 @@ class WebSocketService {
     }
   }
 
+  ConnectionPurpose? _parseConnectionPurpose(String? value) {
+    return switch (value) {
+      'primary' => ConnectionPurpose.primary,
+      'probe' => ConnectionPurpose.probe,
+      _ => null,
+    };
+  }
+
   String _platformString() {
     return 'flutter';
   }
 
   void dispose() {
     _intentionalDisconnect = true;
+    _connectionPurpose = null;
     const exception = BridgeConnectionException('Bridge connection disposed.');
     _completeAuthError(exception);
     _failPendingRequests(exception);

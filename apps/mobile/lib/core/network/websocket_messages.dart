@@ -46,6 +46,8 @@ enum BridgeMessageType {
   error,
 }
 
+enum ConnectionPurpose { primary, probe }
+
 BridgeMessageType _typeFromString(String type) {
   return switch (type) {
     'auth' => BridgeMessageType.auth,
@@ -142,6 +144,7 @@ class BridgeMessage {
     required String token,
     required String clientVersion,
     required String platform,
+    ConnectionPurpose purpose = ConnectionPurpose.primary,
   }) {
     return BridgeMessage(
       type: BridgeMessageType.auth,
@@ -151,6 +154,7 @@ class BridgeMessage {
         'token': token,
         'client_version': clientVersion,
         'platform': platform,
+        'purpose': purpose.name,
       },
     );
   }
