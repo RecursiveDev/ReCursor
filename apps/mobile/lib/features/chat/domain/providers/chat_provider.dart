@@ -84,6 +84,7 @@ Message _rowToDomainMessage(db_lib.Message row) {
 class ChatNotifier extends _$ChatNotifier {
   StreamSubscription<BridgeMessage>? _messageSubscription;
   StreamSubscription<ConnectionStatus>? _statusSubscription;
+  Future<void> _messagePipeline = Future<void>.value();
 
   @override
   Future<void> build() async {
@@ -98,7 +99,11 @@ class ChatNotifier extends _$ChatNotifier {
       await syncQueue.flush(service);
     }
 
-    _messageSubscription = service.messages.listen(_handleBridgeMessage);
+    _messageSubscription = service.messages.listen((message) {
+      _messagePipeline = _messagePipeline
+          .catchError((Object _, StackTrace __) {})
+          .then((_) => _handleBridgeMessage(message));
+    });
     _statusSubscription = service.connectionStatus.listen((status) async {
       if (status == ConnectionStatus.connected) {
         await syncQueue.flush(service);
@@ -115,15 +120,15 @@ class ChatNotifier extends _$ChatNotifier {
     });
   }
 
-  void _handleBridgeMessage(BridgeMessage message) {
+  Future<void> _handleBridgeMessage(BridgeMessage message) async {
     final payload = message.payload;
 
     switch (message.type) {
       case BridgeMessageType.connectionAck:
-        unawaited(_syncActiveSessions(payload));
+        await _syncActiveSessions(payload);
         break;
       case BridgeMessageType.sessionReady:
-        unawaited(_persistSessionReady(payload));
+        await _persistSessionReady(payload);
         break;
       case BridgeMessageType.streamStart:
         _setStreaming(_stringValue(payload['session_id']), '');
@@ -135,19 +140,19 @@ class ChatNotifier extends _$ChatNotifier {
         );
         break;
       case BridgeMessageType.streamEnd:
-        unawaited(_finalizeStreaming(_stringValue(payload['session_id'])));
+        await _finalizeStreaming(_stringValue(payload['session_id']));
         break;
       case BridgeMessageType.approvalRequired:
-        unawaited(_persistApprovalRequired(payload));
+        await _persistApprovalRequired(message);
         break;
       case BridgeMessageType.toolResult:
-        unawaited(_persistToolResult(payload));
+        await _persistToolResult(message);
         break;
       case BridgeMessageType.claudeEvent:
-        unawaited(_handleClaudeEvent(payload));
+        await _handleClaudeEvent(message);
         break;
       case BridgeMessageType.sessionEnd:
-        unawaited(_markSessionClosed(_stringValue(payload['session_id'])));
+        await _markSessionClosed(_stringValue(payload['session_id']));
         break;
       default:
         break;
@@ -237,24 +242,29 @@ class ChatNotifier extends _$ChatNotifier {
         _stringValue(payload['working_directory']),
       ),
       workingDirectory: _stringValue(payload['working_directory']),
-      branch: payload['branch'] as String?,
+      branch: _nullableStringValue(payload['branch']),
       status: SessionStatus.active,
       synced: true,
     );
     ref.invalidate(activeSessionsProvider);
   }
 
-  Future<void> _persistApprovalRequired(Map<String, dynamic> payload) async {
+  Future<void> _persistApprovalRequired(BridgeMessage message) async {
+    final payload = message.payload;
     final sessionId = _stringValue(payload['session_id']);
     if (sessionId.isEmpty) {
       return;
     }
 
     await _ensureSessionExists(sessionId);
-    final now = DateTime.now().toUtc();
+    final toolCallId = _stringValue(payload['tool_call_id']);
+    final receivedAt = _messageTimestamp(message);
     await _insertMessage(
       Message(
-        id: _uuid.v4(),
+        id: _remoteMessageId(
+          message,
+          fallback: 'approval:$sessionId:$toolCallId',
+        ),
         sessionId: sessionId,
         role: MessageRole.agent,
         content: _stringValue(payload['description']),
@@ -263,7 +273,7 @@ class ChatNotifier extends _$ChatNotifier {
           MessagePart.toolUse(
             tool: _stringValue(payload['tool'], fallback: 'unknown_tool'),
             params: _mapValue(payload['params']),
-            id: _stringValue(payload['tool_call_id']),
+            id: toolCallId,
           ),
         ],
         metadata: {
@@ -271,15 +281,16 @@ class ChatNotifier extends _$ChatNotifier {
           'risk_level': _stringValue(payload['risk_level']),
           'source': _stringValue(payload['source']),
           'session_id': sessionId,
-          'tool_call_id': _stringValue(payload['tool_call_id']),
+          'tool_call_id': toolCallId,
         },
-        createdAt: now,
-        updatedAt: now,
+        createdAt: receivedAt,
+        updatedAt: receivedAt,
       ),
     );
   }
 
-  Future<void> _persistToolResult(Map<String, dynamic> payload) async {
+  Future<void> _persistToolResult(BridgeMessage message) async {
+    final payload = message.payload;
     final sessionId = _stringValue(payload['session_id']);
     if (sessionId.isEmpty) {
       return;
@@ -288,10 +299,11 @@ class ChatNotifier extends _$ChatNotifier {
     await _ensureSessionExists(sessionId);
     final resultMap = _mapValue(payload['result']);
     final toolName = _stringValue(payload['tool'], fallback: 'unknown_tool');
+    final toolCallId = _stringValue(payload['tool_call_id']);
     final metadata = <String, dynamic>{
       'tool': toolName,
       'session_id': sessionId,
-      'tool_call_id': _stringValue(payload['tool_call_id']),
+      'tool_call_id': toolCallId,
       'source': _stringValue(payload['source']),
     };
     final diff = resultMap['diff'] as String?;
@@ -299,17 +311,20 @@ class ChatNotifier extends _$ChatNotifier {
       metadata['diff'] = diff;
     }
 
-    final now = DateTime.now().toUtc();
+    final receivedAt = _messageTimestamp(message);
     await _insertMessage(
       Message(
-        id: _uuid.v4(),
+        id: _remoteMessageId(
+          message,
+          fallback: 'tool_result:$sessionId:$toolCallId',
+        ),
         sessionId: sessionId,
         role: MessageRole.agent,
         content: _stringValue(resultMap['content']),
         type: MessageType.toolResult,
         parts: [
           MessagePart.toolResult(
-            toolCallId: _stringValue(payload['tool_call_id']),
+            toolCallId: toolCallId,
             result: ToolResult(
               success: resultMap['success'] as bool? ?? true,
               content: _stringValue(resultMap['content']),
@@ -319,13 +334,14 @@ class ChatNotifier extends _$ChatNotifier {
             ),
           ),
         ],
-        createdAt: now,
-        updatedAt: now,
+        createdAt: receivedAt,
+        updatedAt: receivedAt,
       ),
     );
   }
 
-  Future<void> _handleClaudeEvent(Map<String, dynamic> payload) async {
+  Future<void> _handleClaudeEvent(BridgeMessage message) async {
+    final payload = message.payload;
     final eventType = _stringValue(payload['event_type']);
     final sessionId = _stringValue(payload['session_id']);
     final eventPayload = _mapValue(payload['payload']);
@@ -334,12 +350,18 @@ class ChatNotifier extends _$ChatNotifier {
       return;
     }
 
+    final receivedAt = _payloadTimestamp(
+      payload['timestamp'],
+      fallback: _messageTimestamp(message),
+    );
+
     switch (eventType) {
       case 'SessionStart':
         await _ensureSessionExists(
           sessionId,
           workingDirectory: _stringValue(eventPayload['working_directory']),
           title: _stringValue(eventPayload['title']),
+          branch: _nullableStringValue(eventPayload['branch']),
         );
         ref.invalidate(activeSessionsProvider);
         break;
@@ -355,26 +377,42 @@ class ChatNotifier extends _$ChatNotifier {
           break;
         }
         await _ensureSessionExists(sessionId);
-        final now = DateTime.now().toUtc();
         await _insertMessage(
           Message(
-            id: _uuid.v4(),
+            id: _remoteMessageId(
+              message,
+              fallback:
+                  'claude_event:$sessionId:$eventType:${receivedAt.toIso8601String()}',
+            ),
             sessionId: sessionId,
             role: MessageRole.user,
             content: content,
             type: MessageType.text,
             parts: [MessagePart.text(content: content)],
-            createdAt: now,
-            updatedAt: now,
+            createdAt: receivedAt,
+            updatedAt: receivedAt,
           ),
         );
         break;
       case 'SessionEnd':
       case 'Stop':
+        await _ensureSessionExists(sessionId);
         await _markSessionClosed(sessionId);
         break;
       default:
         break;
+    }
+
+    final sessionEvent = _sessionEventFromHook(
+      message: message,
+      eventType: eventType,
+      sessionId: sessionId,
+      eventPayload: eventPayload,
+      timestamp: receivedAt,
+    );
+    if (sessionEvent != null) {
+      await _ensureSessionExists(sessionId);
+      await _insertSessionEvent(sessionEvent);
     }
   }
 
@@ -382,10 +420,30 @@ class ChatNotifier extends _$ChatNotifier {
     String sessionId, {
     String? workingDirectory,
     String? title,
+    String? branch,
   }) async {
     final db = ref.read(databaseProvider);
     final existing = await db.sessionDao.getSession(sessionId);
     if (existing != null) {
+      final hasSessionMetadata =
+          (workingDirectory != null && workingDirectory.isNotEmpty) ||
+              (title != null && title.isNotEmpty) ||
+              (branch != null && branch.isNotEmpty);
+      if (!hasSessionMetadata) {
+        return;
+      }
+
+      final resolvedWorkingDirectory =
+          workingDirectory ?? existing.workingDirectory;
+      await _upsertSession(
+        sessionId: sessionId,
+        agentType: existing.agentType,
+        title: title ?? _titleFromWorkingDirectory(resolvedWorkingDirectory),
+        workingDirectory: resolvedWorkingDirectory,
+        branch: branch ?? existing.branch,
+        status: _sessionStatusFromRemote(existing.status),
+        synced: existing.synced,
+      );
       return;
     }
 
@@ -394,6 +452,7 @@ class ChatNotifier extends _$ChatNotifier {
       agentType: 'claude-code',
       title: title ?? _titleFromWorkingDirectory(workingDirectory ?? ''),
       workingDirectory: workingDirectory ?? '',
+      branch: branch,
       status: SessionStatus.active,
       synced: true,
     );
@@ -422,10 +481,10 @@ class ChatNotifier extends _$ChatNotifier {
         agentType: Value(existing?.agentType ?? agentType),
         agentId: Value(existing?.agentId),
         title: Value(
-          _coalesceNonEmpty(
+          _resolveSessionTitle(
             existing?.title,
             title,
-            _titleFromWorkingDirectory(workingDirectory),
+            workingDirectory,
           ),
         ),
         workingDirectory: Value(
@@ -499,8 +558,14 @@ class ChatNotifier extends _$ChatNotifier {
 
   Future<void> _insertMessage(Message message) async {
     final db = ref.read(databaseProvider);
-    await db.messageDao.insertMessage(_toCompanion(message));
+    await db.messageDao.updateMessage(_toCompanion(message));
     await _touchSession(message.sessionId);
+  }
+
+  Future<void> _insertSessionEvent(SessionEvent event) async {
+    final db = ref.read(databaseProvider);
+    await db.sessionEventDao.upsertEvent(_toSessionEventCompanion(event));
+    await _touchSession(event.sessionId);
   }
 
   // ---------- Public actions -----------------------------------------------
@@ -646,6 +711,13 @@ String _stringValue(Object? value, {String fallback = ''}) {
   return fallback;
 }
 
+String? _nullableStringValue(Object? value) {
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+  return null;
+}
+
 Map<String, dynamic> _mapValue(Object? value) {
   if (value is Map<String, dynamic>) {
     return value;
@@ -677,6 +749,224 @@ String _coalesceNonEmpty(String? first, String? second,
     return second;
   }
   return fallback;
+}
+
+String _resolveSessionTitle(
+  String? existingTitle,
+  String? incomingTitle,
+  String workingDirectory,
+) {
+  final derivedTitle = _titleFromWorkingDirectory(workingDirectory);
+
+  if (incomingTitle != null && incomingTitle.isNotEmpty) {
+    return incomingTitle;
+  }
+
+  if (existingTitle == null || existingTitle.isEmpty) {
+    return derivedTitle;
+  }
+
+  if (existingTitle == 'Claude Code' && derivedTitle != 'Claude Code') {
+    return derivedTitle;
+  }
+
+  return existingTitle;
+}
+
+String _remoteMessageId(BridgeMessage message, {required String fallback}) {
+  return _stringValue(message.id, fallback: fallback);
+}
+
+DateTime _messageTimestamp(BridgeMessage message) {
+  return message.timestamp.toUtc();
+}
+
+DateTime _payloadTimestamp(Object? value, {required DateTime fallback}) {
+  if (value is String && value.isNotEmpty) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) {
+      return parsed.toUtc();
+    }
+  }
+  return fallback.toUtc();
+}
+
+db_lib.SessionEventsCompanion _toSessionEventCompanion(SessionEvent event) {
+  final metadata = event.metadata == null ? null : jsonEncode(event.metadata);
+  return db_lib.SessionEventsCompanion(
+    id: Value(event.id),
+    sessionId: Value(event.sessionId),
+    eventType: Value(event.eventType.name),
+    title: Value(event.title),
+    description: Value(event.description),
+    metadata: Value(metadata),
+    timestamp: Value(event.timestamp),
+  );
+}
+
+SessionEvent? _sessionEventFromHook({
+  required BridgeMessage message,
+  required String eventType,
+  required String sessionId,
+  required Map<String, dynamic> eventPayload,
+  required DateTime timestamp,
+}) {
+  final eventId = _remoteMessageId(
+    message,
+    fallback:
+        'session_event:$sessionId:$eventType:${timestamp.toIso8601String()}',
+  );
+
+  switch (eventType) {
+    case 'SessionStart':
+      final workingDirectory = _stringValue(eventPayload['working_directory']);
+      return SessionEvent(
+        id: eventId,
+        sessionId: sessionId,
+        eventType: SessionEventType.sessionStart,
+        title: 'Session started',
+        description: _truncateForTimeline(
+          _coalesceNonEmpty(
+            _nullableStringValue(eventPayload['title']),
+            workingDirectory,
+          ),
+        ),
+        timestamp: timestamp,
+        metadata: {
+          'hook_event_type': eventType,
+          'working_directory': workingDirectory,
+          if (_nullableStringValue(eventPayload['branch']) case final branch?)
+            'branch': branch,
+        },
+      );
+    case 'SessionEnd':
+    case 'Stop':
+      return SessionEvent(
+        id: eventId,
+        sessionId: sessionId,
+        eventType: SessionEventType.sessionEnd,
+        title: 'Session ended',
+        description: _truncateForTimeline(
+          _coalesceNonEmpty(
+            _nullableStringValue(eventPayload['reason']),
+            _nullableStringValue(eventPayload['message']),
+          ),
+        ),
+        timestamp: timestamp,
+        metadata: {
+          'hook_event_type': eventType,
+          if (_nullableStringValue(eventPayload['reason']) case final reason?)
+            'reason': reason,
+        },
+      );
+    case 'PreToolUse':
+      final tool = _hookToolName(eventPayload);
+      final params = _hookToolParams(eventPayload);
+      return SessionEvent(
+        id: eventId,
+        sessionId: sessionId,
+        eventType: SessionEventType.toolUse,
+        title: 'Tool: $tool',
+        description: _truncateForTimeline(
+          _coalesceNonEmpty(
+            _nullableStringValue(eventPayload['description']),
+            _nullableStringValue(eventPayload['message']),
+            _toolTargetSummary(params) ?? '',
+          ),
+        ),
+        timestamp: timestamp,
+        metadata: {
+          'hook_event_type': eventType,
+          'tool': tool,
+          'params': params,
+          if (_nullableStringValue(eventPayload['tool_call_id'])
+              case final toolCallId?)
+            'tool_call_id': toolCallId,
+          if (_nullableStringValue(eventPayload['risk_level'])
+              case final riskLevel?)
+            'risk_level': riskLevel,
+        },
+      );
+    case 'PostToolUse':
+      final tool = _hookToolName(eventPayload);
+      final result = _mapValue(eventPayload['result']);
+      final success = result['success'] as bool? ?? true;
+      return SessionEvent(
+        id: eventId,
+        sessionId: sessionId,
+        eventType: SessionEventType.toolResult,
+        title: success ? 'Tool result: $tool' : 'Tool failed: $tool',
+        description: _truncateForTimeline(
+          _coalesceNonEmpty(
+            _nullableStringValue(result['error']),
+            _nullableStringValue(result['content']),
+            _nullableStringValue(eventPayload['message']) ?? '',
+          ),
+        ),
+        timestamp: timestamp,
+        metadata: {
+          'hook_event_type': eventType,
+          'tool': tool,
+          'result': result,
+          if (_nullableStringValue(eventPayload['tool_call_id'])
+              case final toolCallId?)
+            'tool_call_id': toolCallId,
+        },
+      );
+    case 'Notification':
+      return SessionEvent(
+        id: eventId,
+        sessionId: sessionId,
+        eventType: SessionEventType.hookEvent,
+        title: _coalesceNonEmpty(
+          _nullableStringValue(eventPayload['title']),
+          _nullableStringValue(eventPayload['notification_type']),
+          'Notification',
+        ),
+        description: _truncateForTimeline(
+          _coalesceNonEmpty(
+            _nullableStringValue(eventPayload['body']),
+            _nullableStringValue(eventPayload['message']),
+          ),
+        ),
+        timestamp: timestamp,
+        metadata: {
+          'hook_event_type': eventType,
+          ...eventPayload,
+        },
+      );
+    default:
+      return null;
+  }
+}
+
+String _hookToolName(Map<String, dynamic> payload) {
+  return _coalesceNonEmpty(
+    _nullableStringValue(payload['tool']),
+    _nullableStringValue(payload['tool_name']),
+    'unknown_tool',
+  );
+}
+
+Map<String, dynamic> _hookToolParams(Map<String, dynamic> payload) {
+  final params = _mapValue(payload['params']);
+  if (params.isNotEmpty) {
+    return params;
+  }
+  return _mapValue(payload['tool_input']);
+}
+
+String? _toolTargetSummary(Map<String, dynamic> params) {
+  return _nullableStringValue(params['path']) ??
+      _nullableStringValue(params['file_path']) ??
+      _nullableStringValue(params['command']);
+}
+
+String? _truncateForTimeline(String value, {int maxLength = 120}) {
+  if (value.isEmpty) {
+    return null;
+  }
+  return value.length > maxLength ? '${value.substring(0, maxLength)}…' : value;
 }
 
 SessionStatus _sessionStatusFromRemote(String? status) {

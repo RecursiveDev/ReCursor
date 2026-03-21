@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,6 +152,300 @@ void main() {
         messages.any((message) => message.content == 'Hello world'),
         isTrue,
       );
+    });
+
+    test('deduplicates replayed hook events and preserves hook timestamps',
+        () async {
+      final sessionStartAt = DateTime.utc(2026, 3, 21, 12, 0, 0);
+      final promptAt = DateTime.utc(2026, 3, 21, 12, 0, 1);
+      final toolUseAt = DateTime.utc(2026, 3, 21, 12, 0, 2);
+      final toolResultAt = DateTime.utc(2026, 3, 21, 12, 0, 3);
+
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-session-start-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: sessionStartAt,
+          payload: {
+            'event_type': 'SessionStart',
+            'session_id': 'sess-hooks',
+            'timestamp': sessionStartAt.toIso8601String(),
+            'payload': {
+              'working_directory': '/workspace/project-hooks',
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-user-prompt-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: promptAt,
+          payload: {
+            'event_type': 'UserPromptSubmit',
+            'session_id': 'sess-hooks',
+            'timestamp': promptAt.toIso8601String(),
+            'payload': {
+              'prompt': 'Inspect lib/main.dart',
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'hook-approval-1',
+          type: BridgeMessageType.approvalRequired,
+          timestamp: toolUseAt,
+          payload: {
+            'session_id': 'sess-hooks',
+            'tool_call_id': 'tool-hook-1',
+            'tool': 'read_file',
+            'params': {'path': 'lib/main.dart'},
+            'description': 'Observed via Claude hooks',
+            'risk_level': 'low',
+            'source': 'hooks',
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'hook-approval-1',
+          type: BridgeMessageType.approvalRequired,
+          timestamp: toolUseAt,
+          payload: {
+            'session_id': 'sess-hooks',
+            'tool_call_id': 'tool-hook-1',
+            'tool': 'read_file',
+            'params': {'path': 'lib/main.dart'},
+            'description': 'Observed via Claude hooks',
+            'risk_level': 'low',
+            'source': 'hooks',
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'hook-tool-result-1',
+          type: BridgeMessageType.toolResult,
+          timestamp: toolResultAt,
+          payload: {
+            'session_id': 'sess-hooks',
+            'tool_call_id': 'tool-hook-1',
+            'tool': 'read_file',
+            'result': {
+              'success': true,
+              'content': 'File contents here',
+              'duration_ms': 12,
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'hook-tool-result-1',
+          type: BridgeMessageType.toolResult,
+          timestamp: toolResultAt,
+          payload: {
+            'session_id': 'sess-hooks',
+            'tool_call_id': 'tool-hook-1',
+            'tool': 'read_file',
+            'result': {
+              'success': true,
+              'content': 'File contents here',
+              'duration_ms': 12,
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-user-prompt-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: promptAt,
+          payload: {
+            'event_type': 'UserPromptSubmit',
+            'session_id': 'sess-hooks',
+            'timestamp': promptAt.toIso8601String(),
+            'payload': {
+              'prompt': 'Inspect lib/main.dart',
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-session-end-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: DateTime.utc(2026, 3, 21, 12, 0, 4),
+          payload: {
+            'event_type': 'SessionEnd',
+            'session_id': 'sess-hooks',
+            'timestamp': DateTime.utc(2026, 3, 21, 12, 0, 4).toIso8601String(),
+            'payload': const <String, dynamic>{},
+          },
+        ),
+      );
+
+      await _drainQueue();
+
+      final session = await database.sessionDao.getSession('sess-hooks');
+      final messages =
+          await database.messageDao.getMessagesForSession('sess-hooks');
+
+      expect(session, isNotNull);
+      expect(session!.title, 'project-hooks');
+      expect(session.status, 'closed');
+      expect(messages, hasLength(3));
+      expect(messages.map((message) => message.id), <String>[
+        'claude-user-prompt-1',
+        'hook-approval-1',
+        'hook-tool-result-1',
+      ]);
+      expect(
+        messages.map((message) => message.createdAt.millisecondsSinceEpoch),
+        <int>[
+          promptAt.millisecondsSinceEpoch,
+          toolUseAt.millisecondsSinceEpoch,
+          toolResultAt.millisecondsSinceEpoch,
+        ],
+      );
+
+      final toolCallMetadata =
+          jsonDecode(messages[1].metadata!) as Map<String, dynamic>;
+      expect(toolCallMetadata['source'], 'hooks');
+      expect(toolCallMetadata['tool_call_id'], 'tool-hook-1');
+    });
+
+    test('persists hook timeline events for tool lifecycle and notifications',
+        () async {
+      final sessionStartAt = DateTime.utc(2026, 3, 21, 13, 0, 0);
+      final toolUseAt = DateTime.utc(2026, 3, 21, 13, 0, 2);
+      final toolResultAt = DateTime.utc(2026, 3, 21, 13, 0, 4);
+      final notificationAt = DateTime.utc(2026, 3, 21, 13, 0, 5);
+
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-session-start-timeline',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: sessionStartAt,
+          payload: {
+            'event_type': 'SessionStart',
+            'session_id': 'sess-timeline',
+            'timestamp': sessionStartAt.toIso8601String(),
+            'payload': {
+              'working_directory': '/workspace/project-timeline',
+              'branch': 'feature/live-timeline',
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-pre-tool-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: toolUseAt,
+          payload: {
+            'event_type': 'PreToolUse',
+            'session_id': 'sess-timeline',
+            'timestamp': toolUseAt.toIso8601String(),
+            'payload': {
+              'tool': 'edit_file',
+              'tool_call_id': 'tool-timeline-1',
+              'description': 'Preparing to update lib/main.dart',
+              'params': {'path': 'lib/main.dart'},
+              'risk_level': 'medium',
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-pre-tool-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: toolUseAt,
+          payload: {
+            'event_type': 'PreToolUse',
+            'session_id': 'sess-timeline',
+            'timestamp': toolUseAt.toIso8601String(),
+            'payload': {
+              'tool': 'edit_file',
+              'tool_call_id': 'tool-timeline-1',
+              'description': 'Preparing to update lib/main.dart',
+              'params': {'path': 'lib/main.dart'},
+              'risk_level': 'medium',
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-post-tool-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: toolResultAt,
+          payload: {
+            'event_type': 'PostToolUse',
+            'session_id': 'sess-timeline',
+            'timestamp': toolResultAt.toIso8601String(),
+            'payload': {
+              'tool': 'edit_file',
+              'tool_call_id': 'tool-timeline-1',
+              'result': {
+                'success': true,
+                'content': 'Updated lib/main.dart',
+              },
+            },
+          },
+        ),
+      );
+      webSocketService.emitMessage(
+        BridgeMessage(
+          id: 'claude-notification-1',
+          type: BridgeMessageType.claudeEvent,
+          timestamp: notificationAt,
+          payload: {
+            'event_type': 'Notification',
+            'session_id': 'sess-timeline',
+            'timestamp': notificationAt.toIso8601String(),
+            'payload': {
+              'title': 'Claude is waiting',
+              'body': 'Review the latest diff when ready.',
+              'notification_type': 'agent_idle',
+            },
+          },
+        ),
+      );
+
+      await _drainQueue();
+
+      final session = await database.sessionDao.getSession('sess-timeline');
+      final sessionEvents =
+          await database.sessionEventDao.getEventsForSession('sess-timeline');
+
+      expect(session, isNotNull);
+      expect(session!.branch, 'feature/live-timeline');
+      expect(sessionEvents.map((event) => event.id), <String>[
+        'claude-session-start-timeline',
+        'claude-pre-tool-1',
+        'claude-post-tool-1',
+        'claude-notification-1',
+      ]);
+      expect(sessionEvents.map((event) => event.eventType), <String>[
+        'sessionStart',
+        'toolUse',
+        'toolResult',
+        'hookEvent',
+      ]);
+      expect(
+          sessionEvents.map((event) => event.timestamp.millisecondsSinceEpoch),
+          <int>[
+            sessionStartAt.millisecondsSinceEpoch,
+            toolUseAt.millisecondsSinceEpoch,
+            toolResultAt.millisecondsSinceEpoch,
+            notificationAt.millisecondsSinceEpoch,
+          ]);
+      expect(sessionEvents[1].description, 'Preparing to update lib/main.dart');
+      expect(sessionEvents[2].title, 'Tool result: edit_file');
+      expect(sessionEvents[3].title, 'Claude is waiting');
     });
 
     test('queues outgoing messages offline and flushes them on reconnect',
