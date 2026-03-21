@@ -4,10 +4,12 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import 'daos/message_dao.dart';
 import 'daos/session_dao.dart';
+import 'daos/session_event_dao.dart';
 import 'daos/sync_dao.dart';
 import 'tables/agents_table.dart';
 import 'tables/approvals_table.dart';
 import 'tables/messages_table.dart';
+import 'tables/session_events_table.dart';
 import 'tables/sessions_table.dart';
 import 'tables/sync_queue_table.dart';
 
@@ -17,6 +19,7 @@ part 'database.g.dart';
   tables: [
     Sessions,
     Messages,
+    SessionEvents,
     Agents,
     Approvals,
     SyncQueue,
@@ -24,6 +27,7 @@ part 'database.g.dart';
   daos: [
     SessionDao,
     MessageDao,
+    SessionEventDao,
     SyncDao,
   ],
 )
@@ -37,7 +41,19 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (migrator) async {
+          await migrator.createAll();
+        },
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.createTable(sessionEvents);
+          }
+        },
+      );
 }
 
 LazyDatabase _openConnection() {
