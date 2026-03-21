@@ -1,7 +1,6 @@
 ---
 title: "CI/CD Pipeline"
 description: "GitHub Actions + Fastlane for building, testing, and distributing ReCursor to iOS and Android."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/ci-cd.md"
 sidebar:
   order: 40
   label: "CI/CD"
@@ -224,8 +223,8 @@ end
 
 ## Related Documentation
 
-- [Testing Strategy](/operations/testing-strategy/) — Testing approach
-- [Architecture Overview](/architecture/system-overview/) — System architecture
+- [Testing Strategy](./testing-strategy/) — Testing approach
+- [Architecture Overview](../architecture/system-overview/) — System architecture
 
 ---
 

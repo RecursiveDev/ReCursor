@@ -1,7 +1,6 @@
 ---
 title: "Bridge Protocol Specification"
 description: "WebSocket message protocol between the ReCursor Flutter mobile app and the user-controlled TypeScript bridge server. Bridge-first, no-login: device pairing via QR code, no user accounts."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/bridge-protocol.md"
 sidebar:
   order: 50
   label: "Bridge protocol"
@@ -377,7 +376,7 @@ Agent wants to use a tool. Sent when Agent SDK initiates tool use.
 ```
 
 #### `claude_event` (server -> client)
-Event from Claude Code Hooks. See [Claude Code Hooks Integration](/integrations/claude-code-hooks/).
+Event from Claude Code Hooks. See [Claude Code Hooks Integration](../integrations/claude-code-hooks/).
 
 ```json
 {
@@ -709,10 +708,10 @@ When the mobile app reconnects after disconnection:
 
 ## Related Documentation
 
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook event format
-- [Agent SDK Integration](/integrations/agent-sdk/) — Agent SDK message flow
+- [Architecture Overview](./system-overview/) — System architecture
+- [Data Flow](./data-flow/) — Message sequence diagrams
+- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook event format
+- [Agent SDK Integration](../integrations/agent-sdk/) — Agent SDK message flow
 
 ---
 

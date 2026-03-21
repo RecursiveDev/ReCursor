@@ -1,7 +1,6 @@
 ---
 title: "Project Structure"
 description: "Flutter directory layout and module organization for ReCursor."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/project-structure.md"
 sidebar:
   order: 30
   label: "Project structure"
@@ -340,9 +339,9 @@ bridge/
 
 ## Related Documentation
 
-- [Data Models](/architecture/data-models/) — Drift schemas and domain entities
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component mapping
+- [Data Models](./data-models/) — Drift schemas and domain entities
+- [Architecture Overview](./system-overview/) — System architecture
+- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component mapping
 
 ---
 

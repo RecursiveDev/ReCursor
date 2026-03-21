@@ -1,7 +1,6 @@
 ---
 title: "Security Architecture"
 description: "Best practices for securing the WebSocket bridge between the ReCursor mobile app and the coding agent."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/security-architecture.md"
 sidebar:
   order: 10
   label: "Security architecture"
@@ -821,12 +820,12 @@ class TOFUTrustManager {
 
 ## Related Documentation
 
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket specification
-- [Bridge HTTP API](/reference/bridge-http-api/) — HTTP endpoints specification
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook security
-- [Agent SDK Integration](/integrations/agent-sdk/) — Agent SDK security
-- [Error Handling](/reference/error-handling/) — Error codes and recovery
+- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket specification
+- [Bridge HTTP API](../reference/bridge-http-api/) — HTTP endpoints specification
+- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook security
+- [Agent SDK Integration](../integrations/agent-sdk/) — Agent SDK security
+- [Error Handling](../reference/error-handling/) — Error codes and recovery
 
 ---
 

@@ -1,7 +1,6 @@
 ---
 title: "Offline-First Architecture"
 description: "How the ReCursor app works without connectivity and syncs when reconnected."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/offline-architecture.md"
 sidebar:
   order: 20
   label: "Offline architecture"
@@ -305,9 +304,9 @@ If sync complexity grows, consider:
 
 ## Related Documentation
 
-- [Data Models](/architecture/data-models/) — Drift schemas
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket specification
+- [Data Models](../architecture/data-models/) — Drift schemas
+- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket specification
 
 ---
 

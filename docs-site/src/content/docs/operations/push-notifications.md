@@ -1,7 +1,6 @@
 ---
 title: "In-App Notification Architecture"
 description: "How the ReCursor bridge server notifies the mobile app about agent events — no Firebase, fully WebSocket-based."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/push-notifications.md"
 sidebar:
   order: 30
   label: "Push notifications"
@@ -173,9 +172,9 @@ Future<void> showLocalNotification(AppNotification notification) async {
 
 ## Related Documentation
 
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
+- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
+- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
 
 ---
 

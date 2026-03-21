@@ -1,7 +1,6 @@
 ---
 title: "Testing Strategy"
 description: "Comprehensive testing approach for ReCursor, a Flutter app with WebSocket connections and Claude Code integrations."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/testing-strategy.md"
 sidebar:
   order: 50
   label: "Testing strategy"
@@ -350,9 +349,9 @@ testWidgets('displays Claude Code event from bridge', (tester) async {
 
 ## Related Documentation
 
-- [CI/CD Pipeline](/operations/ci-cd/) — CI/CD configuration
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [CI/CD Pipeline](./ci-cd/) — CI/CD configuration
+- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 

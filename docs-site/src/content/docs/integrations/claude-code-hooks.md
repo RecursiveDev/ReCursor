@@ -1,7 +1,6 @@
 ---
 title: "Claude Code Hooks Integration"
 description: "Configure Claude Code Hooks to POST events to the ReCursor bridge server for mobile consumption. This is a supported integration path for one-way event observation — not a Remote Control protocol."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/integration/claude-code-hooks.md"
 sidebar:
   order: 10
   label: "Claude Code Hooks"
@@ -14,7 +13,7 @@ sidebar:
 
 Claude Code provides a **Hooks system** that allows plugins to observe and react to events. ReCursor uses this system to receive real-time events from Claude Code, enabling the mobile app to display agent activity with OpenCode-style UI components.
 
-> **Important**: Hooks are **one-way observation only**. They cannot inject messages or control the Claude Code session. For bidirectional communication, use the [Agent SDK](/integrations/agent-sdk/) for parallel sessions.
+> **Important**: Hooks are **one-way observation only**. They cannot inject messages or control the Claude Code session. For bidirectional communication, use the [Agent SDK](./agent-sdk/) for parallel sessions.
 
 ---
 
@@ -834,8 +833,8 @@ When validation fails, the bridge server responds with:
 
 - [Claude Code Hook Development Guide](file:///C:/Repository/claude-code/plugins/plugin-dev/skills/hook-development/SKILL.md)
 - [Hookify Plugin Example](file:///C:/Repository/claude-code/plugins/hookify/hooks/hooks.json)
-- [Agent SDK Integration](/integrations/agent-sdk/) — For bidirectional communication
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [Agent SDK Integration](./agent-sdk/) — For bidirectional communication
+- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 

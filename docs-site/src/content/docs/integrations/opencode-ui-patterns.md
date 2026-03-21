@@ -1,7 +1,6 @@
 ---
 title: "OpenCode UI Patterns for ReCursor"
 description: "Mapping OpenCode's terminal-native UI components to Flutter mobile widgets."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/integration/opencode-ui-patterns.md"
 sidebar:
   order: 30
   label: "OpenCode UI patterns"
@@ -547,10 +546,10 @@ class _ToolCardState extends State<ToolCard>
 
 ## Related Documentation
 
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event source
-- [Agent SDK Integration](/integrations/agent-sdk/) — Session control
+- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
+- [Claude Code Hooks Integration](./claude-code-hooks/) — Event source
+- [Agent SDK Integration](./agent-sdk/) — Session control
 
 ---
 

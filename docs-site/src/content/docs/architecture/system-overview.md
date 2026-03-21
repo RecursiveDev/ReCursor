@@ -1,7 +1,6 @@
 ---
 title: "Architecture Overview"
 description: "System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel."
-editUrl: "https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/architecture/overview.md"
 sidebar:
   order: 10
   label: "System overview"
@@ -181,12 +180,12 @@ After establishing the WebSocket connection, the bridge analyzes the connection 
 
 ## Related Documentation
 
-- [Data Flow Details](/architecture/data-flow/) — Message-level sequence diagrams
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook configuration
-- [Agent SDK Integration](/integrations/agent-sdk/) — Parallel session setup
-- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component mapping
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Security Architecture](/operations/security-architecture/) — Security implementation details
+- [Data Flow Details](./data-flow/) — Message-level sequence diagrams
+- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook configuration
+- [Agent SDK Integration](../integrations/agent-sdk/) — Parallel session setup
+- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component mapping
+- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
+- [Security Architecture](../operations/security-architecture/) — Security implementation details
 
 ---
 
