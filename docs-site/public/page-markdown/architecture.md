@@ -25,6 +25,6 @@ The architecture section describes the bridge-first system design and the constr
 
 ## Navigation guide
 
-- Start with [System overview](/architecture/system-overview/) for the core component model
-- Use [Data flow](/architecture/data-flow/) when you need message-level sequence details
-- Read [Bridge protocol](/architecture/bridge-protocol/) and [Project structure](/architecture/project-structure/) for implementation-facing reference material
+- Start with [System overview](./system-overview/) for the core component model
+- Use [Data flow](./data-flow/) when you need message-level sequence details
+- Read [Bridge protocol](./bridge-protocol/) and [Project structure](./project-structure/) for implementation-facing reference material

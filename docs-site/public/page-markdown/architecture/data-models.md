@@ -562,11 +562,11 @@ class PreToolUseEvent with _$PreToolUseEvent {
 
 ## Related Documentation
 
-- [Project Structure](/architecture/project-structure/) — Flutter directory layout
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Offline Architecture](/operations/offline-architecture/) — Sync and storage patterns
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event models
-- [OpenCode UI Patterns](/integrations/opencode-ui-patterns/) — UI component data
+- [Project Structure](./project-structure/) — Flutter directory layout
+- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
+- [Offline Architecture](../operations/offline-architecture/) — Sync and storage patterns
+- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Event models
+- [OpenCode UI Patterns](../integrations/opencode-ui-patterns/) — UI component data
 
 ---
 

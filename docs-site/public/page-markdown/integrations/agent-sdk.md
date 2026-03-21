@@ -383,10 +383,10 @@ function validateWorkingDirectory(dir: string): void {
 
 ## Related Documentation
 
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Event observation
-- [Architecture Overview](/architecture/system-overview/) — System architecture
-- [Data Flow](/architecture/data-flow/) — Message sequence diagrams
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
+- [Claude Code Hooks Integration](./claude-code-hooks/) — Event observation
+- [Architecture Overview](../architecture/system-overview/) — System architecture
+- [Data Flow](../architecture/data-flow/) — Message sequence diagrams
+- [Bridge Protocol](../architecture/bridge-protocol/) — WebSocket message specification
 
 ---
 

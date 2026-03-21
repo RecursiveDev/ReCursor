@@ -218,8 +218,8 @@ end
 
 ## Related Documentation
 
-- [Testing Strategy](/operations/testing-strategy/) — Testing approach
-- [Architecture Overview](/architecture/system-overview/) — System architecture
+- [Testing Strategy](./testing-strategy/) — Testing approach
+- [Architecture Overview](../architecture/system-overview/) — System architecture
 
 ---
 

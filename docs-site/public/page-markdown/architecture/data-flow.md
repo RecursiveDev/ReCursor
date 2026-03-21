@@ -153,7 +153,7 @@ flowchart TB
 | `Stop` | Session status | Show completion status |
 | `SubagentStop` | Subagent status | Update subagent state |
 
-> **Note**: Only confirmed hook events from Claude Code source truth are listed above. See [Claude Code Hooks Integration](/integrations/claude-code-hooks/) for the complete verified event list.
+> **Note**: Only confirmed hook events from Claude Code source truth are listed above. See [Claude Code Hooks Integration](../integrations/claude-code-hooks/) for the complete verified event list.
 
 ---
 
@@ -233,17 +233,17 @@ flowchart TD
 
 ## Message Format: WebSocket Protocol
 
-See [Bridge Protocol](/architecture/bridge-protocol/) for complete WebSocket message specification.
+See [Bridge Protocol](./bridge-protocol/) for complete WebSocket message specification.
 
 ---
 
 ## Related Documentation
 
-- [Architecture Overview](/architecture/system-overview/) — High-level system architecture
-- [Claude Code Hooks Integration](/integrations/claude-code-hooks/) — Hook configuration details
-- [Agent SDK Integration](/integrations/agent-sdk/) — Parallel session flow
-- [Bridge Protocol](/architecture/bridge-protocol/) — WebSocket message specification
-- [Offline Architecture](/operations/offline-architecture/) — Sync queue implementation
+- [Architecture Overview](./system-overview/) — High-level system architecture
+- [Claude Code Hooks Integration](../integrations/claude-code-hooks/) — Hook configuration details
+- [Agent SDK Integration](../integrations/agent-sdk/) — Parallel session flow
+- [Bridge Protocol](./bridge-protocol/) — WebSocket message specification
+- [Offline Architecture](../operations/offline-architecture/) — Sync queue implementation
 
 ---
 
