@@ -1,20 +1,20 @@
 # Getting started
 
-The published docs site is generated from the repository's canonical `/docs` directory. Use this section to understand the project intent before diving into architecture or implementation details.
+The published docs site is generated from the repository's canonical `/docs` directory. Use this section to understand how the documentation set is organized before diving into the technical sections.
 
 <div class="hero-note" style="margin-top: 1.5rem; margin-bottom: 2rem;">
-  **New here?** Start with the [Product vision](/getting-started/product-vision/) to understand what ReCursor aims to achieve and why it uses a bridge-first architecture.
+  **New here?** Start with the [Documentation index](/getting-started/documentation-index/) for the source-of-truth map of the published docs.
 </div>
 
-- [Documentation index](/getting-started/documentation-index/): The source-of-truth index for the entire documentation corpus. Find what you need across all sections.
-- [Product vision](/getting-started/product-vision/): The product concept, bridge-first UX, and OpenCode parity goals. Understand the "why" behind ReCursor.
-- [Implementation plan](/getting-started/implementation-plan/): The phased roadmap used to sequence delivery work across the project. See what's planned and when.
+- [Documentation index](/getting-started/documentation-index/): The source-of-truth index for the published documentation corpus.
 
 ## Quick navigation
 
 | Section | Purpose | Start with |
 |---------|---------|------------|
-| **Getting started** | Project orientation and planning | [Product vision](/getting-started/product-vision/) |
+| **Getting started** | Documentation entry point | [Documentation index](/getting-started/documentation-index/) |
 | **Architecture** | System design and data flow | [System overview](/architecture/system-overview/) |
 | **Integrations** | Claude Code and OpenCode patterns | [Claude Code hooks](/integrations/claude-code-hooks/) |
-| **Wireframes** | Mobile UI design reference | [Overview](/wireframes/overview/) |
+| **Operations** | Security, notifications, offline, and testing | [Security architecture](/operations/security-architecture/) |
+| **Reference** | Protocol and API contracts | [Bridge HTTP API](/reference/bridge-http-api/) |
+| **Legal** | Release policy documents | [Privacy policy](/legal/privacy-policy/) |

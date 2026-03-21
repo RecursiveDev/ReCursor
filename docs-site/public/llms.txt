@@ -8,11 +8,9 @@ Canonical source documents live in `/docs` in the repository. This published sit
 - [llms-full.txt](./llms-full.txt): Concatenated long-form documentation context for AI workflows.
 
 ## Getting started
-Project overview, vision, and implementation plan.
+Documentation entry points and publishing guidance.
 
 - [ReCursor Documentation](/getting-started/documentation-index/): **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
-- [ReCursor — Project Concept](/getting-started/product-vision/): **Mobile-first AI coding agent companion** — Connect to your user-controlled desktop bridge to observe and interact with Claude Code and other AI coding assistants from your mobile device (iOS/Android) with an OpenCode-inspired UI. Bridge-first, no-login workflow.
-- [ReCursor — Implementation Plan](/getting-started/implementation-plan/): **Flutter mobile app** providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login: connects to your user-controlled desktop bridge.
 
 ## Architecture
 System structure, data flow, and design constraints.
@@ -45,35 +43,6 @@ Protocol, API, error handling, and type contract references.
 - [Bridge HTTP API Specification](/reference/bridge-http-api/): REST endpoint specification for the ReCursor bridge server. Complements the WebSocket protocol with HTTP endpoints for hook ingestion, health checks, and control operations.
 - [Error Handling & Recovery Specification](/reference/error-handling/): Error taxonomy, session recovery patterns, and reconnection strategies for the ReCursor bridge protocol. Grounded in benchmark research from remote-claude, BAREclaw, and code-server patterns.
 - [Dart ↔ TypeScript Type Mapping Specification](/reference/type-mapping/): Cross-language contract defining type-safe serialization between Flutter (Dart) and Bridge (TypeScript). TypeScript protocol is source-of-truth.
-
-## Wireframes
-Screen-by-screen mobile UX wireframes and navigation flows.
-
-- [ReCursor - UI/UX Wireframes](/wireframes/overview/): Modular ASCII wireframes for every screen in the mobile app. Each file maps to a feature module. Screens are ordered by the bridge-first, no-login user flow.
-- [01 - Startup, Health Verification & Bridge Restore](/wireframes/01-startup/): Phase 1 — bridge-first launch, saved pairing restore, health verification, and handoff to bridge setup.
-- [02 - Bridge Connection Screens](/wireframes/02-bridge/): Phase 1 — QR pairing and connection management.
-- [03 - Agent Chat Screens](/wireframes/03-chat/): Phase 1 (basic chat), Phase 3 (voice input, multi-session).
-- [04 - Repository Browsing Screens](/wireframes/04-repos/): Phase 1 — Repo list, file tree, and file viewer.
-- [05 - Git Operations Screens](/wireframes/05-git/): Phase 2 — Branch management, commit, push/pull.
-- [06 - Code Diff Viewer Screens](/wireframes/06-diff/): Phase 2 — Unified diff, side-by-side, and file navigation.
-- [07 - Tool Call Approval Screens](/wireframes/07-approvals/): Phase 2 — Approve, reject, or modify agent tool calls.
-- [08 - Terminal Session Screens](/wireframes/08-terminal/): Phase 3 — Embedded terminal with command input.
-- [09 - Multi-Agent Management Screens](/wireframes/09-agents/): Phase 3 — Agent registry, switcher, and parallel sessions.
-- [10 - Settings Screens](/wireframes/10-settings/): Phase 1-4 — App configuration, notifications, offline, and account.
-- [11 - Tablet & Landscape Layouts](/wireframes/11-tablet/): Phase 4 — Responsive split views and landscape optimizations.
-
-## Research
-Background research that informed the current documentation.
-
-- [Building a mobile AI coding agent: the open-source landscape in 2026](/research/overview/): **Note:** This section documents GitHub OAuth patterns as prior research for mobile GitHub client architecture. ReCursor's current direction is **bridge-first with no user authentication** — repository operations are delegated to the agent running on the development machine. Git operations via bridge commands, not native mobile OAuth.
-- [Research Report: Claude Code Remote Control Protocol](/research/claude-remote-control-2026-03-17/): Generated: 2026-03-17 | Researcher Agent
-- [Research Report: Claude Code Integration Feasibility for Third-Party Mobile Client](/research/claude-code-integration-feasibility-2026-03-17/): Generated: 2026-03-17 | Researcher Agent Task: Determine supported integration options for ReCursor (Flutter mobile) to connect to Claude Code
-- [Research Report: 2026 Documentation Stacks and AI-Agentic Documentation Patterns](/research/2026-documentation-stacks-research-2026-03-20/): Generated: 2026-03-20 | Researcher Agent | Task: research2026
-- [Research Report: Benchmark Repositories for Mobile Claude Code Remote Control](/research/benchmark-repos-mobile-claude-code-2026-03-20/): Generated: 2026-03-20 | Researcher Agent
-- [Research Report: Claude Code Mobile/Remote Repositories](/research/claude-code-mobile-repos-2026-03-20/): Generated: 2026-03-20 | Researcher Agent
-- [Research Report: Mobile Companion Repositories for Coding Agents](/research/mobile-companion-repos-2025-03-20/): Generated: 2025-03-20 | Researcher Agent
-- [Grounded Specification Patterns: Extracted from Benchmark Repos](/research/specs-grounded-in-benchmarks-2026-03-20/): Generated: 2026-03-20 | Researcher Agent Purpose: Extract concrete, evidence-based patterns for 5 missing ReCursor specs from benchmark repos
-- [Research Report: Tunnel/Pairing Pattern Repositories](/research/tunnel-pairing-patterns-2026-03-20/): Generated: 2026-03-20 | Researcher Agent
 
 ## Legal
 Policy and terms documents for the project.

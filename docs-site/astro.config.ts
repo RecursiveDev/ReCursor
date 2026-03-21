@@ -60,14 +60,6 @@ export default defineConfig({
           autogenerate: { directory: 'reference' },
         },
         {
-          label: 'Wireframes',
-          autogenerate: { directory: 'wireframes' },
-        },
-        {
-          label: 'Research',
-          autogenerate: { directory: 'research' },
-        },
-        {
           label: 'Legal',
           autogenerate: { directory: 'legal' },
         },

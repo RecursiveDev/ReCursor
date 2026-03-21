@@ -8,15 +8,13 @@ export const SECTION_ORDER = [
   'integrations',
   'operations',
   'reference',
-  'wireframes',
-  'research',
   'legal',
 ];
 
 export const SECTION_META = {
   'getting-started': {
     title: 'Getting started',
-    description: 'Project overview, vision, and implementation plan.',
+    description: 'Documentation entry points and publishing guidance.',
   },
   architecture: {
     title: 'Architecture',
@@ -34,14 +32,6 @@ export const SECTION_META = {
     title: 'Reference',
     description: 'Protocol, API, error handling, and type contract references.',
   },
-  wireframes: {
-    title: 'Wireframes',
-    description: 'Screen-by-screen mobile UX wireframes and navigation flows.',
-  },
-  research: {
-    title: 'Research',
-    description: 'Background research that informed the current documentation.',
-  },
   legal: {
     title: 'Legal',
     description: 'Policy and terms documents for the project.',
@@ -55,20 +45,6 @@ export const DOCS_MANIFEST = [
     section: 'getting-started',
     order: 10,
     label: 'Documentation index',
-  },
-  {
-    source: 'idea.md',
-    output: 'getting-started/product-vision.md',
-    section: 'getting-started',
-    order: 20,
-    label: 'Product vision',
-  },
-  {
-    source: 'PLAN.md',
-    output: 'getting-started/implementation-plan.md',
-    section: 'getting-started',
-    order: 30,
-    label: 'Implementation plan',
   },
   {
     source: 'architecture/overview.md',
@@ -181,134 +157,6 @@ export const DOCS_MANIFEST = [
     section: 'reference',
     order: 30,
     label: 'Type mapping',
-  },
-  {
-    source: 'wireframes/README.md',
-    output: 'wireframes/overview.md',
-    section: 'wireframes',
-    order: 10,
-    label: 'Wireframes overview',
-  },
-  {
-    source: 'wireframes/01-startup.md',
-    output: 'wireframes/01-startup.md',
-    section: 'wireframes',
-    order: 20,
-  },
-  {
-    source: 'wireframes/02-bridge.md',
-    output: 'wireframes/02-bridge.md',
-    section: 'wireframes',
-    order: 30,
-  },
-  {
-    source: 'wireframes/03-chat.md',
-    output: 'wireframes/03-chat.md',
-    section: 'wireframes',
-    order: 40,
-  },
-  {
-    source: 'wireframes/04-repos.md',
-    output: 'wireframes/04-repos.md',
-    section: 'wireframes',
-    order: 50,
-  },
-  {
-    source: 'wireframes/05-git.md',
-    output: 'wireframes/05-git.md',
-    section: 'wireframes',
-    order: 60,
-  },
-  {
-    source: 'wireframes/06-diff.md',
-    output: 'wireframes/06-diff.md',
-    section: 'wireframes',
-    order: 70,
-  },
-  {
-    source: 'wireframes/07-approvals.md',
-    output: 'wireframes/07-approvals.md',
-    section: 'wireframes',
-    order: 80,
-  },
-  {
-    source: 'wireframes/08-terminal.md',
-    output: 'wireframes/08-terminal.md',
-    section: 'wireframes',
-    order: 90,
-  },
-  {
-    source: 'wireframes/09-agents.md',
-    output: 'wireframes/09-agents.md',
-    section: 'wireframes',
-    order: 100,
-  },
-  {
-    source: 'wireframes/10-settings.md',
-    output: 'wireframes/10-settings.md',
-    section: 'wireframes',
-    order: 110,
-  },
-  {
-    source: 'wireframes/11-tablet.md',
-    output: 'wireframes/11-tablet.md',
-    section: 'wireframes',
-    order: 120,
-  },
-  {
-    source: 'research.md',
-    output: 'research/overview.md',
-    section: 'research',
-    order: 10,
-    label: 'Research overview',
-  },
-  {
-    source: 'research/claude-remote-control-2026-03-17.md',
-    output: 'research/claude-remote-control-2026-03-17.md',
-    section: 'research',
-    order: 20,
-  },
-  {
-    source: 'research/claude-code-integration-feasibility-2026-03-17.md',
-    output: 'research/claude-code-integration-feasibility-2026-03-17.md',
-    section: 'research',
-    order: 30,
-  },
-  {
-    source: 'research/2026-documentation-stacks-research-2026-03-20.md',
-    output: 'research/2026-documentation-stacks-research-2026-03-20.md',
-    section: 'research',
-    order: 40,
-  },
-  {
-    source: 'research/benchmark-repos-mobile-claude-code-2026-03-20.md',
-    output: 'research/benchmark-repos-mobile-claude-code-2026-03-20.md',
-    section: 'research',
-    order: 50,
-  },
-  {
-    source: 'research/claude-code-mobile-repos-2026-03-20.md',
-    output: 'research/claude-code-mobile-repos-2026-03-20.md',
-    section: 'research',
-    order: 60,
-  },
-  {
-    source: 'research/mobile-companion-repos-2025-03-20.md',
-    output: 'research/mobile-companion-repos-2025-03-20.md',
-    section: 'research',
-    order: 70,
-  },
-  {
-    source: 'research/specs-grounded-in-benchmarks-2026-03-20.md',
-    output: 'research/specs-grounded-in-benchmarks-2026-03-20.md',
-    section: 'research',
-    order: 80,
-  },
-  {
-    source: 'research/tunnel-pairing-patterns-2026-03-20.md',
-    output: 'research/tunnel-pairing-patterns-2026-03-20.md',
-    section: 'research',
-    order: 90,
   },
   {
     source: 'legal/privacy-policy.md',

@@ -8,13 +8,6 @@
 
 ## Quick Navigation
 
-### Getting Started
-
-| Document | Description |
-|----------|-------------|
-| [idea.md](/getting-started/product-vision/) | Project vision and core concept |
-| [PLAN.md](/getting-started/implementation-plan/) | Implementation roadmap and phases |
-
 ### Architecture
 
 | Document | Description |
@@ -57,19 +50,12 @@
 | [ci-cd.md](/operations/ci-cd/) | GitHub Actions + Fastlane pipeline |
 | [testing-strategy.md](/operations/testing-strategy/) | Testing pyramid and CI integration |
 
-### Research
+### Legal
 
 | Document | Description |
 |----------|-------------|
-| [research/claude-remote-control-2026-03-17.md](/research/claude-remote-control-2026-03-17/) | Claude Code Remote Control protocol research |
-| [research/claude-code-integration-feasibility-2026-03-17.md](/research/claude-code-integration-feasibility-2026-03-17/) | Integration options analysis |
-| [research.md](/research/overview/) | Ecosystem research — agents, Flutter clients, references |
-
-### UI/UX
-
-| Document | Description |
-|----------|-------------|
-| [wireframes/README.md](/wireframes/overview/) | All screen wireframes organized by feature module |
+| [legal/privacy-policy.md](/legal/privacy-policy/) | Privacy policy draft for release readiness |
+| [legal/terms-of-service.md](/legal/terms-of-service/) | Terms of service draft for release readiness |
 
 ---
 
