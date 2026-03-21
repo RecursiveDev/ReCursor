@@ -10,11 +10,18 @@ Guidance for **agentic AI** (and humans using AI assistants) contributing to **R
 
 ReCursor is intended to become a **Flutter mobile companion UI** for AI coding workflows.
 
+> **Product vision:** ReCursor is **coding-agent agnostic** — designed to support multiple AI coding tools. **Claude Code is the first supported integration**, with future support planned for OpenCode, Gemini CLI, Codex CLI, GitHub CLI, and others.
+
 Primary goals:
 - **Mobile UI/UX parity with OpenCode desktop** (tool cards, diffs, timeline patterns).
 - Integrate with a developer's desktop/local environment.
+- **Architecture:** Build an integration layer (not agent-specific coupling) to support future agent adapters.
 
-Key constraint:
+### Current integration scope
+
+ReCursor currently integrates with **Claude Code**. Future releases will expand to additional coding agents.
+
+Key constraint (Claude Code):
 - **Claude Code Remote Control is first‑party** (claude.ai/code + official apps). Do **not** claim we can join/mirror a user's Claude Code Remote Control session via a public protocol unless official docs explicitly provide it.
 
 Supported Claude Code integration mechanisms documented in this repo:
@@ -102,6 +109,24 @@ Before marking docs work complete:
   - `Generated with Claude Code`
   - `Written by Cursor AI`
 - Focus on **what changed** and **why**, not **who/what wrote it**.
+
+### 4.4 Architecture for multi-agent support
+
+When implementing features, preserve an **integration-friendly architecture** that avoids hard-coding Claude-specific assumptions:
+
+**Do:**
+- Use abstract interfaces/types for agent adapters (e.g., `AgentAdapter`, `AgentSession`, `AgentEvent`)
+- Keep agent-specific logic in dedicated modules (e.g., `integrations/claude/`, `integrations/opencode/`)
+- Design message types that can map to multiple agent protocols
+- Document which parts are Claude-specific vs. agent-agnostic
+
+**Don't:**
+- Hard-code Claude-specific event types or tool names in core UI components
+- Assume all agents have the same capabilities as Claude Code
+- Couple bridge protocol tightly to Claude Code hooks format
+- Use Claude-specific terminology where generic terms would suffice (e.g., "agent" instead of "Claude", "tool call" instead of "tool_use")
+
+Future agent integrations will follow the adapter pattern established by the Claude Code integration.
 
 ---
 

@@ -1,6 +1,20 @@
 # Architecture Overview
 
-> System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
+> System architecture for ReCursor: a Flutter mobile app with OpenCode-like UI. **Coding-agent agnostic** — Claude Code is the first supported integration. Bridge-first, no-login: connects to your user-controlled desktop bridge via secure tunnel.
+
+---
+
+## Product Vision
+
+**ReCursor is designed to support multiple AI coding tools.** The architecture uses an integration layer pattern that separates agent-specific logic from core application code:
+
+- **Current integration:** Claude Code (fully supported)
+- **Future integrations:** OpenCode, Gemini CLI, Codex CLI, GitHub CLI, and others
+
+When implementing features, preserve this separation:
+- Core UI components should work with any agent adapter
+- Agent-specific logic belongs in dedicated integration modules
+- Bridge protocol should remain agent-agnostic where possible
 
 ---
 
@@ -42,7 +56,34 @@ flowchart TB
 
 ## Key Architectural Decisions
 
-### 1. Claude Code Integration Strategy
+### 1. Multi-Agent Integration Architecture
+
+ReCursor is designed to support multiple AI coding agents. The architecture uses an **adapter pattern**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ReCursor Core                             │
+│  (UI, State Management, WebSocket Client, Local Storage)    │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Integration Layer                          │
+│         (Agent-agnostic interfaces, event types)             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+           ┌──────────────────┼──────────────────┐
+           ▼                  ▼                  ▼
+   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+   │ Claude Code  │   │  OpenCode    │   │  Gemini CLI   │
+   │   Adapter    │   │   Adapter    │   │   Adapter     │
+   │  (Current)   │   │  (Future)    │   │  (Future)     │
+   └──────────────┘   └──────────────┘   └──────────────┘
+```
+
+**Current Implementation:** Claude Code adapter is fully supported. Future adapters will follow the same pattern.
+
+### 2. Claude Code Integration Strategy (Current Implementation)
 
 | Approach | Status | Notes |
 |----------|--------|-------|
@@ -123,7 +164,7 @@ flowchart LR
     Auth --> Bridge["Bridge Server"]
 ```
 
-1. **Network Layer**: Tailscale/WireGuard mesh VPN (or your preferred secure tunnel)
+1. **Network Layer**: Tailscale/WireGuard mesh VPN (recommended), or Named Cloudflare Tunnel (see [Transports](../transports.md) for provider stability)
 2. **Transport Layer**: WSS (WebSocket Secure) with TLS 1.3
 3. **Application Layer**: Device pairing token on WebSocket handshake (no user accounts, no login)
 
@@ -135,7 +176,7 @@ After establishing the WebSocket connection, the bridge analyzes the connection 
 |------|-------------------|----------------|-----------------|
 | **Local-only** | Loopback address (`127.0.0.1`, `::1`) | ✅ Secure | House icon indicator |
 | **Private network** | RFC1918 private IP (10.x, 172.16-31.x, 192.168.x) | ✅ Secure | WiFi icon indicator |
-| **Secure remote** | Tailscale/WireGuard IP (100.x.x.x) or validated tunnel domain | ✅ Secure | Shield icon indicator |
+| **Secure remote** | Tailscale/WireGuard IP (100.x.x.x) or Named Tunnel domain | ✅ Secure | Shield icon indicator |
 | **Direct public remote** | Public IP or domain without tunnel validation | ⚠️ Warning | Warning triangle, requires acknowledgment |
 | **Misconfigured** | `ws://` instead of `wss://`, or other insecure setup | ❌ Blocked | Error screen, connection refused |
 
@@ -181,7 +222,8 @@ After establishing the WebSocket connection, the bridge analyzes the connection 
 - [OpenCode UI Patterns](../integration/opencode-ui-patterns.md) — UI component mapping
 - [Bridge Protocol](../bridge-protocol.md) — WebSocket message specification
 - [Security Architecture](../security-architecture.md) — Security implementation details
+- [Transport Providers](../transports.md) — Transport stability and provider behavior
 
 ---
 
-*Last updated: 2026-03-17*
+*Last updated: 2026-03-21*

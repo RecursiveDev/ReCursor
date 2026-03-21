@@ -55,13 +55,14 @@
 
 ## Project status
 
-This repository is **work in progress**.
+This repository is **work in progress**, but the current Claude-first MVP is no longer just scaffolding.
 
-- ✅ Repo structure + documentation are being established.
-- ✅ The mobile direction is now bridge-first: pair with your local bridge, no sign-in required.
-- ⏳ Flutter app and bridge server implementation are still being completed.
+- ✅ Bridge-first pairing, health verification, and connection mode handling are implemented.
+- ✅ Claude Hooks observation, Agent SDK session flows, streaming chat, tool cards, and timeline persistence are implemented.
+- ✅ Git status, diff viewing, and repository browsing are implemented for the current mobile/bridge stack.
+- ⏳ Remaining work is focused on polish: approval UX refinement, notification center UI, and future multi-agent expansion.
 
-If you're new here, start with: **`docs/README.md`** and the bridge pairing flow in `docs/wireframes/01-startup.md`.
+If you're new here, start with: **`docs/README.md`**, `docs/architecture/overview.md`, and `docs/architecture/REMAINING_PHASES.md`.
 
 ---
 
@@ -69,16 +70,22 @@ If you're new here, start with: **`docs/README.md`** and the bridge pairing flow
 
 **ReCursor** is a Flutter mobile app designed to provide an **OpenCode-like UI/UX on mobile** (tool cards, diffs, session timeline), while integrating with a developer's desktop/local environment.
 
+> **Long-term vision:** ReCursor is **coding-agent agnostic** — designed to support multiple AI coding tools. **Claude Code is the first supported integration**, with future support planned for OpenCode, Gemini CLI, Codex CLI, GitHub CLI, and others.
+
 ### Core product intent
 
 - **UI/UX parity goal:** ReCursor's mobile UI should *feel like OpenCode desktop*, adapted for touch and smaller screens.
-- **Claude Code integration goal:** Observe and complement a user's Claude Code workflow from mobile.
+- **Integration goal:** Observe and complement a user's AI coding workflow from mobile. Currently supports **Claude Code** with additional agents planned.
 
-### Important constraint (Claude Code)
+### Current Integration: Claude Code
+
+ReCursor currently integrates with **Claude Code**, Anthropic's AI coding assistant. Future releases will add support for additional coding agents (OpenCode, Gemini CLI, Codex CLI, GitHub CLI, etc.).
+
+#### Important constraint (Claude Code)
 
 Claude Code's **Remote Control** feature is **first-party only** (designed for `claude.ai/code` and official Claude apps). There is no public API for third-party clients to join or mirror existing Claude Code sessions.
 
-ReCursor's supported integration paths:
+ReCursor's supported Claude Code integration paths (current implementation):
 - **Claude Code Hooks**: HTTP-based event observation (one-way)
 - **Claude Agent SDK**: **parallel, controllable** agent sessions that ReCursor can drive
 
@@ -91,14 +98,14 @@ ReCursor uses a **bridge-first** connection model:
 
 ---
 
-## Repository layout (scaffold)
+## Repository layout
 
 ```text
 C:/Repository/ReCursor/
 ├── apps/
-│   └── mobile/              # Flutter app scaffold (no UI implementation yet)
+│   └── mobile/              # Flutter mobile client (startup, chat, timeline, repos, git, diff)
 ├── packages/
-│   └── bridge/              # Node/TypeScript bridge scaffold (no server logic yet)
+│   └── bridge/              # Node/TypeScript desktop bridge (WebSocket, hooks, CLI, file/git services)
 ├── docs/                    # Source-of-truth project documentation
 ├── .github/                 # CI/CD scaffolding
 └── fastlane/                # Release automation scaffolding

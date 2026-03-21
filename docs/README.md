@@ -1,8 +1,24 @@
 # ReCursor Documentation
 
-> **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
+> **ReCursor** — A Flutter mobile app providing OpenCode-like UI/UX for AI coding agents. **Coding-agent agnostic by design** — Claude Code is the first supported integration, with future support planned for additional agents. Bridge-first, no-login workflow: connects to your user-controlled desktop bridge via secure tunnel.
 
 > **Publishing note:** `C:/Repository/ReCursor/docs/` is the canonical source. The Astro Starlight site in `C:/Repository/ReCursor/docs-site/` is generated from this directory.
+
+---
+
+## Product Vision
+
+**ReCursor is coding-agent agnostic.** The goal is to support multiple AI coding tools as first-class integrations:
+
+| Status | Agent | Notes |
+|--------|-------|-------|
+| ✅ **Current** | Claude Code | First integration — fully supported |
+| 🔜 Planned | OpenCode | Future integration |
+| 🔜 Planned | Gemini CLI | Future integration |
+| 🔜 Planned | Codex CLI | Future integration |
+| 🔜 Planned | GitHub CLI | Future integration |
+
+Architecture is designed with an **integration layer** (not agent-specific coupling) to support future adapters. Contributions should preserve this pattern.
 
 ---
 
@@ -21,6 +37,7 @@
 |----------|-------------|
 | [architecture/overview.md](architecture/overview.md) | System architecture and component diagram |
 | [architecture/data-flow.md](architecture/data-flow.md) | Message flow between mobile app, bridge, and agent |
+| [architecture/REMAINING_PHASES.md](architecture/REMAINING_PHASES.md) | Reconciled Claude-first MVP status and remaining scope |
 | [project-structure.md](project-structure.md) | Flutter directory layout and module organization |
 | [data-models.md](data-models.md) | Drift schemas, Hive models, and domain entities |
 
@@ -28,8 +45,8 @@
 
 | Document | Description |
 |----------|-------------|
-| [integration/claude-code-hooks.md](integration/claude-code-hooks.md) | Claude Code Hooks integration (event observation) |
-| [integration/agent-sdk.md](integration/agent-sdk.md) | Agent SDK for parallel agent sessions |
+| [integration/claude-code-hooks.md](integration/claude-code-hooks.md) | Claude Code Hooks integration (event observation) — **current implementation** |
+| [integration/agent-sdk.md](integration/agent-sdk.md) | Agent SDK for parallel agent sessions — **current implementation** |
 | [integration/opencode-ui-patterns.md](integration/opencode-ui-patterns.md) | OpenCode UI component patterns for Flutter |
 | [bridge-protocol.md](bridge-protocol.md) | WebSocket message protocol between app and bridge |
 
@@ -47,6 +64,7 @@
 |----------|-------------|
 | [bridge-protocol.md](bridge-protocol.md) | WebSocket message protocol between app and bridge |
 | [bridge-http-api.md](bridge-http-api.md) | REST endpoints for hooks, health, and control |
+| [transports.md](transports.md) | Transport provider behavior, stability, and protocol expectations |
 | [error-handling.md](error-handling.md) | Error taxonomy, recovery patterns, reconnection strategies |
 | [type-mapping.md](type-mapping.md) | Dart↔TypeScript cross-language type contracts |
 
@@ -110,9 +128,13 @@ flowchart TB
 
 ## Important Notes
 
-> ⚠️ **Claude Code Remote Control Protocol**: The Remote Control feature is designed exclusively for first-party Anthropic clients. There is no public API for third-party clients to join or mirror existing Claude Code sessions.
+> ⚠️ **Current Integration: Claude Code**
 >
-> **Supported Integration Paths:**
+> ReCursor currently integrates with **Claude Code** (Anthropic's AI coding assistant). Future releases will add support for additional agents.
+>
+> **Claude Code Remote Control Protocol**: The Remote Control feature is designed exclusively for first-party Anthropic clients. There is no public API for third-party clients to join or mirror existing Claude Code sessions.
+>
+> **Supported Integration Paths (current implementation):**
 > - **Claude Code Hooks** — HTTP-based event observation (one-way)
 > - **Agent SDK** — Parallel agent sessions (not mirroring)
 > - **MCP (Model Context Protocol)** — Tool interoperability
@@ -132,4 +154,4 @@ This documentation is a living document. When making changes:
 
 ---
 
-*Last updated: 2026-03-17*
+*Last updated: 2026-03-21*

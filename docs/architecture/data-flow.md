@@ -1,6 +1,6 @@
 # Data Flow Architecture
 
-> Message flow between ReCursor mobile app, bridge server, and Claude Code via Hooks.
+> Message flow between ReCursor mobile app, bridge server, and coding agent. **Claude Code is the current integration** — this diagram shows the Claude Code integration pattern. Future agent adapters will follow similar patterns.
 
 ---
 
@@ -10,21 +10,21 @@
 sequenceDiagram
     participant Mobile as ReCursor App
     participant Bridge as Bridge Server
-    participant Hooks as Claude Code Hooks
-    participant CC as Claude Code
+    participant Hooks as Agent Hooks
+    participant Agent as Coding Agent (Claude Code)
 
-    Note over Mobile,CC: Initial Connection
+    Note over Mobile,Agent: Initial Connection
     Mobile->>Bridge: wss:// connect + auth token
     Bridge-->>Mobile: connection_ack { version, sessions }
-    
+
     Mobile->>Bridge: heartbeat_ping
     Bridge-->>Mobile: heartbeat_pong
 
-    Note over Mobile,CC: Claude Code Hook Registration
-    CC->>Hooks: SessionStart event
+    Note over Mobile,Agent: Agent Hook Registration (Claude Code shown)
+    Agent->>Hooks: SessionStart event
     Hooks->>Bridge: HTTP POST /hooks/event
     Bridge-->>Hooks: 200 OK
-    
+
     Bridge->>Mobile: session_started { session_id }
 ```
 
@@ -36,24 +36,24 @@ sequenceDiagram
 sequenceDiagram
     participant Mobile as ReCursor App
     participant Bridge as Bridge Server
-    participant Agent as Agent SDK
-    participant API as Claude API
+    participant AgentSDK as Agent SDK (Claude)
+    participant API as LLM API
 
     Note over Mobile,API: User sends message via mobile
     Mobile->>Mobile: Queue in SyncQueue (if offline)
     Mobile->>Bridge: message { text, session_id }
     Bridge->>Bridge: Validate session
-    Bridge->>Agent: Forward message
-    Agent->>API: Claude API request
-    API-->>Agent: Stream response
+    Bridge->>AgentSDK: Forward message
+    AgentSDK->>API: LLM API request
+    API-->>AgentSDK: Stream response
 
     loop Streaming Response
-        Agent->>Bridge: stream_chunk { content }
+        AgentSDK->>Bridge: stream_chunk { content }
         Bridge->>Mobile: stream_chunk { content }
         Mobile->>Mobile: Update UI (streaming text)
     end
 
-    Agent-->>Bridge: stream_end
+    AgentSDK-->>Bridge: stream_end
     Bridge-->>Mobile: stream_end
 ```
 
@@ -61,41 +61,43 @@ sequenceDiagram
 
 ## Message Flow: Tool Use (via Hooks)
 
+> **Note:** This diagram shows Claude Code's hook integration. Other agents may use different event mechanisms.
+
 ```mermaid
 sequenceDiagram
     participant Mobile as ReCursor App
     participant Bridge as Bridge Server
-    participant Hooks as Claude Code Hooks
-    participant CC as Claude Code
-    participant API as Claude API
+    participant Hooks as Agent Hooks
+    participant Agent as Coding Agent (Claude Code)
+    participant API as LLM API
 
-    Note over Mobile,API: Claude Code executes tool
-    CC->>CC: ToolUse (e.g., edit_file)
-    CC->>Hooks: PostToolUse event
+    Note over Mobile,API: Agent executes tool (Claude Code shown)
+    Agent->>Agent: ToolUse (e.g., edit_file)
+    Agent->>Hooks: PostToolUse event
     Hooks->>Bridge: HTTP POST /hooks/event
     Note right of Hooks: { tool, params, result, session_id }
-    
+
     Bridge->>Bridge: Queue event (if mobile offline)
     Bridge->>Mobile: tool_result { tool, result }
-    
+
     Mobile->>Mobile: Render OpenCode-style Tool Card
     Mobile->>Mobile: Update Session Timeline
 
     Note over Mobile,API: Tool requires approval
-    CC->>CC: ToolUse with approval_required
-    CC->>Hooks: PreToolUse event
+    Agent->>Agent: ToolUse with approval_required
+    Agent->>Hooks: PreToolUse event
     Hooks->>Bridge: HTTP POST /hooks/event
     Bridge->>Mobile: approval_required { tool, description }
-    
+
     Mobile->>Mobile: Show approval UI with rich context
     Mobile->>Bridge: approval_response { decision, modifications }
-    
+
     Note right of Mobile: Cannot inject into Claude Code directly
     Bridge->>Bridge: Queue for Agent SDK session
-    
+
     alt Agent SDK Session Active
-        Bridge->>Agent: Forward approval
-        Agent->>API: Continue with approval context
+        Bridge->>AgentSDK: Forward approval
+        AgentSDK->>API: Continue with approval context
     else No Agent SDK Session
         Bridge->>Bridge: Log for manual handling
     end
@@ -105,9 +107,11 @@ sequenceDiagram
 
 ## Event Types from Hooks
 
+> **Note:** Hook events shown are for Claude Code integration. Other agents may emit different event types.
+
 ```mermaid
 flowchart TB
-    subgraph Events["Hook Event Types"]
+    subgraph Events["Hook Event Types (Claude Code)"]
         Session["Session Events"]
         Tool["Tool Events"]
         User["User Events"]

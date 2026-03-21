@@ -1,5 +1,7 @@
 # Agent SDK Integration
 
+> **Current integration:** This document describes ReCursor's Claude Agent SDK integration — the first supported agent. Future releases will add support for additional AI coding tools.
+
 > Using the Claude Agent SDK for parallel agent sessions in ReCursor. This is a supported integration path — ReCursor does not claim to mirror or control existing Claude Code sessions via unsupported Remote Control protocols.
 
 ---

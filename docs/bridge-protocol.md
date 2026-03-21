@@ -6,6 +6,60 @@
 
 ## Connection Lifecycle
 
+### Connection Purpose Semantics
+
+The mobile app establishes WebSocket connections with specific purpose semantics:
+
+| Purpose | Duration | Behavior | Close Code |
+|---------|----------|----------|------------|
+| **Probe** | ~500ms - 2s | Health verification, capability check | 1000 (Normal) |
+| **Primary** | Session lifetime | Active session for all communication | Variable |
+
+**Probe Connection:** A short-lived connection used to:
+- Verify bridge health before entering main shell
+- Detect connection mode (security level)
+- Check bridge version compatibility
+- Validate authentication token works
+
+**Primary Connection:** The long-lived WebSocket used for:
+- All real-time message exchange
+- Session state management
+- Tool execution and results
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Connection Sequence                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  App                           Bridge                                │
+│   │                              │                                   │
+│   │ ─── Probe WebSocket ──────>│                                   │
+│   │     auth + health_check     │                                   │
+│   │ <── connection_ack ────────│                                   │
+│   │ <── health_status ─────────│                                   │
+│   │     validate stability      │                                   │
+│   │ ─── Close (1000) ──────────>│ ✓ Probe complete                  │
+│   │                              │                                   │
+│   │ ─── Primary WebSocket ─────>│                                   │
+│   │     auth + health_check     │                                   │
+│   │ <── connection_ack ────────│                                   │
+│   │ <── health_status ─────────│                                   │
+│   │     [Ready for session]     │                                   │
+│   │ <──────> messages <───────>│ ← Active session                  │
+│   │                              │                                   │
+│  Note: Probe MUST close before Primary opens                        │
+│  Rapid open/close without code 1005 indicates transport instability │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Requirements:**
+- Probe connections MUST close cleanly (code 1000) after health verification
+- Primary connections SHOULD reuse the same WebSocket for the entire session
+- Bridge distinguishes expected probe closures from unexpected disconnects
+- Closing without close code (1005) indicates protocol error or transport instability
+
+### Connection Lifecycle Sequence
+
 ```mermaid
 sequenceDiagram
     participant Mobile as ReCursor App
@@ -16,7 +70,7 @@ sequenceDiagram
     Note over Mobile,CC: Initial Connection
     Mobile->>Bridge: wss:// connect + auth token
     Bridge-->>Mobile: connection_ack { version, sessions }
-    
+
     Mobile->>Bridge: heartbeat_ping
     Bridge-->>Mobile: heartbeat_pong
 
@@ -24,7 +78,7 @@ sequenceDiagram
     CC->>Hooks: SessionStart event
     Hooks->>Bridge: HTTP POST /hooks/event
     Bridge-->>Hooks: 200 OK
-    
+
     Bridge->>Mobile: session_started { session_id }
 ```
 
@@ -699,6 +753,8 @@ When the mobile app reconnects after disconnection:
 3. Server replays any queued events (notifications, tool results)
 4. Client acknowledges with `notification_ack`
 
+**Probe Connection on Reconnect:** The probe-primary pattern still applies on reconnection. The app may establish a brief probe connection to verify bridge availability before the primary session connection, especially after transport-level disconnects on unstable providers (see [Transports](transports.md)).
+
 ---
 
 ## Related Documentation
@@ -707,7 +763,8 @@ When the mobile app reconnects after disconnection:
 - [Data Flow](architecture/data-flow.md) — Message sequence diagrams
 - [Claude Code Hooks Integration](integration/claude-code-hooks.md) — Hook event format
 - [Agent SDK Integration](integration/agent-sdk.md) — Agent SDK message flow
+- [Transport Providers](transports.md) — Transport stability and connection behavior
 
 ---
 
-*Last updated: 2026-03-17*
+*Last updated: 2026-03-21*

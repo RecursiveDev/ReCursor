@@ -1,6 +1,18 @@
 # ReCursor — Implementation Plan
 
-> **Flutter mobile app** providing OpenCode-like UI/UX for AI coding agents. Bridge-first, no-login: connects to your user-controlled desktop bridge.
+> **Flutter mobile app** providing OpenCode-like UI/UX for AI coding agents. **Coding-agent agnostic** — Claude Code is the first supported integration, with future support for additional agents. Bridge-first, no-login: connects to your user-controlled desktop bridge.
+
+---
+
+## Product Vision
+
+**ReCursor is coding-agent agnostic.** The current release focuses on Claude Code integration, with architecture designed for future multi-agent support:
+
+| Phase | Agent Support | Notes |
+|-------|---------------|-------|
+| **Phase 1–2** | Claude Code only | Build core integration and UI |
+| **Phase 3** | Multi-agent foundation | Architecture refactoring for adapters |
+| **Future** | OpenCode, Gemini CLI, etc. | Additional agent adapters |
 
 ---
 
@@ -54,6 +66,27 @@ ReCursor uses a **bridge-first** connection model with no user accounts:
 - **User-controlled bridge** — the bridge runs on your development machine, not a hosted service
 - **Secure device pairing** — QR code pairing with device tokens stored in secure storage
 - **Remote access** — optional secure tunneling (Tailscale, WireGuard) to your own bridge
+
+---
+
+## Current implementation snapshot
+
+The plan below remains the long-range roadmap, but the repository has already moved beyond the original scaffold assumptions.
+
+### Implemented in the current Claude-first MVP
+- Bridge pairing, authentication, connection health verification, and connection mode handling
+- Hook ingestion from Claude Code plus WebSocket forwarding to mobile
+- Session lifecycle persistence, streaming chat, tool cards, and timeline rendering
+- Diff handoff, repository browsing, git status, and file viewing flows
+- Notification routing for bridge events and hook-derived notifications
+
+### Still intentionally outside the current MVP closure
+- Rich approval UI polish for Agent SDK flows
+- Notification center / inbox UI surface
+- Additional non-Claude agent adapters
+- Broader production hardening and release polish
+
+For the reconciled near-term status, see [`architecture/REMAINING_PHASES.md`](architecture/REMAINING_PHASES.md).
 
 ---
 
@@ -163,12 +196,16 @@ ReCursor uses a **bridge-first** connection model with no user accounts:
 - [ ] Text preview before send (edit transcribed text)
 - [ ] **Tests:** Unit test transcription → message flow
 
-### 3.2 Multi-Agent Support
-- [ ] Agent registry (Claude Code, OpenCode, Aider, Goose)
+### 3.2 Multi-Agent Support (Architecture Foundation)
+
+> **Note:** This phase establishes the adapter architecture for future multi-agent support. Claude Code remains the primary integration.
+
+- [ ] Define abstract agent adapter interface (`AgentAdapter`, `AgentSession`, `AgentEvent`)
+- [ ] Refactor Claude Code integration into adapter pattern (`integrations/claude/`)
+- [ ] Agent registry interface (enumerate available adapters, switch active agent)
+- [ ] Agent switcher UI (shows available agents, indicates current vs. future support)
 - [ ] Per-agent connection management
-- [ ] Agent switcher UI
-- [ ] Parallel session support
-- [ ] **Tests:** Unit test agent registry CRUD
+- [ ] **Tests:** Unit test agent adapter interface, Claude Code adapter compliance
 
 ### 3.3 Terminal Session
 - [ ] Embedded terminal view (read-only output from bridge)

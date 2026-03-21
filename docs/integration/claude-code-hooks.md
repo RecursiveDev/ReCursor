@@ -1,5 +1,7 @@
 # Claude Code Hooks Integration
 
+> **Current integration:** This document describes ReCursor's Claude Code integration — the first supported agent. Future releases will add support for additional AI coding tools.
+
 > Configure Claude Code Hooks to POST events to the ReCursor bridge server for mobile consumption. This is a supported integration path for one-way event observation — not a Remote Control protocol.
 
 ---

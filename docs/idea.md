@@ -48,21 +48,23 @@ flowchart LR
 
     subgraph DevMachine["💻 User-Controlled Development Machine"]
         Bridge["ReCursor Bridge Server"]
-        CCHooks["Claude Code Hooks\n(Event Observer)"]
-        CC["Claude Code CLI"]
+        AgentHooks["Agent Hooks\n(Event Observer)"]
+        Agent["Coding Agent (Claude Code)"]
     end
 
     App <-->|WebSocket (wss://)| Bridge
-    Bridge <-->|HTTP POST| CCHooks
-    CCHooks -->|Observes| CC
+    Bridge <-->|HTTP POST| AgentHooks
+    AgentHooks -->|Observes| Agent
 ```
 
 **Integration Strategy:**
 - **Bridge-First**: Mobile app connects directly to user-controlled bridge (no hosted service, no login)
-- **Event Source**: Claude Code Hooks POST events to the bridge server (one-way observation)
+- **Event Source**: Agent hooks POST events to the bridge server (one-way observation)
 - **UI Pattern**: OpenCode-style tool cards, diff viewer, session timeline
-- **Session Model**: Parallel Agent SDK sessions (not mirroring existing Claude Code sessions)
-- **Remote Access**: Secure tunnel (Tailscale, WireGuard) to your own bridge — not unsupported third-party Claude Remote Control
+- **Session Model**: Parallel Agent SDK sessions (not mirroring existing agent sessions)
+- **Remote Access**: Secure tunnel (Tailscale, WireGuard) to your own bridge
+
+**Current Integration:** Claude Code is the first supported agent, with future support planned for OpenCode, Gemini CLI, Codex CLI, and others.
 
 ---
 

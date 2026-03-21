@@ -1,5 +1,7 @@
 # ReCursor Claude Code Plugin
 
+> **Current integration:** This plugin supports Claude Code — ReCursor's first supported agent. Future releases will add plugins for additional AI coding tools.
+
 Forwards Claude Code events to the ReCursor bridge server for mobile consumption.
 
 ## Installation
