@@ -26,7 +26,7 @@ export default defineConfig({
         },
       ],
       editLink: {
-        baseUrl: 'https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/src/content/docs/',
+        baseUrl: 'https://github.com/RecursiveDev/ReCursor/edit/main/docs-site/',
       },
       customCss: ['./src/styles/custom.css'],
       components: {
